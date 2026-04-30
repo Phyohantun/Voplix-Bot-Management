@@ -71,7 +71,7 @@ export default function SignupPage() {
   };
 
   return (
-    <Card className="border-zinc-800 bg-zinc-900">
+    <Card className="border-zinc-700/70 bg-zinc-900/70 shadow-2xl backdrop-blur-xl">
       <CardHeader className="space-y-1">
         <CardTitle className="text-2xl text-white">Create an account</CardTitle>
         <CardDescription className="text-zinc-400">
