@@ -37,6 +37,13 @@ export default async function DashboardLayout({
     return new Date(a.created_at).getTime() > new Date(profile.notification_last_seen_at).getTime();
   }).length;
 
+  const { data: bots } = await (supabase as any)
+    .from('bots')
+    .select('id, bot_username')
+    .eq('user_id', user.id)
+    .eq('is_active', true)
+    .order('created_at', { ascending: false });
+
   return (
     <div className="min-h-screen bg-zinc-950">
       <DashboardSidebar user={user} />
@@ -46,6 +53,7 @@ export default async function DashboardLayout({
           profile={profile}
           announcements={(announcements as any[]) || []}
           unreadCount={unreadCount}
+          bots={(bots as any[]) || []}
         />
         <main className="py-8 px-4 sm:px-6 lg:px-8">
           {children}

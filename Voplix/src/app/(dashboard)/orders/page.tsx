@@ -75,9 +75,7 @@ export default async function OrdersPage({
       </div>
       
       <OrdersDashboard 
-        bots={bots}
         orders={orders}
-        selectedBotId={selectedBotId}
       />
     </div>
   );

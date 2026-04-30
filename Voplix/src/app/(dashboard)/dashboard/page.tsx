@@ -98,26 +98,6 @@ export default async function DashboardPage({
         <p className="text-zinc-400">A quick view of your bot activity and sales performance.</p>
       </div>
 
-      {bots.length > 1 ? (
-        <div className="flex flex-wrap gap-2">
-          <Link
-            href="/dashboard"
-            className={`rounded-md px-3 py-1.5 text-sm ${selectedBotId ? 'bg-zinc-800 text-zinc-300' : 'bg-indigo-600 text-white'}`}
-          >
-            All bots
-          </Link>
-          {bots.map((bot) => (
-            <Link
-              key={bot.id}
-              href={`/dashboard?bot=${bot.id}`}
-              className={`rounded-md px-3 py-1.5 text-sm ${selectedBotId === bot.id ? 'bg-indigo-600 text-white' : 'bg-zinc-800 text-zinc-300'}`}
-            >
-              @{bot.bot_username}
-            </Link>
-          ))}
-        </div>
-      ) : null}
-      
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card className="border-zinc-800 bg-zinc-900">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

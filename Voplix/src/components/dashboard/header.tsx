@@ -5,9 +5,10 @@ import { Bell, ChevronDown, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { DashboardSidebar } from './sidebar';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface DashboardHeaderProps {
   user: User;
@@ -18,13 +19,19 @@ interface DashboardHeaderProps {
   } | null;
   announcements: Array<{ id: string; title: string; message: string; created_at: string }>;
   unreadCount: number;
+  bots: Array<{ id: string; bot_username: string }>;
 }
 
-export function DashboardHeader({ user, profile, announcements, unreadCount }: DashboardHeaderProps) {
+const BOT_SCOPED_PAGES = ['/dashboard', '/menu', '/orders', '/broadcast'];
+
+export function DashboardHeader({ user, profile, announcements, unreadCount, bots }: DashboardHeaderProps) {
   const [openProfile, setOpenProfile] = useState(false);
   const [openNotifications, setOpenNotifications] = useState(false);
   const supabase = createClient();
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const activeBotId = searchParams.get('bot');
 
   const initials = useMemo(() => {
     const src = (profile?.display_name || profile?.business_name || user.email || 'U').trim();
@@ -47,6 +54,22 @@ export function DashboardHeader({ user, profile, announcements, unreadCount }: D
     router.refresh();
   };
 
+  useEffect(() => {
+    if (!BOT_SCOPED_PAGES.includes(pathname)) return;
+    if (bots.length === 0) return;
+    if (activeBotId && bots.some((b) => b.id === activeBotId)) return;
+    router.replace(`${pathname}?bot=${bots[0].id}`);
+  }, [activeBotId, bots, pathname, router]);
+
+  const handleBotChange = (value: string | null) => {
+    if (!value) return;
+    if (BOT_SCOPED_PAGES.includes(pathname)) {
+      router.replace(`${pathname}?bot=${value}`);
+      return;
+    }
+    router.push(`/dashboard?bot=${value}`);
+  };
+
   return (
     <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-x-4 border-b border-zinc-800 bg-zinc-900/95 px-4 backdrop-blur sm:gap-x-6 sm:px-6 lg:px-8">
       <Sheet>
@@ -66,9 +89,24 @@ export function DashboardHeader({ user, profile, announcements, unreadCount }: D
           <p className="text-sm text-zinc-400 truncate">
             Welcome, {profile?.display_name || user.email?.split('@')[0] || 'Owner'}
           </p>
-          <p className="text-sm font-semibold text-white truncate">
-            {profile?.business_name || 'Digital Shop'}
-          </p>
+          {bots.length > 0 ? (
+            <div className="mx-auto mt-1 w-full max-w-[260px] lg:mx-0">
+              <Select value={activeBotId || bots[0].id} onValueChange={handleBotChange}>
+                <SelectTrigger className="h-8 bg-zinc-800 border-zinc-700 text-white">
+                  <SelectValue placeholder="Select bot" />
+                </SelectTrigger>
+                <SelectContent className="bg-zinc-800 border-zinc-700">
+                  {bots.map((bot) => (
+                    <SelectItem key={bot.id} value={bot.id} className="text-white">
+                      @{bot.bot_username}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : (
+            <p className="text-sm font-semibold text-white truncate">{profile?.business_name || 'Digital Shop'}</p>
+          )}
         </div>
 
         <div className="relative ml-3">

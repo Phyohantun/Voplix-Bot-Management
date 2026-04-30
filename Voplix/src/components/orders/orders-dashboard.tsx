@@ -1,16 +1,8 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import {
   Dialog,
   DialogContent,
@@ -25,9 +17,7 @@ import { CheckCircle, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface OrdersDashboardProps {
-  bots: any[];
   orders: any[];
-  selectedBotId: string | null;
 }
 
 const statusColors: Record<string, string> = {
@@ -46,21 +36,11 @@ const statusLabels: Record<string, string> = {
   REJECTED: 'Rejected',
 };
 
-export function OrdersDashboard({ bots, orders: initialOrders, selectedBotId }: OrdersDashboardProps) {
-  const router = useRouter();
+export function OrdersDashboard({ orders: initialOrders }: OrdersDashboardProps) {
   const [orders, setOrders] = useState(initialOrders);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [rejectReasons, setRejectReasons] = useState<Record<string, string>>({});
-
-  const handleSelectChange = (value: string | null) => {
-    if (value === 'all' || value === null) {
-      router.push('/orders');
-    } else {
-      router.push(`/orders?bot=${value}`);
-    }
-    router.refresh();
-  };
 
   const pendingOrders = useMemo(
     () => orders.filter((o: any) => o.status === 'SLIP_SUBMITTED'),
@@ -117,20 +97,6 @@ export function OrdersDashboard({ bots, orders: initialOrders, selectedBotId }: 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <Select value={selectedBotId || 'all'} onValueChange={handleSelectChange}>
-          <SelectTrigger className="w-[280px] bg-zinc-800 border-zinc-700 text-white">
-            <SelectValue placeholder="All bots" />
-          </SelectTrigger>
-          <SelectContent className="bg-zinc-800 border-zinc-700">
-            <SelectItem value="all" className="text-white">All bots</SelectItem>
-            {bots.map((bot) => (
-              <SelectItem key={bot.id} value={bot.id} className="text-white">
-                @{bot.bot_username}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
         <p className="text-sm text-zinc-400">{pendingOrders.length} pending verification</p>
       </div>
 

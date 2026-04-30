@@ -7,13 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Megaphone, Users, Send, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -48,12 +42,6 @@ export function BroadcastClient({ bots, initialBotId }: BroadcastClientProps) {
   }, [bots, formData.bot_id, searchParams]);
 
   const selectedBot = bots.find((b) => b.id === formData.bot_id);
-
-  const handleBotChange = (value: string | null) => {
-    if (!value) return;
-    setFormData((prev) => ({ ...prev, bot_id: value }));
-    router.replace(`/broadcast?bot=${value}`);
-  };
 
   const handleSend = async () => {
     if (!formData.bot_id) {
@@ -131,19 +119,10 @@ export function BroadcastClient({ bots, initialBotId }: BroadcastClientProps) {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label className="text-zinc-300">Select Bot</Label>
-              <Select value={formData.bot_id} onValueChange={handleBotChange}>
-                <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
-                  <SelectValue placeholder="Choose a bot" />
-                </SelectTrigger>
-                <SelectContent className="bg-zinc-800 border-zinc-700">
-                  {bots.map((bot) => (
-                    <SelectItem key={bot.id} value={bot.id} className="text-white">
-                      @{bot.bot_username}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label className="text-zinc-300">Selected Bot</Label>
+              <div className="rounded-md border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white">
+                {selectedBot ? `@${selectedBot.bot_username}` : 'No bot selected'}
+              </div>
             </div>
 
             <div className="space-y-2">

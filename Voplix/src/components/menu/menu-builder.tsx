@@ -7,13 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Dialog,
   DialogContent,
@@ -213,12 +207,6 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems }: Menu
     });
   };
 
-  const handleSelectChange = (value: string | null) => {
-    if (!value) return;
-    router.push(`/menu?bot=${value}`);
-    router.refresh();
-  };
-
   const handleSaveStartSettings = async () => {
     setStartSettingsLoading(true);
     try {
@@ -317,18 +305,10 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems }: Menu
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <Select value={selectedBot.id} onValueChange={handleSelectChange}>
-          <SelectTrigger className="w-full sm:w-[280px] bg-zinc-800 border-zinc-700 text-white">
-            <SelectValue placeholder="Select a bot" />
-          </SelectTrigger>
-          <SelectContent className="bg-zinc-800 border-zinc-700">
-            {bots.map((bot) => (
-              <SelectItem key={bot.id} value={bot.id} className="text-white">
-                @{bot.bot_username}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div>
+          <p className="text-sm text-zinc-400">Selected bot</p>
+          <p className="text-sm font-medium text-white">@{selectedBot.bot_username}</p>
+        </div>
 
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
           <Dialog open={isStartSettingsOpen} onOpenChange={setIsStartSettingsOpen}>
