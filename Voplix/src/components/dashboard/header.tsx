@@ -5,7 +5,7 @@ import { Bell, ChevronDown, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { DashboardSidebar } from './sidebar';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useTransition } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -32,6 +32,13 @@ export function DashboardHeader({ user, profile, announcements, unreadCount, bot
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const activeBotId = searchParams.get('bot');
+  const [isSwitchingBot, startSwitchBotTransition] = useTransition();
+  const [pendingBotId, setPendingBotId] = useState<string | null>(null);
+  const selectedBot =
+    ((pendingBotId ? bots.find((b) => b.id === pendingBotId) : null) ||
+      (activeBotId ? bots.find((b) => b.id === activeBotId) : null) ||
+      bots[0] ||
+      null);
 
   const initials = useMemo(() => {
     const src = (profile?.display_name || profile?.business_name || user.email || 'U').trim();
@@ -61,13 +68,21 @@ export function DashboardHeader({ user, profile, announcements, unreadCount, bot
     router.replace(`${pathname}?bot=${bots[0].id}`);
   }, [activeBotId, bots, pathname, router]);
 
+  useEffect(() => {
+    // Clear optimistic state once URL catches up.
+    if (pendingBotId && activeBotId === pendingBotId) {
+      setPendingBotId(null);
+    }
+  }, [activeBotId, pendingBotId]);
+
   const handleBotChange = (value: string | null) => {
     if (!value) return;
-    if (BOT_SCOPED_PAGES.includes(pathname)) {
-      router.replace(`${pathname}?bot=${value}`);
-      return;
-    }
-    router.push(`/dashboard?bot=${value}`);
+    setPendingBotId(value);
+    const nextUrl = BOT_SCOPED_PAGES.includes(pathname) ? `${pathname}?bot=${value}` : `/dashboard?bot=${value}`;
+
+    startSwitchBotTransition(() => {
+      router.replace(nextUrl, { scroll: false });
+    });
   };
 
   return (
@@ -91,9 +106,9 @@ export function DashboardHeader({ user, profile, announcements, unreadCount, bot
           </p>
           {bots.length > 0 ? (
             <div className="mx-auto mt-1 w-full max-w-[260px] lg:mx-0">
-              <Select value={activeBotId || bots[0].id} onValueChange={handleBotChange}>
-                <SelectTrigger className="h-8 bg-zinc-800 border-zinc-700 text-white">
-                  <SelectValue placeholder="Select bot" />
+              <Select value={selectedBot?.id || ''} onValueChange={handleBotChange}>
+                <SelectTrigger className="h-8 bg-zinc-800 border-zinc-700 text-white" disabled={isSwitchingBot}>
+                  <span className="truncate">{selectedBot ? `@${selectedBot.bot_username}` : 'Select bot'}</span>
                 </SelectTrigger>
                 <SelectContent className="bg-zinc-800 border-zinc-700">
                   {bots.map((bot) => (
@@ -103,6 +118,9 @@ export function DashboardHeader({ user, profile, announcements, unreadCount, bot
                   ))}
                 </SelectContent>
               </Select>
+              {isSwitchingBot ? (
+                <p className="mt-1 text-[11px] text-zinc-500">Switching bot...</p>
+              ) : null}
             </div>
           ) : (
             <p className="text-sm font-semibold text-white truncate">{profile?.business_name || 'Digital Shop'}</p>
