@@ -20,6 +20,9 @@ export type Database = {
           bot_username: string;
           webhook_set: boolean;
           is_active: boolean;
+          start_welcome_message: string | null;
+          start_show_menu_only: boolean;
+          start_show_tip: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -31,6 +34,9 @@ export type Database = {
           bot_username: string;
           webhook_set: boolean;
           is_active: boolean;
+          start_welcome_message: string | null;
+          start_show_menu_only: boolean;
+          start_show_tip: boolean;
           created_at: string;
           updated_at: string;
         }, 'id' | 'created_at' | 'updated_at'> & Partial<{ id: string; created_at: string; updated_at: string }>;
@@ -42,6 +48,9 @@ export type Database = {
           bot_username: string;
           webhook_set: boolean;
           is_active: boolean;
+          start_welcome_message: string | null;
+          start_show_menu_only: boolean;
+          start_show_tip: boolean;
           created_at: string;
           updated_at: string;
         }>;

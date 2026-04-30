@@ -59,6 +59,32 @@ interface MenuItemRecord {
   is_active: boolean;
 }
 
+interface BotStartConfig {
+  start_welcome_message: string | null;
+  start_show_menu_only: boolean;
+  start_show_tip: boolean;
+}
+
+async function sendMessageWithFallback(
+  token: string,
+  chatId: number,
+  htmlText: string,
+  fallbackText: string,
+  options?: { reply_markup?: object }
+) {
+  const primary = await sendMessage(token, chatId, htmlText, {
+    parse_mode: 'HTML',
+    ...options,
+  });
+
+  if (primary.ok) {
+    return primary;
+  }
+
+  console.error('[webhook] HTML send failed, retrying plain text:', primary.error);
+  return sendMessage(token, chatId, fallbackText, options);
+}
+
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ tokenHash: string }> }
@@ -206,6 +232,18 @@ async function trackTelegramUser(botId: string, telegramUserId: string, telegram
 }
 
 async function handleStart(token: string, chatId: number, botId: string, telegramUserId: string) {
+  const { data: botConfigData } = await (supabaseAdmin
+    .from('bots') as any)
+    .select('start_welcome_message, start_show_menu_only, start_show_tip')
+    .eq('id', botId)
+    .single();
+
+  const botConfig = (botConfigData as BotStartConfig | null) ?? {
+    start_welcome_message: null,
+    start_show_menu_only: false,
+    start_show_tip: true,
+  };
+
   // Get menu items
   const { data: menuItems } = await (supabaseAdmin
     .from('menu_items') as any)
@@ -215,11 +253,11 @@ async function handleStart(token: string, chatId: number, botId: string, telegra
     .order('sort_order', { ascending: true });
 
   if (!menuItems || menuItems.length === 0) {
-    await sendMessage(
+    await sendMessageWithFallback(
       token,
       chatId,
       '<b>Welcome!</b>\n\nThere are no products in the menu yet. Please try again later.',
-      { parse_mode: 'HTML' }
+      'Welcome!\n\nThere are no products in the menu yet. Please try again later.'
     );
     return;
   }
@@ -242,26 +280,48 @@ async function handleStart(token: string, chatId: number, botId: string, telegra
     return `${index + 1}. ${safe}`;
   });
 
-  const main = await sendMessage(
+  const plainMenuLines = typedMenuItems.map((item, index) =>
+    item.price > 0
+      ? `${index + 1}. ${item.name} — ${item.price.toLocaleString()} THB`
+      : `${index + 1}. ${item.name}`
+  );
+
+  const main = await sendMessageWithFallback(
     token,
     chatId,
-    `<b>Welcome!</b>\n\n<b>Your menu</b>\n${menuLines.join('\n')}\n\n<i>Tap a product button below to continue.</i>`,
-    { parse_mode: 'HTML', reply_markup: keyboard }
+    botConfig.start_show_menu_only
+      ? `${menuLines.join('\n')}`
+      : `${
+          botConfig.start_welcome_message?.trim()
+            ? `${escapeHtml(botConfig.start_welcome_message.trim())}\n\n`
+            : '<b>Welcome!</b>\n\n'
+        }<b>Your menu</b>\n${menuLines.join('\n')}\n\n<i>Tap a product button below to continue.</i>`,
+    botConfig.start_show_menu_only
+      ? `${plainMenuLines.join('\n')}`
+      : `${
+          botConfig.start_welcome_message?.trim()
+            ? `${botConfig.start_welcome_message.trim()}\n\n`
+            : 'Welcome!\n\n'
+        }Your menu\n${plainMenuLines.join('\n')}\n\nTap a product button below to continue.`,
+    { reply_markup: keyboard }
   );
 
   if (!main.ok) {
     console.error('[webhook] sendMessage (menu) failed:', main.error);
   }
 
-  const tip = await sendMessage(
-    token,
-    chatId,
-    `<i>Tip: use ${escapeHtml(TELEGRAM_REPLY_MENU_BUTTON_TEXT)} or type /menu anytime to see this list again.</i>`,
-    { parse_mode: 'HTML', reply_markup: createPersistentMenuReplyKeyboard() }
-  );
+  if (botConfig.start_show_tip) {
+    const tip = await sendMessageWithFallback(
+      token,
+      chatId,
+      `<i>Tip: use ${escapeHtml(TELEGRAM_REPLY_MENU_BUTTON_TEXT)} or type /menu anytime to see this list again.</i>`,
+      `Tip: use ${TELEGRAM_REPLY_MENU_BUTTON_TEXT} or type /menu anytime to see this list again.`,
+      { reply_markup: createPersistentMenuReplyKeyboard() }
+    );
 
-  if (!tip.ok) {
-    console.error('[webhook] sendMessage (reply keyboard) failed:', tip.error);
+    if (!tip.ok) {
+      console.error('[webhook] sendMessage (reply keyboard) failed:', tip.error);
+    }
   }
 
   await setUserSession(telegramUserId, botId, { state: 'VIEWING_MENU' });

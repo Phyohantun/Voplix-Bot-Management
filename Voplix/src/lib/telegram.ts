@@ -1,8 +1,19 @@
 const TELEGRAM_API_BASE = 'https://api.telegram.org/bot';
+const TELEGRAM_REQUEST_TIMEOUT_MS = 10000;
+
+async function fetchWithTimeout(url: string, init?: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), TELEGRAM_REQUEST_TIMEOUT_MS);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 export async function validateBotToken(token: string): Promise<{ ok: boolean; result?: { username: string }; error?: string }> {
   try {
-    const response = await fetch(`${TELEGRAM_API_BASE}${token}/getMe`);
+    const response = await fetchWithTimeout(`${TELEGRAM_API_BASE}${token}/getMe`);
     const data = await response.json();
     
     if (data.ok) {
@@ -22,7 +33,7 @@ export async function validateBotToken(token: string): Promise<{ ok: boolean; re
 
 export async function setWebhook(token: string, webhookUrl: string): Promise<{ ok: boolean; error?: string }> {
   try {
-    const response = await fetch(`${TELEGRAM_API_BASE}${token}/setWebhook`, {
+    const response = await fetchWithTimeout(`${TELEGRAM_API_BASE}${token}/setWebhook`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -45,7 +56,7 @@ export async function setWebhook(token: string, webhookUrl: string): Promise<{ o
 
 export async function deleteWebhook(token: string): Promise<{ ok: boolean; error?: string }> {
   try {
-    const response = await fetch(`${TELEGRAM_API_BASE}${token}/deleteWebhook`, {
+    const response = await fetchWithTimeout(`${TELEGRAM_API_BASE}${token}/deleteWebhook`, {
       method: 'POST',
     });
     
@@ -72,7 +83,7 @@ export async function getWebhookInfo(
   token: string
 ): Promise<{ ok: boolean; result?: TelegramWebhookInfo; error?: string }> {
   try {
-    const response = await fetch(`${TELEGRAM_API_BASE}${token}/getWebhookInfo`);
+    const response = await fetchWithTimeout(`${TELEGRAM_API_BASE}${token}/getWebhookInfo`);
     const data = await response.json();
 
     if (data.ok) {
@@ -95,7 +106,7 @@ export async function sendMessage(
   }
 ): Promise<{ ok: boolean; error?: string }> {
   try {
-    const response = await fetch(`${TELEGRAM_API_BASE}${token}/sendMessage`, {
+    const response = await fetchWithTimeout(`${TELEGRAM_API_BASE}${token}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -124,7 +135,7 @@ export async function sendPhoto(
   caption?: string
 ): Promise<{ ok: boolean; error?: string }> {
   try {
-    const response = await fetch(`${TELEGRAM_API_BASE}${token}/sendPhoto`, {
+    const response = await fetchWithTimeout(`${TELEGRAM_API_BASE}${token}/sendPhoto`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -151,7 +162,7 @@ export async function fetchTelegramFile(
   token: string,
   fileId: string
 ): Promise<{ body: ArrayBuffer; contentType: string } | null> {
-  const getFileRes = await fetch(`${TELEGRAM_API_BASE}${token}/getFile`, {
+  const getFileRes = await fetchWithTimeout(`${TELEGRAM_API_BASE}${token}/getFile`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ file_id: fileId }),
@@ -164,7 +175,7 @@ export async function fetchTelegramFile(
 
   const filePath = getFileData.result.file_path as string;
   const fileUrl = `https://api.telegram.org/file/bot${token}/${filePath}`;
-  const fileRes = await fetch(fileUrl);
+  const fileRes = await fetchWithTimeout(fileUrl);
 
   if (!fileRes.ok) {
     return null;
@@ -181,7 +192,7 @@ export async function answerCallbackQuery(
   text?: string
 ): Promise<{ ok: boolean; error?: string }> {
   try {
-    const response = await fetch(`${TELEGRAM_API_BASE}${token}/answerCallbackQuery`, {
+    const response = await fetchWithTimeout(`${TELEGRAM_API_BASE}${token}/answerCallbackQuery`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

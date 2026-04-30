@@ -5,6 +5,9 @@ import { MenuBuilder } from '@/components/menu/menu-builder';
 interface BotRecord {
   id: string;
   bot_username: string;
+  start_welcome_message: string | null;
+  start_show_menu_only: boolean;
+  start_show_tip: boolean;
 }
 
 interface SupabaseQueryError {

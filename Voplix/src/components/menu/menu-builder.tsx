@@ -32,6 +32,9 @@ type MenuItemType = 'DIGITAL_DELIVERY' | 'MANUAL_DELIVERY' | 'MESSAGE_ONLY';
 interface BotOption {
   id: string;
   bot_username: string;
+  start_welcome_message: string | null;
+  start_show_menu_only: boolean;
+  start_show_tip: boolean;
 }
 
 interface MenuItem {
@@ -82,6 +85,10 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems }: Menu
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
   const [loading, setLoading] = useState(false);
+  const [startSettingsLoading, setStartSettingsLoading] = useState(false);
+  const [startWelcomeMessage, setStartWelcomeMessage] = useState(selectedBot.start_welcome_message ?? '');
+  const [startShowMenuOnly, setStartShowMenuOnly] = useState(selectedBot.start_show_menu_only);
+  const [startShowTip, setStartShowTip] = useState(selectedBot.start_show_tip);
   const [formData, setFormData] = useState<FormState>(emptyForm());
 
   const parsePrice = (): number => {
@@ -199,6 +206,33 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems }: Menu
     if (!value) return;
     router.push(`/menu?bot=${value}`);
     router.refresh();
+  };
+
+  const handleSaveStartSettings = async () => {
+    setStartSettingsLoading(true);
+    try {
+      const response = await fetch(`/api/bots/${selectedBot.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          start_welcome_message: startWelcomeMessage.trim() || null,
+          start_show_menu_only: startShowMenuOnly,
+          start_show_tip: startShowTip,
+        }),
+      });
+
+      if (!response.ok) {
+        const j = (await response.json().catch(() => ({}))) as { error?: string };
+        throw new Error(j.error || 'Failed to save start settings');
+      }
+
+      toast.success('Start message settings saved');
+      router.refresh();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to save settings');
+    } finally {
+      setStartSettingsLoading(false);
+    }
   };
 
   const stockCount = (item: MenuItem) => {
@@ -329,6 +363,60 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems }: Menu
           </DialogContent>
         </Dialog>
       </div>
+
+      <Card className="border-zinc-800 bg-zinc-900">
+        <CardHeader>
+          <CardTitle className="text-white">Telegram /start message settings</CardTitle>
+          <CardDescription className="text-zinc-400">
+            Customize what users see when they press Start or type /start (no code needed).
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label className="text-zinc-300">Custom welcome message (optional)</Label>
+            <Textarea
+              value={startWelcomeMessage}
+              onChange={(e) => setStartWelcomeMessage(e.target.value)}
+              className="bg-zinc-800 border-zinc-700 text-white min-h-[88px]"
+              placeholder="e.g. Welcome to Voplix! Choose your package below."
+            />
+            <p className="text-xs text-zinc-500">
+              Leave empty to use default message. This appears above your menu list.
+            </p>
+          </div>
+
+          <label className="flex items-center gap-3 text-sm text-zinc-300">
+            <input
+              type="checkbox"
+              checked={startShowMenuOnly}
+              onChange={(e) => setStartShowMenuOnly(e.target.checked)}
+              className="h-4 w-4 rounded border-zinc-600 bg-zinc-800"
+            />
+            Show only menu list on /start (hide welcome/title text)
+          </label>
+
+          <label className="flex items-center gap-3 text-sm text-zinc-300">
+            <input
+              type="checkbox"
+              checked={startShowTip}
+              onChange={(e) => setStartShowTip(e.target.checked)}
+              className="h-4 w-4 rounded border-zinc-600 bg-zinc-800"
+            />
+            Show "Browse menu" tip message after /start
+          </label>
+
+          <div className="pt-2">
+            <Button
+              type="button"
+              onClick={handleSaveStartSettings}
+              disabled={startSettingsLoading}
+              className="bg-indigo-600 hover:bg-indigo-700"
+            >
+              {startSettingsLoading ? 'Saving…' : 'Save /start settings'}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {menuItems.length === 0 ? (
         <Card className="border-zinc-800 bg-zinc-900">
