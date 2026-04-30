@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useSearchParams } from 'next/navigation';
+import { useEffect } from 'react';
 import { User } from '@supabase/supabase-js';
 import { 
   SquaresFour, 
@@ -40,6 +41,14 @@ export function DashboardSidebar({ user, mobile = false }: DashboardSidebarProps
   const router = useRouter();
   const supabase = createClient();
   const activeBotId = searchParams.get('bot');
+
+  useEffect(() => {
+    navigation.forEach((item) => {
+      const shouldScopeByBot = ['/dashboard', '/menu', '/orders', '/broadcast'].includes(item.href);
+      const href = shouldScopeByBot && activeBotId ? `${item.href}?bot=${activeBotId}` : item.href;
+      router.prefetch(href);
+    });
+  }, [activeBotId, router]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
