@@ -4,15 +4,15 @@ import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { User } from '@supabase/supabase-js';
 import { 
-  LayoutDashboard, 
-  Bot, 
+  SquaresFour, 
+  Robot, 
   ShoppingCart, 
-  Menu, 
+  List, 
   Megaphone, 
   UserCircle,
-  Settings,
-  LogOut
-} from 'lucide-react';
+  Gear,
+  SignOut
+} from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
@@ -22,13 +22,13 @@ interface DashboardSidebarProps {
 }
 
 const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Bots', href: '/bots', icon: Bot },
-  { name: 'Menu', href: '/menu', icon: Menu },
+  { name: 'Dashboard', href: '/dashboard', icon: SquaresFour },
+  { name: 'Bots', href: '/bots', icon: Robot },
+  { name: 'Menu', href: '/menu', icon: List },
   { name: 'Orders', href: '/orders', icon: ShoppingCart },
   { name: 'Broadcast', href: '/broadcast', icon: Megaphone },
   { name: 'Profile', href: '/profile', icon: UserCircle },
-  { name: 'Settings', href: '/settings', icon: Settings },
+  { name: 'Settings', href: '/settings', icon: Gear },
 ];
 
 export function DashboardSidebar({ user }: DashboardSidebarProps) {
@@ -50,7 +50,7 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
         <div className="flex h-16 shrink-0 items-center">
           <Link href="/dashboard" className="flex items-center gap-2">
             <div className="h-8 w-8 rounded-lg bg-indigo-600 flex items-center justify-center">
-              <Bot className="h-5 w-5 text-white" />
+              <Robot className="h-5 w-5 text-white" />
             </div>
             <span className="text-xl font-bold text-white">Voplix</span>
           </Link>
@@ -97,7 +97,7 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
                 onClick={handleLogout}
                 className="flex w-full items-center gap-x-3 rounded-md px-6 py-2 text-sm font-semibold text-zinc-400 hover:text-white hover:bg-zinc-800"
               >
-                <LogOut className="h-5 w-5 shrink-0" />
+                <SignOut className="h-5 w-5 shrink-0" />
                 Logout
               </button>
             </li>

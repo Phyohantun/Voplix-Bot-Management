@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { RefreshCcw, Loader2 } from 'lucide-react';
+import { ArrowClockwise, SpinnerGap } from '@phosphor-icons/react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 
@@ -69,9 +69,9 @@ export function ReconnectWebhookButton({ botId }: ReconnectWebhookButtonProps) {
       className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 text-xs"
     >
       {loading ? (
-        <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+        <SpinnerGap className="mr-1 h-3 w-3 animate-spin" />
       ) : (
-        <RefreshCcw className="mr-1 h-3 w-3" />
+        <ArrowClockwise className="mr-1 h-3 w-3" />
       )}
       Reconnect
     </Button>

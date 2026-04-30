@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Bot, ShoppingCart, DollarSign, Clock } from 'lucide-react';
+import { Robot, ShoppingCart, CurrencyDollar, Clock } from '@phosphor-icons/react/dist/ssr';
 import Link from 'next/link';
 import { AutoRefresh } from '@/components/dashboard/auto-refresh';
 
@@ -102,7 +102,7 @@ export default async function DashboardPage({
         <Card className="border-zinc-800 bg-zinc-900">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-zinc-300">Total Bots</CardTitle>
-            <Bot className="h-4 w-4 text-zinc-400" />
+            <Robot className="h-4 w-4 text-zinc-400" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-white">{stats.totalBots}</div>
@@ -143,7 +143,7 @@ export default async function DashboardPage({
         <Card className="border-zinc-800 bg-zinc-900">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-zinc-300">Revenue</CardTitle>
-            <DollarSign className="h-4 w-4 text-green-500" />
+            <CurrencyDollar className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-white">{stats.totalRevenue.toLocaleString()} THB</div>
@@ -166,7 +166,7 @@ export default async function DashboardPage({
               className="flex items-center justify-between rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-3 text-sm text-white transition-colors hover:bg-zinc-700"
             >
               <span className="flex items-center gap-3">
-                <Bot className="h-4 w-4 text-indigo-400" />
+                <Robot className="h-4 w-4 text-indigo-400" />
                 Connect bot
               </span>
               <span className="text-xs text-zinc-400">Open</span>

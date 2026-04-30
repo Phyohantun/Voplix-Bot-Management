@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Bot } from 'lucide-react';
+import { Robot } from '@phosphor-icons/react';
 import { toast } from 'sonner';
 
 export default function LoginPage() {
@@ -107,7 +107,7 @@ export default function LoginPage() {
           className="w-full border-zinc-700 text-zinc-300 hover:bg-zinc-800"
           onClick={handleGoogleLogin}
         >
-          <Bot className="mr-2 h-4 w-4" />
+          <Robot className="mr-2 h-4 w-4" />
           Google
         </Button>
 

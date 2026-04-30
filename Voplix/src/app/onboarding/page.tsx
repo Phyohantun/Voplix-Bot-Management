@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { Bot, CheckCircle, Loader2 } from 'lucide-react';
+import { Robot, CheckCircle, SpinnerGap } from '@phosphor-icons/react';
 import { validateBotToken } from '@/lib/telegram';
 
 export default function OnboardingPage() {
@@ -73,7 +73,7 @@ export default function OnboardingPage() {
         <CardHeader className="space-y-1">
           <div className="flex items-center gap-2">
             <div className="h-10 w-10 rounded-lg bg-indigo-600 flex items-center justify-center">
-              <Bot className="h-6 w-6 text-white" />
+              <Robot className="h-6 w-6 text-white" />
             </div>
             <div>
               <CardTitle className="text-2xl text-white">Connect Your Bot</CardTitle>
@@ -122,7 +122,7 @@ export default function OnboardingPage() {
             >
               {validating ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <SpinnerGap className="mr-2 h-4 w-4 animate-spin" />
                   Validating...
                 </>
               ) : validatedBot ? (
@@ -139,7 +139,7 @@ export default function OnboardingPage() {
             >
               {loading ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <SpinnerGap className="mr-2 h-4 w-4 animate-spin" />
                   Connecting...
                 </>
               ) : (

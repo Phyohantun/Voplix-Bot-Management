@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Megaphone, Users, Send, Loader2 } from 'lucide-react';
+import { Megaphone, Users, PaperPlaneTilt, SpinnerGap } from '@phosphor-icons/react';
 import { toast } from 'sonner';
 
 interface BotRow {
@@ -169,12 +169,12 @@ export function BroadcastClient({ bots, initialBotId }: BroadcastClientProps) {
             <Button onClick={handleSend} disabled={loading || !formData.bot_id} className="w-full bg-indigo-600 hover:bg-indigo-700">
               {loading ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <SpinnerGap className="mr-2 h-4 w-4 animate-spin" />
                   Sending...
                 </>
               ) : (
                 <>
-                  <Send className="mr-2 h-4 w-4" />
+                  <PaperPlaneTilt className="mr-2 h-4 w-4" />
                   Send Broadcast
                 </>
               )}

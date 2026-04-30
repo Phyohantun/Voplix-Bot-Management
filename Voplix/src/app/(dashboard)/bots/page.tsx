@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Bot, Plus, Webhook, CheckCircle, XCircle } from 'lucide-react';
+import { Robot, Plus, LinkSimple, CheckCircle, XCircle } from '@phosphor-icons/react/dist/ssr';
 import Link from 'next/link';
 import { DeleteBotButton } from '@/components/bots/delete-bot-button';
 import { ReconnectWebhookButton } from '@/components/bots/reconnect-webhook-button';
@@ -71,7 +71,7 @@ export default async function BotsPage() {
         <Card className="border-zinc-800 bg-zinc-900">
           <CardContent className="flex flex-col items-center justify-center py-12">
             <div className="h-12 w-12 rounded-full bg-zinc-800 flex items-center justify-center mb-4">
-              <Bot className="h-6 w-6 text-zinc-400" />
+              <Robot className="h-6 w-6 text-zinc-400" />
             </div>
             <h3 className="text-lg font-medium text-white mb-2">No bots connected</h3>
             <p className="text-zinc-400 text-center max-w-sm mb-4">
@@ -93,7 +93,7 @@ export default async function BotsPage() {
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
                     <div className="h-10 w-10 rounded-full bg-indigo-600/20 flex items-center justify-center">
-                      <Bot className="h-5 w-5 text-indigo-400" />
+                      <Robot className="h-5 w-5 text-indigo-400" />
                     </div>
                     <div>
                       <CardTitle className="text-base text-white">@{bot.bot_username}</CardTitle>
@@ -113,7 +113,7 @@ export default async function BotsPage() {
               <CardContent className="space-y-3">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-zinc-300">Webhook</span>
-                  <Webhook className="h-4 w-4 text-zinc-400" />
+                  <LinkSimple className="h-4 w-4 text-zinc-400" />
                   {bot.webhook_set ? (
                     <span className="flex items-center gap-1 text-green-400">
                       <CheckCircle className="h-3 w-3" />

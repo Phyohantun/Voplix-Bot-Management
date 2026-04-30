@@ -17,7 +17,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Plus, Pencil, Trash2, Package } from 'lucide-react';
+import { Plus, PencilSimple, Trash, Package } from '@phosphor-icons/react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 
@@ -471,7 +471,7 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems }: Menu
                         onClick={() => openEdit(item)}
                         aria-label="Edit product"
                       >
-                        <Pencil className="h-4 w-4" />
+                        <PencilSimple className="h-4 w-4" />
                       </Button>
                       <Button
                         type="button"
@@ -481,7 +481,7 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems }: Menu
                         onClick={() => handleDelete(item.id)}
                         aria-label="Remove product"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>

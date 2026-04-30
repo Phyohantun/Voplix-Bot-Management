@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { CheckCircle, XCircle } from 'lucide-react';
+import { CheckCircle, XCircle } from '@phosphor-icons/react';
 import { toast } from 'sonner';
 
 interface OrdersDashboardProps {

@@ -1,7 +1,7 @@
 'use client';
 
 import { User } from '@supabase/supabase-js';
-import { Bell, ChevronDown, Menu } from 'lucide-react';
+import { Bell, CaretDown, List } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { DashboardSidebar } from './sidebar';
@@ -98,7 +98,7 @@ export function DashboardHeader({ user, profile, announcements, unreadCount, bot
         <SheetTrigger
           render={<Button variant="ghost" size="icon" className="lg:hidden text-zinc-400" />}
         >
-          <Menu className="h-6 w-6" />
+          <List className="h-6 w-6" />
           <span className="sr-only">Open sidebar</span>
         </SheetTrigger>
         <SheetContent side="left" className="w-72 bg-zinc-900 border-zinc-800 p-0">
@@ -190,7 +190,7 @@ export function DashboardHeader({ user, profile, announcements, unreadCount, bot
                 initials
               )}
             </div>
-            <ChevronDown className="h-4 w-4 text-zinc-400" />
+            <CaretDown className="h-4 w-4 text-zinc-400" />
           </button>
           {openProfile ? (
             <div className="absolute right-0 mt-2 w-44 rounded-lg border border-zinc-800 bg-zinc-900 p-1 shadow-xl">

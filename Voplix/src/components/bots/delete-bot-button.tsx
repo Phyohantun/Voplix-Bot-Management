@@ -12,7 +12,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Trash2, Loader2 } from 'lucide-react';
+import { Trash, SpinnerGap } from '@phosphor-icons/react';
 import { toast } from 'sonner';
 
 interface DeleteBotButtonProps {
@@ -52,7 +52,7 @@ export function DeleteBotButton({ botId, botUsername }: DeleteBotButtonProps) {
       <DialogTrigger
         className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-700 text-red-400 hover:bg-red-950/30 hover:text-red-300"
       >
-        <Trash2 className="h-4 w-4" />
+        <Trash className="h-4 w-4" />
       </DialogTrigger>
       <DialogContent className="border-zinc-800 bg-zinc-900">
         <DialogHeader>
@@ -77,12 +77,12 @@ export function DeleteBotButton({ botId, botUsername }: DeleteBotButtonProps) {
           >
             {loading ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <SpinnerGap className="mr-2 h-4 w-4 animate-spin" />
                 Deleting...
               </>
             ) : (
               <>
-                <Trash2 className="mr-2 h-4 w-4" />
+                <Trash className="mr-2 h-4 w-4" />
                 Disconnect
               </>
             )}
