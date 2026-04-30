@@ -69,6 +69,13 @@ export function DashboardHeader({ user, profile, announcements, unreadCount, bot
   }, [activeBotId, bots, pathname, router]);
 
   useEffect(() => {
+    if (!BOT_SCOPED_PAGES.includes(pathname)) return;
+    bots.forEach((bot) => {
+      router.prefetch(`${pathname}?bot=${bot.id}`);
+    });
+  }, [bots, pathname, router]);
+
+  useEffect(() => {
     // Clear optimistic state once URL catches up.
     if (pendingBotId && activeBotId === pendingBotId) {
       setPendingBotId(null);
@@ -86,7 +93,7 @@ export function DashboardHeader({ user, profile, announcements, unreadCount, bot
   };
 
   return (
-    <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-x-4 border-b border-zinc-800 bg-zinc-900/95 px-4 backdrop-blur sm:gap-x-6 sm:px-6 lg:px-8">
+    <header className="sticky top-0 z-40 flex min-h-20 shrink-0 items-center gap-x-4 border-b border-zinc-800 bg-zinc-900/95 px-4 py-3 backdrop-blur sm:gap-x-6 sm:px-6 lg:px-8">
       <Sheet>
         <SheetTrigger
           render={<Button variant="ghost" size="icon" className="lg:hidden text-zinc-400" />}
@@ -105,7 +112,7 @@ export function DashboardHeader({ user, profile, announcements, unreadCount, bot
             Welcome, {profile?.display_name || user.email?.split('@')[0] || 'Owner'}
           </p>
           {bots.length > 0 ? (
-            <div className="mx-auto mt-1 w-full max-w-[260px] lg:mx-0">
+            <div className="mx-auto mt-1 w-full max-w-[300px] lg:mx-0">
               <Select value={selectedBot?.id || ''} onValueChange={handleBotChange}>
                 <SelectTrigger className="h-8 bg-zinc-800 border-zinc-700 text-white" disabled={isSwitchingBot}>
                   <span className="truncate">{selectedBot ? `@${selectedBot.bot_username}` : 'Select bot'}</span>
@@ -119,7 +126,7 @@ export function DashboardHeader({ user, profile, announcements, unreadCount, bot
                 </SelectContent>
               </Select>
               {isSwitchingBot ? (
-                <p className="mt-1 text-[11px] text-zinc-500">Switching bot...</p>
+                <p className="mt-1 text-sm font-medium text-indigo-300">Switching bot...</p>
               ) : null}
             </div>
           ) : (
