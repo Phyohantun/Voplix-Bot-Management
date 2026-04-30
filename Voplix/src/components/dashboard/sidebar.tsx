@@ -1,0 +1,99 @@
+'use client';
+
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { User } from '@supabase/supabase-js';
+import { 
+  LayoutDashboard, 
+  Bot, 
+  ShoppingCart, 
+  Menu, 
+  Megaphone, 
+  Settings,
+  LogOut
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { createClient } from '@/lib/supabase/client';
+import { useRouter } from 'next/navigation';
+
+interface DashboardSidebarProps {
+  user: User;
+}
+
+const navigation = [
+  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { name: 'Bots', href: '/bots', icon: Bot },
+  { name: 'Menu', href: '/menu', icon: Menu },
+  { name: 'Orders', href: '/orders', icon: ShoppingCart },
+  { name: 'Broadcast', href: '/broadcast', icon: Megaphone },
+  { name: 'Settings', href: '/settings', icon: Settings },
+];
+
+export function DashboardSidebar({ user }: DashboardSidebarProps) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const supabase = createClient();
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push('/login');
+    router.refresh();
+  };
+
+  return (
+    <div className="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-72 lg:flex-col">
+      <div className="flex grow flex-col gap-y-5 overflow-y-auto border-r border-zinc-800 bg-zinc-900 px-6">
+        <div className="flex h-16 shrink-0 items-center">
+          <Link href="/dashboard" className="flex items-center gap-2">
+            <div className="h-8 w-8 rounded-lg bg-indigo-600 flex items-center justify-center">
+              <Bot className="h-5 w-5 text-white" />
+            </div>
+            <span className="text-xl font-bold text-white">BotManager</span>
+          </Link>
+        </div>
+        
+        <nav className="flex flex-1 flex-col">
+          <ul role="list" className="flex flex-1 flex-col gap-y-7">
+            <li>
+              <ul role="list" className="-mx-2 space-y-1">
+                {navigation.map((item) => (
+                  <li key={item.name}>
+                    <Link
+                      href={item.href}
+                      className={cn(
+                        'group flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6',
+                        pathname === item.href || pathname.startsWith(`${item.href}/`)
+                          ? 'bg-indigo-600 text-white'
+                          : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
+                      )}
+                    >
+                      <item.icon className="h-5 w-5 shrink-0" aria-hidden="true" />
+                      {item.name}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </li>
+            
+            <li className="-mx-6 mt-auto">
+              <div className="flex items-center gap-x-4 px-6 py-3 text-sm font-semibold leading-6 text-white">
+                <div className="h-8 w-8 rounded-full bg-zinc-700 flex items-center justify-center">
+                  <span className="text-xs">{user.email?.[0].toUpperCase()}</span>
+                </div>
+                <span className="sr-only">Your profile</span>
+                <span aria-hidden="true">{user.email}</span>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="flex w-full items-center gap-x-3 rounded-md px-6 py-2 text-sm font-semibold text-zinc-400 hover:text-white hover:bg-zinc-800"
+              >
+                <LogOut className="h-5 w-5 shrink-0" />
+                Logout
+              </button>
+            </li>
+          </ul>
+        </nav>
+      </div>
+    </div>
+  );
+}
