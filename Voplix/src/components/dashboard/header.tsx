@@ -1,7 +1,7 @@
 'use client';
 
 import { User } from '@supabase/supabase-js';
-import { Bell, Bot, ChevronDown, Menu } from 'lucide-react';
+import { Bell, ChevronDown, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { DashboardSidebar } from './sidebar';
@@ -62,21 +62,16 @@ export function DashboardHeader({ user, profile, announcements, unreadCount }: D
       </Sheet>
 
       <div className="flex flex-1 items-center justify-between">
-        <div className="hidden items-center gap-2 lg:flex">
-          <div className="h-8 w-8 rounded-lg bg-indigo-600 flex items-center justify-center">
-            <Bot className="h-5 w-5 text-white" />
-          </div>
-          <span className="text-white font-semibold">Voplix</span>
-        </div>
-
-        <div className="flex-1 text-center">
-          <p className="text-sm text-zinc-400">Business</p>
+        <div className="flex-1 text-center lg:text-left">
+          <p className="text-sm text-zinc-400 truncate">
+            Welcome, {profile?.display_name || user.email?.split('@')[0] || 'Owner'}
+          </p>
           <p className="text-sm font-semibold text-white truncate">
-            {profile?.business_name || 'Welcome Digital Shop'}
+            {profile?.business_name || 'Digital Shop'}
           </p>
         </div>
 
-        <div className="relative">
+        <div className="relative ml-3">
           <Button
             variant="ghost"
             size="icon"
