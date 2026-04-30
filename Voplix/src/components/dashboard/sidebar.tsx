@@ -15,6 +15,7 @@ import {
   SignOut
 } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
+import { VoplixWordmark } from '@/components/brand/voplix-wordmark';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 
@@ -54,7 +55,7 @@ export function DashboardSidebar({ user, mobile = false }: DashboardSidebarProps
             <div className="h-8 w-8 overflow-hidden rounded-lg ring-1 ring-zinc-700">
               <Image src="/apple-touch-icon.png" alt="Voplix logo" width={32} height={32} className="h-full w-full object-cover" />
             </div>
-            <span className="text-xl font-semibold tracking-[-0.02em] text-white">Voplix</span>
+            <VoplixWordmark className="text-xl" />
           </Link>
         </div>
         

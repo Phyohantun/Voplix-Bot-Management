@@ -3,6 +3,7 @@ import Image from 'next/image';
 import { ArrowRight, Lightning, ShieldCheck, Storefront } from '@phosphor-icons/react/dist/ssr';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { VoplixWordmark } from '@/components/brand/voplix-wordmark';
 
 export default function HomePage() {
   return (
@@ -14,7 +15,7 @@ export default function HomePage() {
             <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl ring-1 ring-zinc-700">
               <Image src="/apple-touch-icon.png" alt="Voplix logo" width={36} height={36} className="h-full w-full object-cover" />
             </div>
-            <span className="text-lg font-semibold tracking-[-0.02em] text-white">Voplix</span>
+            <VoplixWordmark className="text-lg" />
           </div>
           <div className="flex items-center gap-2">
             <Link href="/login">

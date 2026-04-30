@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { DM_Sans, Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
@@ -11,6 +11,13 @@ const geistSans = Geist({
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+});
+
+/** DM Sans SemiBold only (600) — wordmark / brand text */
+const voplixWordmark = DM_Sans({
+  variable: "--font-voplix-wordmark",
+  subsets: ["latin"],
+  weight: ["600"],
 });
 
 const metadataBase = new URL(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000");
@@ -49,7 +56,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}
+      className={`${geistSans.variable} ${geistMono.variable} ${voplixWordmark.variable} h-full antialiased dark`}
     >
       <body className="min-h-full flex flex-col bg-zinc-950">
         {children}
