@@ -26,9 +26,8 @@ export const metadata: Metadata = {
   metadataBase,
   title: "Voplix - Telegram Bot Management",
   description: "Manage your Telegram bots, orders, and digital products",
+  // Tab favicon: `src/app/favicon.ico` (Next.js serves it at /favicon.ico). Keep apple touch separate.
   icons: {
-    icon: [{ url: "/favicon.ico", sizes: "any" }],
-    shortcut: "/favicon.ico",
     apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
   },
   openGraph: {
