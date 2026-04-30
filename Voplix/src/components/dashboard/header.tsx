@@ -39,11 +39,16 @@ export function DashboardHeader({ user, profile, announcements, unreadCount, bot
       (activeBotId ? bots.find((b) => b.id === activeBotId) : null) ||
       bots[0] ||
       null);
+  const firstName =
+    typeof user.user_metadata?.first_name === 'string' ? user.user_metadata.first_name.trim() : '';
+  const lastName =
+    typeof user.user_metadata?.last_name === 'string' ? user.user_metadata.last_name.trim() : '';
+  const fullName = [firstName, lastName].filter(Boolean).join(' ').trim();
 
   const initials = useMemo(() => {
-    const src = (profile?.display_name || profile?.business_name || user.email || 'U').trim();
+    const src = (firstName || profile?.display_name || user.email || 'U').trim();
     return src.slice(0, 1).toUpperCase();
-  }, [profile?.display_name, profile?.business_name, user.email]);
+  }, [firstName, profile?.display_name, user.email]);
 
   const onLogout = async () => {
     await supabase.auth.signOut();
@@ -109,7 +114,7 @@ export function DashboardHeader({ user, profile, announcements, unreadCount, bot
       <div className="flex flex-1 items-center justify-between gap-2">
         <div className="min-w-0 flex-1 text-left">
           <p className="text-sm text-zinc-400 truncate">
-            Welcome, {profile?.display_name || user.email?.split('@')[0] || 'Owner'}
+            Welcome, {fullName || profile?.display_name || user.email?.split('@')[0] || 'Owner'}
           </p>
           {bots.length > 0 ? (
             <div className="mt-1 w-full max-w-[220px] sm:max-w-[300px]">
@@ -183,12 +188,7 @@ export function DashboardHeader({ user, profile, announcements, unreadCount, bot
             }}
           >
             <div className="h-8 w-8 rounded-full overflow-hidden bg-zinc-800 flex items-center justify-center text-sm text-zinc-200">
-              {profile?.avatar_data_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={profile.avatar_data_url} alt="Profile avatar" className="h-full w-full object-cover" />
-              ) : (
-                initials
-              )}
+              {initials}
             </div>
             <CaretDown className="h-4 w-4 text-zinc-400" />
           </button>

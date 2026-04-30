@@ -1,73 +1,60 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 
 interface ProfileFormProps {
-  initialDisplayName: string;
-  initialBusinessName: string;
-  initialAvatarDataUrl: string | null;
+  initialFirstName: string;
+  initialLastName: string;
   mode: 'setup' | 'edit';
 }
 
 export function ProfileForm({
-  initialDisplayName,
-  initialBusinessName,
-  initialAvatarDataUrl,
+  initialFirstName,
+  initialLastName,
   mode,
 }: ProfileFormProps) {
   const router = useRouter();
-  const [displayName, setDisplayName] = useState(initialDisplayName);
-  const [businessName, setBusinessName] = useState(initialBusinessName);
-  const [avatarDataUrl, setAvatarDataUrl] = useState<string | null>(initialAvatarDataUrl);
+  const supabase = createClient();
+  const [firstName, setFirstName] = useState(initialFirstName);
+  const [lastName, setLastName] = useState(initialLastName);
   const [loading, setLoading] = useState(false);
 
-  const initials = useMemo(() => {
-    const src = (displayName || businessName || 'U').trim();
-    return src.slice(0, 1).toUpperCase();
-  }, [displayName, businessName]);
-
-  const onPickAvatar = async (file: File | null) => {
-    if (!file) return;
-    if (file.size > 1_000_000) {
-      toast.error('Image must be smaller than 1MB');
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result;
-      if (typeof result === 'string') {
-        setAvatarDataUrl(result);
-      }
-    };
-    reader.readAsDataURL(file);
-  };
-
   const onSave = async () => {
-    if (!displayName.trim()) {
-      toast.error('Please enter your nickname or name');
+    if (!firstName.trim()) {
+      toast.error('Please enter your first name');
       return;
     }
-    if (!businessName.trim()) {
-      toast.error('Please enter your business name');
+    if (!lastName.trim()) {
+      toast.error('Please enter your last name');
       return;
     }
 
     setLoading(true);
     try {
+      const fullName = `${firstName.trim()} ${lastName.trim()}`;
+      const { error: authUpdateError } = await supabase.auth.updateUser({
+        data: {
+          first_name: firstName.trim(),
+          last_name: lastName.trim(),
+          full_name: fullName,
+        },
+      });
+      if (authUpdateError) {
+        throw authUpdateError;
+      }
+
       const response = await fetch('/api/profile', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          display_name: displayName.trim(),
-          business_name: businessName.trim(),
-          avatar_data_url: avatarDataUrl,
+          display_name: fullName,
         }),
       });
 
@@ -90,54 +77,43 @@ export function ProfileForm({
     <Card className="border-zinc-800 bg-zinc-900">
       <CardHeader>
         <CardTitle className="text-white">
-          {mode === 'setup' ? 'Set up your profile' : 'Edit profile'}
+          {mode === 'setup' ? 'Set up your name' : 'Edit profile'}
         </CardTitle>
         <CardDescription className="text-zinc-400">
           {mode === 'setup'
-            ? 'Complete these details before using your dashboard.'
-            : 'Update your personal and business details.'}
+            ? 'Complete your first and last name before using your dashboard.'
+            : 'Update your account name details.'}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex items-center gap-4">
-          <div className="h-14 w-14 rounded-full bg-zinc-800 overflow-hidden flex items-center justify-center text-zinc-300 font-semibold">
-            {avatarDataUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={avatarDataUrl} alt="Profile avatar" className="h-full w-full object-cover" />
-            ) : (
-              initials
-            )}
+        <div className="rounded-md border border-zinc-800 bg-zinc-900/60 p-3 text-sm text-zinc-400">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-800 text-zinc-200">
+              {(firstName.trim() || 'U').slice(0, 1).toUpperCase()}
+            </div>
+            <p>Profile image upload is disabled. The app uses your first-name initial.</p>
           </div>
-          <div className="space-y-1">
-            <Label className="text-zinc-300">Profile image</Label>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label className="text-zinc-300">First Name</Label>
             <Input
-              type="file"
-              accept="image/png,image/jpeg,image/webp"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              placeholder="e.g. John"
               className="bg-zinc-800 border-zinc-700 text-white"
-              onChange={(e) => onPickAvatar(e.target.files?.[0] || null)}
             />
-            <p className="text-xs text-zinc-500">PNG/JPG/WEBP up to 1MB.</p>
           </div>
-        </div>
-
-        <div className="space-y-2">
-          <Label className="text-zinc-300">Nickname or name</Label>
-          <Input
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
-            placeholder="e.g. Alex"
-            className="bg-zinc-800 border-zinc-700 text-white"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label className="text-zinc-300">Business name</Label>
-          <Input
-            value={businessName}
-            onChange={(e) => setBusinessName(e.target.value)}
-            placeholder="e.g. Welcome Digital Shop"
-            className="bg-zinc-800 border-zinc-700 text-white"
-          />
+          <div className="space-y-2">
+            <Label className="text-zinc-300">Last Name</Label>
+            <Input
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              placeholder="e.g. Doe"
+              className="bg-zinc-800 border-zinc-700 text-white"
+            />
+          </div>
         </div>
 
         <Button onClick={onSave} disabled={loading} className="w-full bg-indigo-600 hover:bg-indigo-700">

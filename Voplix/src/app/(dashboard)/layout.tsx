@@ -21,10 +21,6 @@ export default async function DashboardLayout({
     .eq('user_id', user.id)
     .maybeSingle();
 
-  if (!profile?.display_name || !profile?.business_name) {
-    redirect('/profile-setup');
-  }
-
   const { data: announcements } = await (supabase as any)
     .from('system_announcements')
     .select('id, title, message, created_at')

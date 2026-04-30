@@ -9,11 +9,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Robot } from '@phosphor-icons/react';
 import { toast } from 'sonner';
 
 export default function SignupPage() {
   const router = useRouter();
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -23,6 +24,16 @@ export default function SignupPage() {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!firstName.trim()) {
+      toast.error('First name is required');
+      return;
+    }
+
+    if (!lastName.trim()) {
+      toast.error('Last name is required');
+      return;
+    }
+
     if (password !== confirmPassword) {
       toast.error('Passwords do not match');
       return;
@@ -40,6 +51,11 @@ export default function SignupPage() {
       email,
       password,
       options: {
+        data: {
+          first_name: firstName.trim(),
+          last_name: lastName.trim(),
+          full_name: `${firstName.trim()} ${lastName.trim()}`,
+        },
         emailRedirectTo: `${siteUrl}/api/auth/callback`,
       },
     });
@@ -54,20 +70,6 @@ export default function SignupPage() {
     setLoading(false);
   };
 
-  const handleGoogleSignup = async () => {
-    const siteUrl = getClientSiteUrl();
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${siteUrl}/api/auth/callback`,
-      },
-    });
-
-    if (error) {
-      toast.error(error.message);
-    }
-  };
-
   return (
     <Card className="border-zinc-800 bg-zinc-900">
       <CardHeader className="space-y-1">
@@ -78,6 +80,32 @@ export default function SignupPage() {
       </CardHeader>
       <CardContent className="space-y-4">
         <form onSubmit={handleSignup} className="space-y-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="firstName" className="text-zinc-300">First Name</Label>
+              <Input
+                id="firstName"
+                type="text"
+                placeholder="John"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                required
+                className="bg-zinc-800 border-zinc-700 text-white"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="lastName" className="text-zinc-300">Last Name</Label>
+              <Input
+                id="lastName"
+                type="text"
+                placeholder="Doe"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                required
+                className="bg-zinc-800 border-zinc-700 text-white"
+              />
+            </div>
+          </div>
           <div className="space-y-2">
             <Label htmlFor="email" className="text-zinc-300">Email</Label>
             <Input
@@ -120,24 +148,6 @@ export default function SignupPage() {
             {loading ? 'Creating account...' : 'Create account'}
           </Button>
         </form>
-
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t border-zinc-700" />
-          </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-zinc-900 px-2 text-zinc-500">Or continue with</span>
-          </div>
-        </div>
-
-        <Button 
-          variant="outline" 
-          className="w-full border-zinc-700 text-zinc-300 hover:bg-zinc-800"
-          onClick={handleGoogleSignup}
-        >
-          <Robot className="mr-2 h-4 w-4" />
-          Google
-        </Button>
 
         <p className="text-center text-sm text-zinc-400">
           Already have an account?{' '}

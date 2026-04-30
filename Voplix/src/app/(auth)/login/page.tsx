@@ -4,12 +4,10 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
-import { getClientSiteUrl } from '@/lib/site-url';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Robot } from '@phosphor-icons/react';
 import { toast } from 'sonner';
 
 export default function LoginPage() {
@@ -37,20 +35,6 @@ export default function LoginPage() {
     }
 
     setLoading(false);
-  };
-
-  const handleGoogleLogin = async () => {
-    const siteUrl = getClientSiteUrl();
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${siteUrl}/api/auth/callback`,
-      },
-    });
-
-    if (error) {
-      toast.error(error.message);
-    }
   };
 
   return (
@@ -94,24 +78,6 @@ export default function LoginPage() {
             {loading ? 'Logging in...' : 'Login'}
           </Button>
         </form>
-
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t border-zinc-700" />
-          </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-zinc-900 px-2 text-zinc-500">Or continue with</span>
-          </div>
-        </div>
-
-        <Button 
-          variant="outline" 
-          className="w-full border-zinc-700 text-zinc-300 hover:bg-zinc-800"
-          onClick={handleGoogleLogin}
-        >
-          <Robot className="mr-2 h-4 w-4" />
-          Google
-        </Button>
 
         <p className="text-center text-sm text-zinc-400">
           Don&apos;t have an account?{' '}

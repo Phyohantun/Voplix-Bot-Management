@@ -18,18 +18,26 @@ export default async function ProfilePage() {
     .eq('user_id', user.id)
     .maybeSingle();
 
+  const metadataFirstName =
+    typeof user.user_metadata?.first_name === 'string' ? user.user_metadata.first_name.trim() : '';
+  const metadataLastName =
+    typeof user.user_metadata?.last_name === 'string' ? user.user_metadata.last_name.trim() : '';
+  const [fallbackFirstName = '', ...restDisplayName] = (profile?.display_name || '').trim().split(' ');
+  const fallbackLastName = restDisplayName.join(' ');
+  const initialFirstName = metadataFirstName || fallbackFirstName;
+  const initialLastName = metadataLastName || fallbackLastName;
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-white">Profile</h1>
-        <p className="text-zinc-400">Manage your account and business details.</p>
+        <p className="text-zinc-400">Manage your account name details.</p>
       </div>
       <div className="max-w-2xl">
         <ProfileForm
           mode="edit"
-          initialDisplayName={profile?.display_name || ''}
-          initialBusinessName={profile?.business_name || ''}
-          initialAvatarDataUrl={profile?.avatar_data_url || null}
+          initialFirstName={initialFirstName}
+          initialLastName={initialLastName}
         />
       </div>
     </div>
