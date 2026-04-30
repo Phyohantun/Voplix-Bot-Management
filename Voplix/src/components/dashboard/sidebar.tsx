@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { User } from '@supabase/supabase-js';
 import { 
@@ -50,8 +51,8 @@ export function DashboardSidebar({ user, mobile = false }: DashboardSidebarProps
       <div className={`flex grow flex-col gap-y-5 overflow-y-auto bg-zinc-900 px-6 ${mobile ? '' : 'border-r border-zinc-800'}`}>
         <div className="flex h-16 shrink-0 items-center">
           <Link href="/dashboard" className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-indigo-600 flex items-center justify-center">
-              <Robot className="h-5 w-5 text-white" />
+            <div className="h-8 w-8 overflow-hidden rounded-lg ring-1 ring-zinc-700">
+              <Image src="/Voplix.PNG" alt="Voplix logo" width={32} height={32} className="h-full w-full object-cover" />
             </div>
             <span className="text-xl font-bold text-white">Voplix</span>
           </Link>

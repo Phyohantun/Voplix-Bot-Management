@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { ArrowRight, Lightning, ShieldCheck, Storefront } from '@phosphor-icons/react/dist/ssr';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -10,8 +11,8 @@ export default function HomePage() {
       <div className="relative mx-auto flex min-h-screen w-full max-w-6xl flex-col px-4 py-8 sm:px-6 lg:px-8">
         <header className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-600/20 text-indigo-300">
-              <Storefront className="h-5 w-5" />
+            <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl ring-1 ring-zinc-700">
+              <Image src="/Voplix.PNG" alt="Voplix logo" width={36} height={36} className="h-full w-full object-cover" />
             </div>
             <span className="text-lg font-semibold tracking-tight text-white">Voplix</span>
           </div>
