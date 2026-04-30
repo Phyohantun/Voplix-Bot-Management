@@ -54,7 +54,7 @@ export function DashboardSidebar({ user, mobile = false }: DashboardSidebarProps
             <div className="h-8 w-8 overflow-hidden rounded-lg ring-1 ring-zinc-700">
               <Image src="/apple-touch-icon.png" alt="Voplix logo" width={32} height={32} className="h-full w-full object-cover" />
             </div>
-            <span className="text-xl font-bold text-white">Voplix</span>
+            <span className="text-xl font-semibold tracking-[-0.02em] text-white">Voplix</span>
           </Link>
         </div>
         
