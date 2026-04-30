@@ -20,20 +20,20 @@ export const metadata: Metadata = {
   title: "Voplix - Telegram Bot Management",
   description: "Manage your Telegram bots, orders, and digital products",
   icons: {
-    icon: "/Voplix.PNG",
-    apple: "/Voplix.PNG",
-    shortcut: "/Voplix.PNG",
+    icon: "/favicon.ico",
+    apple: "/apple-touch-icon.png",
+    shortcut: "/favicon-32x32.png",
   },
   openGraph: {
     title: "Voplix - Telegram Bot Management",
     description: "Manage your Telegram bots, orders, and digital products",
-    images: ["/Voplix.PNG"],
+    images: ["/android-chrome-512x512.png"],
   },
   twitter: {
     card: "summary_large_image",
     title: "Voplix - Telegram Bot Management",
     description: "Manage your Telegram bots, orders, and digital products",
-    images: ["/Voplix.PNG"],
+    images: ["/android-chrome-512x512.png"],
   },
 };
 

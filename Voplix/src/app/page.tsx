@@ -12,7 +12,7 @@ export default function HomePage() {
         <header className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl ring-1 ring-zinc-700">
-              <Image src="/Voplix.PNG" alt="Voplix logo" width={36} height={36} className="h-full w-full object-cover" />
+              <Image src="/apple-touch-icon.png" alt="Voplix logo" width={36} height={36} className="h-full w-full object-cover" />
             </div>
             <span className="text-lg font-semibold tracking-tight text-white">Voplix</span>
           </div>
