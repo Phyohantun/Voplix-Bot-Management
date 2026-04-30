@@ -15,11 +15,38 @@ export default async function DashboardLayout({
     redirect('/login');
   }
 
+  const { data: profile } = await (supabase as any)
+    .from('owner_profiles')
+    .select('*')
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  if (!profile?.display_name || !profile?.business_name) {
+    redirect('/profile-setup');
+  }
+
+  const { data: announcements } = await (supabase as any)
+    .from('system_announcements')
+    .select('id, title, message, created_at')
+    .eq('is_active', true)
+    .order('created_at', { ascending: false })
+    .limit(20);
+
+  const unreadCount = ((announcements as any[]) || []).filter((a) => {
+    if (!profile.notification_last_seen_at) return true;
+    return new Date(a.created_at).getTime() > new Date(profile.notification_last_seen_at).getTime();
+  }).length;
+
   return (
     <div className="min-h-screen bg-zinc-950">
       <DashboardSidebar user={user} />
       <div className="lg:pl-72">
-        <DashboardHeader user={user} />
+        <DashboardHeader
+          user={user}
+          profile={profile}
+          announcements={(announcements as any[]) || []}
+          unreadCount={unreadCount}
+        />
         <main className="py-8 px-4 sm:px-6 lg:px-8">
           {children}
         </main>

@@ -9,6 +9,7 @@ import {
   ShoppingCart, 
   Menu, 
   Megaphone, 
+  UserCircle,
   Settings,
   LogOut
 } from 'lucide-react';
@@ -26,6 +27,7 @@ const navigation = [
   { name: 'Menu', href: '/menu', icon: Menu },
   { name: 'Orders', href: '/orders', icon: ShoppingCart },
   { name: 'Broadcast', href: '/broadcast', icon: Megaphone },
+  { name: 'Profile', href: '/profile', icon: UserCircle },
   { name: 'Settings', href: '/settings', icon: Settings },
 ];
 

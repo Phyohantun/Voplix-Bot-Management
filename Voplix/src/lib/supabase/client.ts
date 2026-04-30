@@ -129,6 +129,30 @@ export type Database = {
         Insert: any;
         Update: any;
       };
+      owner_profiles: {
+        Row: {
+          user_id: string;
+          display_name: string | null;
+          business_name: string | null;
+          avatar_data_url: string | null;
+          notification_last_seen_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: any;
+        Update: any;
+      };
+      system_announcements: {
+        Row: {
+          id: string;
+          title: string;
+          message: string;
+          is_active: boolean;
+          created_at: string;
+        };
+        Insert: any;
+        Update: any;
+      };
       user_states: {
         Row: {
           id: string;

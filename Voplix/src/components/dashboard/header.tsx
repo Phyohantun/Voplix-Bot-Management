@@ -1,16 +1,52 @@
 'use client';
 
 import { User } from '@supabase/supabase-js';
-import { Menu } from 'lucide-react';
+import { Bell, Bot, ChevronDown, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { DashboardSidebar } from './sidebar';
+import { useMemo, useState } from 'react';
+import { createClient } from '@/lib/supabase/client';
+import { useRouter } from 'next/navigation';
 
 interface DashboardHeaderProps {
   user: User;
+  profile: {
+    display_name: string | null;
+    business_name: string | null;
+    avatar_data_url: string | null;
+  } | null;
+  announcements: Array<{ id: string; title: string; message: string; created_at: string }>;
+  unreadCount: number;
 }
 
-export function DashboardHeader({ user }: DashboardHeaderProps) {
+export function DashboardHeader({ user, profile, announcements, unreadCount }: DashboardHeaderProps) {
+  const [openProfile, setOpenProfile] = useState(false);
+  const [openNotifications, setOpenNotifications] = useState(false);
+  const supabase = createClient();
+  const router = useRouter();
+
+  const initials = useMemo(() => {
+    const src = (profile?.display_name || profile?.business_name || user.email || 'U').trim();
+    return src.slice(0, 1).toUpperCase();
+  }, [profile?.display_name, profile?.business_name, user.email]);
+
+  const onLogout = async () => {
+    await supabase.auth.signOut();
+    router.push('/login');
+    router.refresh();
+  };
+
+  const markNotificationsRead = async () => {
+    if (unreadCount <= 0) return;
+    await fetch('/api/profile', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ notification_last_seen_at: true }),
+    });
+    router.refresh();
+  };
+
   return (
     <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-x-4 border-b border-zinc-800 bg-zinc-900/95 px-4 backdrop-blur sm:gap-x-6 sm:px-6 lg:px-8">
       <Sheet>
@@ -25,9 +61,100 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
         </SheetContent>
       </Sheet>
 
-      <div className="flex flex-1 gap-x-4 self-stretch lg:gap-x-6">
-        <div className="flex flex-1 items-center">
-          <p className="hidden text-sm text-zinc-400 sm:block">Signed in as {user.email}</p>
+      <div className="flex flex-1 items-center justify-between">
+        <div className="hidden items-center gap-2 lg:flex">
+          <div className="h-8 w-8 rounded-lg bg-indigo-600 flex items-center justify-center">
+            <Bot className="h-5 w-5 text-white" />
+          </div>
+          <span className="text-white font-semibold">Voplix</span>
+        </div>
+
+        <div className="flex-1 text-center">
+          <p className="text-sm text-zinc-400">Business</p>
+          <p className="text-sm font-semibold text-white truncate">
+            {profile?.business_name || 'Welcome Digital Shop'}
+          </p>
+        </div>
+
+        <div className="relative">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-zinc-300"
+            onClick={async () => {
+              const next = !openNotifications;
+              setOpenNotifications(next);
+              setOpenProfile(false);
+              if (next) await markNotificationsRead();
+            }}
+          >
+            <Bell className="h-5 w-5" />
+            {unreadCount > 0 ? (
+              <span className="absolute -top-1 -right-1 min-w-4 rounded-full bg-indigo-600 px-1 text-[10px] text-white">
+                {unreadCount}
+              </span>
+            ) : null}
+            <span className="sr-only">Notifications</span>
+          </Button>
+          {openNotifications ? (
+            <div className="absolute right-0 mt-2 w-80 rounded-lg border border-zinc-800 bg-zinc-900 p-2 shadow-xl">
+              <p className="px-2 py-1 text-xs uppercase tracking-wide text-zinc-500">System announcements</p>
+              <div className="max-h-80 overflow-auto">
+                {announcements.length === 0 ? (
+                  <p className="px-2 py-4 text-sm text-zinc-400">No announcements yet.</p>
+                ) : (
+                  announcements.map((item) => (
+                    <div key={item.id} className="rounded-md px-2 py-2 hover:bg-zinc-800">
+                      <p className="text-sm font-medium text-white">{item.title}</p>
+                      <p className="text-xs text-zinc-400 mt-0.5">{item.message}</p>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          ) : null}
+        </div>
+
+        <div className="relative ml-2">
+          <button
+            type="button"
+            className="flex items-center gap-2 rounded-md px-2 py-1 hover:bg-zinc-800"
+            onClick={() => {
+              setOpenProfile((v) => !v);
+              setOpenNotifications(false);
+            }}
+          >
+            <div className="h-8 w-8 rounded-full overflow-hidden bg-zinc-800 flex items-center justify-center text-sm text-zinc-200">
+              {profile?.avatar_data_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={profile.avatar_data_url} alt="Profile avatar" className="h-full w-full object-cover" />
+              ) : (
+                initials
+              )}
+            </div>
+            <ChevronDown className="h-4 w-4 text-zinc-400" />
+          </button>
+          {openProfile ? (
+            <div className="absolute right-0 mt-2 w-44 rounded-lg border border-zinc-800 bg-zinc-900 p-1 shadow-xl">
+              <button
+                type="button"
+                className="w-full rounded-md px-3 py-2 text-left text-sm text-zinc-200 hover:bg-zinc-800"
+                onClick={() => {
+                  setOpenProfile(false);
+                  router.push('/profile');
+                }}
+              >
+                Profile
+              </button>
+              <button
+                type="button"
+                className="w-full rounded-md px-3 py-2 text-left text-sm text-zinc-200 hover:bg-zinc-800"
+                onClick={onLogout}
+              >
+                Logout
+              </button>
+            </div>
+          ) : null}
         </div>
       </div>
     </header>

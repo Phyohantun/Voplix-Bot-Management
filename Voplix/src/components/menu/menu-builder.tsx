@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -83,12 +83,23 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems }: Menu
   const router = useRouter();
   const [menuItems, setMenuItems] = useState(initialItems);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isStartSettingsOpen, setIsStartSettingsOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
   const [loading, setLoading] = useState(false);
   const [startSettingsLoading, setStartSettingsLoading] = useState(false);
   const [startWelcomeMessage, setStartWelcomeMessage] = useState(selectedBot.start_welcome_message ?? '');
   const [startShowMenuOnly, setStartShowMenuOnly] = useState(selectedBot.start_show_menu_only);
   const [startShowTip, setStartShowTip] = useState(selectedBot.start_show_tip);
+
+  useEffect(() => {
+    setMenuItems(initialItems);
+  }, [initialItems, selectedBot.id]);
+
+  useEffect(() => {
+    setStartWelcomeMessage(selectedBot.start_welcome_message ?? '');
+    setStartShowMenuOnly(selectedBot.start_show_menu_only);
+    setStartShowTip(selectedBot.start_show_tip);
+  }, [selectedBot.id, selectedBot.start_welcome_message, selectedBot.start_show_menu_only, selectedBot.start_show_tip]);
   const [formData, setFormData] = useState<FormState>(emptyForm());
 
   const parsePrice = (): number => {
@@ -319,104 +330,122 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems }: Menu
           </SelectContent>
         </Select>
 
-        <Dialog
-          open={isCreateOpen}
-          onOpenChange={(open) => {
-            setIsCreateOpen(open);
-            if (open) setFormData(emptyForm());
-          }}
-        >
-          <DialogTrigger
-            render={
-              <Button type="button" className="bg-indigo-600 hover:bg-indigo-700 w-full sm:w-auto">
-                <Plus className="mr-2 h-4 w-4" />
-                Add product
-              </Button>
-            }
-          />
-          <DialogContent className="border-zinc-800 bg-zinc-900 sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle className="text-white">New product</DialogTitle>
-              <DialogDescription className="text-zinc-400">
-                Appears in Telegram when customers send /start or tap “Browse menu”.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-2 max-h-[70vh] overflow-y-auto pr-1">{formFields}</div>
-            <DialogFooter className="gap-2 sm:gap-0">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setIsCreateOpen(false)}
-                className="border-zinc-700 text-zinc-300"
-              >
-                Cancel
-              </Button>
-              <Button
-                type="button"
-                onClick={handleCreate}
-                disabled={loading}
-                className="bg-indigo-600 hover:bg-indigo-700"
-              >
-                {loading ? 'Saving…' : 'Add to menu'}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+          <Dialog open={isStartSettingsOpen} onOpenChange={setIsStartSettingsOpen}>
+            <DialogTrigger
+              render={
+                <Button type="button" variant="outline" className="w-full sm:w-auto border-zinc-700 text-zinc-300">
+                  Edit /start message
+                </Button>
+              }
+            />
+            <DialogContent className="border-zinc-800 bg-zinc-900 sm:max-w-lg">
+              <DialogHeader>
+                <DialogTitle className="text-white">Telegram /start settings</DialogTitle>
+                <DialogDescription className="text-zinc-400">
+                  Customize what users see when they press Start or type /start.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-2 max-h-[70vh] overflow-y-auto pr-1">
+                <div className="space-y-2">
+                  <Label className="text-zinc-300">Custom welcome message (optional)</Label>
+                  <Textarea
+                    value={startWelcomeMessage}
+                    onChange={(e) => setStartWelcomeMessage(e.target.value)}
+                    className="bg-zinc-800 border-zinc-700 text-white min-h-[88px]"
+                    placeholder="e.g. Welcome to Voplix! Choose your package below."
+                  />
+                  <p className="text-xs text-zinc-500">
+                    Leave empty to use default message. This appears above your menu list.
+                  </p>
+                </div>
+
+                <label className="flex items-center gap-3 text-sm text-zinc-300">
+                  <input
+                    type="checkbox"
+                    checked={startShowMenuOnly}
+                    onChange={(e) => setStartShowMenuOnly(e.target.checked)}
+                    className="h-4 w-4 rounded border-zinc-600 bg-zinc-800"
+                  />
+                  Show only menu list on /start (hide welcome/title text)
+                </label>
+
+                <label className="flex items-center gap-3 text-sm text-zinc-300">
+                  <input
+                    type="checkbox"
+                    checked={startShowTip}
+                    onChange={(e) => setStartShowTip(e.target.checked)}
+                    className="h-4 w-4 rounded border-zinc-600 bg-zinc-800"
+                  />
+                  Show "Browse menu" tip message after /start
+                </label>
+              </div>
+              <DialogFooter className="gap-2 sm:gap-0">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsStartSettingsOpen(false)}
+                  className="border-zinc-700 text-zinc-300"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleSaveStartSettings}
+                  disabled={startSettingsLoading}
+                  className="bg-indigo-600 hover:bg-indigo-700"
+                >
+                  {startSettingsLoading ? 'Saving…' : 'Save /start settings'}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog
+            open={isCreateOpen}
+            onOpenChange={(open) => {
+              setIsCreateOpen(open);
+              if (open) setFormData(emptyForm());
+            }}
+          >
+            <DialogTrigger
+              render={
+                <Button type="button" className="bg-indigo-600 hover:bg-indigo-700 w-full sm:w-auto">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add product
+                </Button>
+              }
+            />
+            <DialogContent className="border-zinc-800 bg-zinc-900 sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle className="text-white">New product</DialogTitle>
+                <DialogDescription className="text-zinc-400">
+                  Appears in Telegram when customers send /start or tap “Browse menu”.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-2 max-h-[70vh] overflow-y-auto pr-1">{formFields}</div>
+              <DialogFooter className="gap-2 sm:gap-0">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsCreateOpen(false)}
+                  className="border-zinc-700 text-zinc-300"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleCreate}
+                  disabled={loading}
+                  className="bg-indigo-600 hover:bg-indigo-700"
+                >
+                  {loading ? 'Saving…' : 'Add to menu'}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
-
-      <Card className="border-zinc-800 bg-zinc-900">
-        <CardHeader>
-          <CardTitle className="text-white">Telegram /start message settings</CardTitle>
-          <CardDescription className="text-zinc-400">
-            Customize what users see when they press Start or type /start (no code needed).
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label className="text-zinc-300">Custom welcome message (optional)</Label>
-            <Textarea
-              value={startWelcomeMessage}
-              onChange={(e) => setStartWelcomeMessage(e.target.value)}
-              className="bg-zinc-800 border-zinc-700 text-white min-h-[88px]"
-              placeholder="e.g. Welcome to Voplix! Choose your package below."
-            />
-            <p className="text-xs text-zinc-500">
-              Leave empty to use default message. This appears above your menu list.
-            </p>
-          </div>
-
-          <label className="flex items-center gap-3 text-sm text-zinc-300">
-            <input
-              type="checkbox"
-              checked={startShowMenuOnly}
-              onChange={(e) => setStartShowMenuOnly(e.target.checked)}
-              className="h-4 w-4 rounded border-zinc-600 bg-zinc-800"
-            />
-            Show only menu list on /start (hide welcome/title text)
-          </label>
-
-          <label className="flex items-center gap-3 text-sm text-zinc-300">
-            <input
-              type="checkbox"
-              checked={startShowTip}
-              onChange={(e) => setStartShowTip(e.target.checked)}
-              className="h-4 w-4 rounded border-zinc-600 bg-zinc-800"
-            />
-            Show "Browse menu" tip message after /start
-          </label>
-
-          <div className="pt-2">
-            <Button
-              type="button"
-              onClick={handleSaveStartSettings}
-              disabled={startSettingsLoading}
-              className="bg-indigo-600 hover:bg-indigo-700"
-            >
-              {startSettingsLoading ? 'Saving…' : 'Save /start settings'}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
 
       {menuItems.length === 0 ? (
         <Card className="border-zinc-800 bg-zinc-900">
