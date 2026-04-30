@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { OrdersDashboard } from '@/components/orders/orders-dashboard';
+import { AutoRefresh } from '@/components/dashboard/auto-refresh';
 
 async function getBots(userId: string) {
   const supabase = await createClient();
@@ -67,6 +68,7 @@ export default async function OrdersPage({
   
   return (
     <div className="space-y-6">
+      <AutoRefresh intervalMs={30000} />
       <div>
         <h1 className="text-2xl font-bold text-white">Orders</h1>
         <p className="text-zinc-400">Manage and fulfill customer orders</p>

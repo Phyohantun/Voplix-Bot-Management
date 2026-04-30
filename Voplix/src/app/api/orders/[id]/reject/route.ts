@@ -17,6 +17,9 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const body = await request.json().catch(() => ({}));
+    const reason = typeof body.reason === 'string' ? body.reason.trim() : '';
+
     // Get order with bot and menu item
     const { data: order } = await (supabaseAdmin
       .from('orders') as any)
@@ -33,6 +36,7 @@ export async function POST(
       .from('orders') as any)
       .update({
         status: 'REJECTED',
+        manual_delivery_data: reason ? { reject_reason: reason } : null,
         updated_at: new Date().toISOString(),
       })
       .eq('id', id);
@@ -47,7 +51,7 @@ export async function POST(
     await sendMessage(
       token,
       order.telegram_user_id,
-      `<b>Order Update</b>\n\nYour order for ${order.menu_items.name} has been cancelled.\n\nIf you believe this is an error, please contact support.`,
+      `<b>Order Update</b>\n\nYour order for ${order.menu_items.name} has been cancelled.${reason ? `\n\nReason: ${reason}` : ''}\n\nIf you believe this is an error, please contact support.`,
       { parse_mode: 'HTML' }
     );
 

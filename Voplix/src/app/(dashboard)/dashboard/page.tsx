@@ -2,63 +2,121 @@ import { createClient } from '@/lib/supabase/server';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Bot, ShoppingCart, DollarSign, Clock } from 'lucide-react';
 import Link from 'next/link';
+import { AutoRefresh } from '@/components/dashboard/auto-refresh';
 
-async function getDashboardStats(userId: string) {
+interface BotRecord {
+  id: string;
+  bot_username: string;
+}
+
+interface PendingOrderRow {
+  id: string;
+  telegram_username: string | null;
+  created_at: string;
+  menu_items: { name: string; price: number } | null;
+}
+
+async function getBots(userId: string) {
   const supabase = await createClient();
-  
-  // Get total bots
+  const { data } = await (supabase as any)
+    .from('bots')
+    .select('id, bot_username')
+    .eq('user_id', userId)
+    .eq('is_active', true)
+    .order('created_at', { ascending: false });
+  return ((data as BotRecord[]) || []);
+}
+
+async function getDashboardStats(userId: string, botId: string | null) {
+  const supabase = await createClient();
+
   const { count: totalBots } = await (supabase as any)
     .from('bots')
     .select('*', { count: 'exact', head: true })
     .eq('user_id', userId)
     .eq('is_active', true);
-  
-  // Get pending orders (simplified query)
-  const { data: pendingOrdersData } = await (supabase as any)
+
+  let pendingQuery = (supabase as any)
     .from('orders')
-    .select('id, bots!inner(user_id)')
+    .select('id, telegram_username, created_at, menu_items(name, price), bots!inner(user_id, id)')
     .eq('status', 'SLIP_SUBMITTED')
-    .eq('bots.user_id', userId);
-  
-  // Get total orders
-  const { data: totalOrdersData } = await (supabase as any)
+    .eq('bots.user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(8);
+  if (botId) pendingQuery = pendingQuery.eq('bot_id', botId);
+  const { data: pendingOrdersData } = await pendingQuery;
+
+  let totalOrdersQuery = (supabase as any)
     .from('orders')
     .select('id, bots!inner(user_id)')
     .eq('bots.user_id', userId);
-  
-  // Get total revenue (completed orders)
-  const { data: revenue } = await (supabase as any)
+  if (botId) totalOrdersQuery = totalOrdersQuery.eq('bot_id', botId);
+  const { data: totalOrdersData } = await totalOrdersQuery;
+
+  let revenueQuery = (supabase as any)
     .from('orders')
-    .select('menu_items!inner(price)')
+    .select('menu_items(price), bots!inner(user_id), status')
     .eq('status', 'COMPLETED')
-    .eq('bots!inner(user_id)', userId);
-  
-  const totalRevenue = (revenue as any[])?.reduce((sum, order) => sum + (order.menu_items?.price || 0), 0) || 0;
-  
+    .eq('bots.user_id', userId);
+  if (botId) revenueQuery = revenueQuery.eq('bot_id', botId);
+  const { data: revenue } = await revenueQuery;
+
+  const totalRevenue =
+    (revenue as any[])?.reduce((sum, order) => sum + Number(order.menu_items?.price || 0), 0) || 0;
+
   return {
     totalBots: totalBots || 0,
+    pendingOrdersData: (pendingOrdersData || []) as PendingOrderRow[],
     pendingOrders: (pendingOrdersData as any[])?.length || 0,
     totalOrders: (totalOrdersData as any[])?.length || 0,
     totalRevenue,
   };
 }
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ bot?: string }>;
+}) {
   const supabase = await createClient();
+  const params = await searchParams;
   const { data: { user } } = await supabase.auth.getUser();
   
   if (!user) {
     return null;
   }
-  
-  const stats = await getDashboardStats(user.id);
+
+  const bots = await getBots(user.id);
+  const selectedBotId = params.bot && bots.some((b) => b.id === params.bot) ? params.bot : null;
+  const stats = await getDashboardStats(user.id, selectedBotId);
   
   return (
     <div className="space-y-6">
+      <AutoRefresh intervalMs={30000} />
       <div className="space-y-1">
         <h1 className="text-2xl font-bold text-white">Dashboard</h1>
         <p className="text-zinc-400">A quick view of your bot activity and sales performance.</p>
       </div>
+
+      {bots.length > 1 ? (
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href="/dashboard"
+            className={`rounded-md px-3 py-1.5 text-sm ${selectedBotId ? 'bg-zinc-800 text-zinc-300' : 'bg-indigo-600 text-white'}`}
+          >
+            All bots
+          </Link>
+          {bots.map((bot) => (
+            <Link
+              key={bot.id}
+              href={`/dashboard?bot=${bot.id}`}
+              className={`rounded-md px-3 py-1.5 text-sm ${selectedBotId === bot.id ? 'bg-indigo-600 text-white' : 'bg-zinc-800 text-zinc-300'}`}
+            >
+              @{bot.bot_username}
+            </Link>
+          ))}
+        </div>
+      ) : null}
       
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card className="border-zinc-800 bg-zinc-900">
@@ -74,7 +132,7 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
         
-        <Link href="/orders">
+        <Link href={`/orders${selectedBotId ? `?bot=${selectedBotId}` : ''}`}>
           <Card className="border-zinc-800 bg-zinc-900 transition-colors hover:bg-zinc-800/50 cursor-pointer">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-zinc-300">Pending Approvals</CardTitle>
@@ -110,13 +168,13 @@ export default async function DashboardPage() {
           <CardContent>
             <div className="text-2xl font-bold text-white">{stats.totalRevenue.toLocaleString()} THB</div>
             <p className="text-xs text-zinc-400">
-              Completed orders
+              Completed paid orders
             </p>
           </CardContent>
         </Card>
       </div>
       
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-2">
         <Card className="border-zinc-800 bg-zinc-900">
           <CardHeader>
             <CardTitle className="text-white">Quick Actions</CardTitle>
@@ -191,6 +249,49 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      <Card className="border-zinc-800 bg-zinc-900">
+        <CardHeader>
+          <CardTitle className="text-white">Pending Orders</CardTitle>
+          <CardDescription className="text-zinc-400">
+            Latest orders waiting for payment verification.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {stats.pendingOrdersData.length === 0 ? (
+            <p className="text-sm text-zinc-400">No pending orders.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="text-zinc-400">
+                  <tr className="border-b border-zinc-800">
+                    <th className="py-2 text-left font-medium">Order</th>
+                    <th className="py-2 text-left font-medium">Customer</th>
+                    <th className="py-2 text-left font-medium">Product</th>
+                    <th className="py-2 text-left font-medium">Price</th>
+                    <th className="py-2 text-left font-medium">Time</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {stats.pendingOrdersData.map((order) => (
+                    <tr key={order.id} className="border-b border-zinc-800/70 text-zinc-200">
+                      <td className="py-2">
+                        <Link href={`/orders${selectedBotId ? `?bot=${selectedBotId}` : ''}`} className="text-indigo-400 hover:text-indigo-300">
+                          #{order.id.slice(0, 8)}
+                        </Link>
+                      </td>
+                      <td className="py-2">{order.telegram_username || '-'}</td>
+                      <td className="py-2">{order.menu_items?.name || '-'}</td>
+                      <td className="py-2">{order.menu_items?.price?.toLocaleString() || 0} THB</td>
+                      <td className="py-2">{new Date(order.created_at).toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

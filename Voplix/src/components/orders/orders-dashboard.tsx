@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,11 +19,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ShoppingCart, CheckCircle, XCircle, Clock, User } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { CheckCircle, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface OrdersDashboardProps {
@@ -53,14 +51,7 @@ export function OrdersDashboard({ bots, orders: initialOrders, selectedBotId }: 
   const [orders, setOrders] = useState(initialOrders);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-  const [deliveryData, setDeliveryData] = useState({
-    username: '',
-    password: '',
-    note: '',
-  });
-
-  const pendingOrders = orders.filter(o => o.status === 'SLIP_SUBMITTED');
-  const otherOrders = orders.filter(o => o.status !== 'SLIP_SUBMITTED');
+  const [rejectReasons, setRejectReasons] = useState<Record<string, string>>({});
 
   const handleSelectChange = (value: string | null) => {
     if (value === 'all' || value === null) {
@@ -71,101 +62,57 @@ export function OrdersDashboard({ bots, orders: initialOrders, selectedBotId }: 
     router.refresh();
   };
 
-  const handleApprove = async () => {
-    if (!selectedOrder) return;
+  const pendingOrders = useMemo(
+    () => orders.filter((o: any) => o.status === 'SLIP_SUBMITTED'),
+    [orders]
+  );
+
+  const handleApprove = async (order: any) => {
     setLoading(true);
 
     try {
-      const response = await fetch(`/api/orders/${selectedOrder.id}/approve`, {
+      const response = await fetch(`/api/orders/${order.id}/approve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          manual_delivery_data: deliveryData.username || deliveryData.password || deliveryData.note
-            ? deliveryData
-            : null,
-        }),
+        body: JSON.stringify({ manual_delivery_data: null }),
       });
 
       if (!response.ok) {
         throw new Error('Failed to approve order');
       }
 
-      setOrders(orders.map(o => 
-        o.id === selectedOrder.id 
-          ? { ...o, status: 'COMPLETED', manual_delivery_data: deliveryData }
-          : o
-      ));
-      setSelectedOrder(null);
-      setDeliveryData({ username: '', password: '', note: '' });
-      toast.success('Order approved and delivered');
-    } catch (error) {
+      setOrders(orders.map((o: any) => (o.id === order.id ? { ...o, status: 'COMPLETED' } : o)));
+      toast.success('Order confirmed');
+    } catch {
       toast.error('Failed to approve order');
     }
 
     setLoading(false);
   };
 
-  const handleReject = async () => {
-    if (!selectedOrder) return;
+  const handleReject = async (order: any) => {
     setLoading(true);
+    const reason = (rejectReasons[order.id] || '').trim();
 
     try {
-      const response = await fetch(`/api/orders/${selectedOrder.id}/reject`, {
+      const response = await fetch(`/api/orders/${order.id}/reject`, {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason }),
       });
 
       if (!response.ok) {
         throw new Error('Failed to reject order');
       }
 
-      setOrders(orders.map(o => 
-        o.id === selectedOrder.id 
-          ? { ...o, status: 'REJECTED' }
-          : o
-      ));
-      setSelectedOrder(null);
+      setOrders(orders.map((o: any) => (o.id === order.id ? { ...o, status: 'REJECTED' } : o)));
       toast.success('Order rejected');
-    } catch (error) {
+    } catch {
       toast.error('Failed to reject order');
     }
 
     setLoading(false);
   };
-
-  const OrderCard = ({ order }: { order: any }) => (
-    <Card 
-      className="border-zinc-800 bg-zinc-900 cursor-pointer hover:bg-zinc-800/50 transition-colors"
-      onClick={() => setSelectedOrder(order)}
-    >
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-full bg-zinc-800 flex items-center justify-center">
-              <ShoppingCart className="h-5 w-5 text-zinc-400" />
-            </div>
-            <div>
-              <CardTitle className="text-sm text-white">{order.menu_items?.name}</CardTitle>
-              <p className="text-xs text-zinc-400">
-                {order.menu_items?.price.toLocaleString()} THB • @{order.bots?.bot_username}
-              </p>
-            </div>
-          </div>
-          <Badge className={`${statusColors[order.status]} text-white text-xs`}>
-            {statusLabels[order.status]}
-          </Badge>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="flex items-center gap-2 text-sm text-zinc-400">
-          <User className="h-4 w-4" />
-          <span>{order.telegram_username || `User ${order.telegram_user_id}`}</span>
-        </div>
-        <p className="text-xs text-zinc-500 mt-2">
-          {new Date(order.created_at).toLocaleString()}
-        </p>
-      </CardContent>
-    </Card>
-  );
 
   return (
     <div className="space-y-6">
@@ -184,97 +131,115 @@ export function OrdersDashboard({ bots, orders: initialOrders, selectedBotId }: 
           </SelectContent>
         </Select>
 
-        <div className="flex items-center gap-2 text-sm text-zinc-400">
-          <Clock className="h-4 w-4 text-yellow-500" />
-          <span>{pendingOrders.length} pending</span>
-        </div>
+        <p className="text-sm text-zinc-400">{pendingOrders.length} pending verification</p>
       </div>
 
-      <Tabs defaultValue="pending" className="w-full">
-        <TabsList className="bg-zinc-800 border-zinc-700">
-          <TabsTrigger value="pending" className="data-[state=active]:bg-zinc-700">
-            Pending ({pendingOrders.length})
-          </TabsTrigger>
-          <TabsTrigger value="all" className="data-[state=active]:bg-zinc-700">
-            All Orders ({orders.length})
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="pending" className="mt-4">
-          {pendingOrders.length === 0 ? (
-            <Card className="border-zinc-800 bg-zinc-900">
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <CheckCircle className="h-12 w-12 text-green-500 mb-4" />
-                <h3 className="text-lg font-medium text-white mb-2">No pending orders</h3>
-                <p className="text-zinc-400">All orders have been processed!</p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2">
-              {pendingOrders.map((order) => (
-                <OrderCard key={order.id} order={order} />
-              ))}
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="all" className="mt-4">
+      <Card className="border-zinc-800 bg-zinc-900">
+        <CardHeader>
+          <CardTitle className="text-white">Orders</CardTitle>
+        </CardHeader>
+        <CardContent>
           {orders.length === 0 ? (
-            <Card className="border-zinc-800 bg-zinc-900">
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <ShoppingCart className="h-12 w-12 text-zinc-500 mb-4" />
-                <h3 className="text-lg font-medium text-white mb-2">No orders yet</h3>
-                <p className="text-zinc-400">Orders will appear here when customers make purchases.</p>
-              </CardContent>
-            </Card>
+            <p className="text-sm text-zinc-400">No orders found.</p>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2">
-              {orders.map((order) => (
-                <OrderCard key={order.id} order={order} />
-              ))}
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="text-zinc-400">
+                  <tr className="border-b border-zinc-800">
+                    <th className="py-2 text-left font-medium">Order number</th>
+                    <th className="py-2 text-left font-medium">Customer Telegram name</th>
+                    <th className="py-2 text-left font-medium">Product purchased</th>
+                    <th className="py-2 text-left font-medium">Price</th>
+                    <th className="py-2 text-left font-medium">Time</th>
+                    <th className="py-2 text-left font-medium">Payment slip</th>
+                    <th className="py-2 text-left font-medium">Status</th>
+                    <th className="py-2 text-left font-medium">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {orders.map((order: any) => (
+                    <tr key={order.id} className="border-b border-zinc-800/60 align-top text-zinc-200">
+                      <td className="py-2">#{order.id.slice(0, 8)}</td>
+                      <td className="py-2">{order.telegram_username || order.telegram_user_id}</td>
+                      <td className="py-2">{order.menu_items?.name || '-'}</td>
+                      <td className="py-2">{Number(order.menu_items?.price || 0).toLocaleString()} THB</td>
+                      <td className="py-2">{new Date(order.created_at).toLocaleString()}</td>
+                      <td className="py-2">
+                        {order.slip_image_url ? (
+                          <button
+                            type="button"
+                            className="text-indigo-400 hover:text-indigo-300"
+                            onClick={() => setSelectedOrder(order)}
+                          >
+                            Click to view
+                          </button>
+                        ) : (
+                          <span className="text-zinc-500">-</span>
+                        )}
+                      </td>
+                      <td className="py-2">
+                        <Badge className={`${statusColors[order.status]} text-white`}>
+                          {statusLabels[order.status]}
+                        </Badge>
+                      </td>
+                      <td className="py-2 min-w-[280px]">
+                        {order.status === 'SLIP_SUBMITTED' ? (
+                          <div className="space-y-2">
+                            <div className="flex gap-2">
+                              <Button
+                                onClick={() => handleApprove(order)}
+                                disabled={loading}
+                                className="h-8 bg-green-600 hover:bg-green-700"
+                              >
+                                <CheckCircle className="mr-1 h-4 w-4" />
+                                Confirm
+                              </Button>
+                              <Button
+                                onClick={() => handleReject(order)}
+                                disabled={loading}
+                                variant="outline"
+                                className="h-8 border-red-700 text-red-400 hover:bg-red-950/30"
+                              >
+                                <XCircle className="mr-1 h-4 w-4" />
+                                Reject
+                              </Button>
+                            </div>
+                            <Input
+                              placeholder="Reject reason (optional)"
+                              value={rejectReasons[order.id] || ''}
+                              onChange={(e) =>
+                                setRejectReasons((prev) => ({ ...prev, [order.id]: e.target.value }))
+                              }
+                              className="h-8 bg-zinc-800 border-zinc-700 text-white"
+                            />
+                          </div>
+                        ) : (
+                          <span className="text-zinc-500">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
-        </TabsContent>
-      </Tabs>
+        </CardContent>
+      </Card>
 
       {/* Order Detail Dialog */}
       <Dialog open={!!selectedOrder} onOpenChange={() => setSelectedOrder(null)}>
-        <DialogContent className="max-w-lg border-zinc-800 bg-zinc-900">
+        <DialogContent className="max-w-2xl border-zinc-800 bg-zinc-900">
           <DialogHeader>
-            <DialogTitle className="text-white">Order Details</DialogTitle>
+            <DialogTitle className="text-white">Payment Slip</DialogTitle>
             <DialogDescription className="text-zinc-400">
-              Review and process this order
+              Order #{selectedOrder?.id?.slice(0, 8)}
             </DialogDescription>
           </DialogHeader>
 
           {selectedOrder && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="text-zinc-500">Product</span>
-                  <p className="text-white font-medium">{selectedOrder.menu_items?.name}</p>
-                </div>
-                <div>
-                  <span className="text-zinc-500">Price</span>
-                  <p className="text-white font-medium">{selectedOrder.menu_items?.price.toLocaleString()} THB</p>
-                </div>
-                <div>
-                  <span className="text-zinc-500">Customer</span>
-                  <p className="text-white font-medium">
-                    {selectedOrder.telegram_username || `User ${selectedOrder.telegram_user_id}`}
-                  </p>
-                </div>
-                <div>
-                  <span className="text-zinc-500">Status</span>
-                  <Badge className={`${statusColors[selectedOrder.status]} text-white`}>
-                    {statusLabels[selectedOrder.status]}
-                  </Badge>
-                </div>
-              </div>
-
               {selectedOrder.slip_image_url && (
                 <div className="space-y-2">
-                  <span className="text-zinc-500 text-sm">Payment Slip</span>
                   <div className="rounded-lg overflow-hidden border border-zinc-800 bg-zinc-800">
                     <img
                       src={`/api/orders/${selectedOrder.id}/slip`}
@@ -285,68 +250,11 @@ export function OrdersDashboard({ bots, orders: initialOrders, selectedBotId }: 
                 </div>
               )}
 
-              {selectedOrder.status === 'SLIP_SUBMITTED' && (
-                <>
-                  <div className="space-y-3 pt-4 border-t border-zinc-800">
-                    <h4 className="text-sm font-medium text-white">Delivery Details (Optional)</h4>
-                    <div className="space-y-2">
-                      <Input
-                        placeholder="Username / Account"
-                        value={deliveryData.username}
-                        onChange={(e) => setDeliveryData({ ...deliveryData, username: e.target.value })}
-                        className="bg-zinc-800 border-zinc-700 text-white"
-                      />
-                      <Input
-                        placeholder="Password / Key"
-                        value={deliveryData.password}
-                        onChange={(e) => setDeliveryData({ ...deliveryData, password: e.target.value })}
-                        className="bg-zinc-800 border-zinc-700 text-white"
-                      />
-                      <Input
-                        placeholder="Additional note"
-                        value={deliveryData.note}
-                        onChange={(e) => setDeliveryData({ ...deliveryData, note: e.target.value })}
-                        className="bg-zinc-800 border-zinc-700 text-white"
-                      />
-                    </div>
-                  </div>
-
-                  <DialogFooter className="gap-2">
-                    <Button
-                      variant="outline"
-                      onClick={handleReject}
-                      disabled={loading}
-                      className="border-red-700 text-red-400 hover:bg-red-950/30"
-                    >
-                      <XCircle className="mr-2 h-4 w-4" />
-                      Reject
-                    </Button>
-                    <Button
-                      onClick={handleApprove}
-                      disabled={loading}
-                      className="bg-green-600 hover:bg-green-700"
-                    >
-                      <CheckCircle className="mr-2 h-4 w-4" />
-                      Approve & Deliver
-                    </Button>
-                  </DialogFooter>
-                </>
-              )}
-
-              {selectedOrder.status === 'COMPLETED' && selectedOrder.manual_delivery_data && (
-                <div className="pt-4 border-t border-zinc-800">
-                  <h4 className="text-sm font-medium text-white mb-2">Delivered</h4>
-                  <div className="bg-zinc-800 rounded p-3 text-sm text-zinc-300">
-                    {Object.entries(selectedOrder.manual_delivery_data).map(([key, value]) => (
-                      value ? (
-                        <p key={key}>
-                          <span className="text-zinc-500 capitalize">{key}:</span> {value as string}
-                        </p>
-                      ) : null
-                    ))}
-                  </div>
-                </div>
-              )}
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setSelectedOrder(null)} className="border-zinc-700 text-zinc-300">
+                  Close
+                </Button>
+              </DialogFooter>
             </div>
           )}
         </DialogContent>
