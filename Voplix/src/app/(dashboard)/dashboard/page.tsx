@@ -55,9 +55,9 @@ export default async function DashboardPage() {
   
   return (
     <div className="space-y-6">
-      <div>
+      <div className="space-y-1">
         <h1 className="text-2xl font-bold text-white">Dashboard</h1>
-        <p className="text-zinc-400">Welcome back! Here&apos;s your overview.</p>
+        <p className="text-zinc-400">A quick view of your bot activity and sales performance.</p>
       </div>
       
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -75,7 +75,7 @@ export default async function DashboardPage() {
         </Card>
         
         <Link href="/orders">
-          <Card className="border-zinc-800 bg-zinc-900 hover:bg-zinc-800/50 transition-colors cursor-pointer">
+          <Card className="border-zinc-800 bg-zinc-900 transition-colors hover:bg-zinc-800/50 cursor-pointer">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-zinc-300">Pending Approvals</CardTitle>
               <Clock className="h-4 w-4 text-yellow-500" />
@@ -108,7 +108,7 @@ export default async function DashboardPage() {
             <DollarSign className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">${stats.totalRevenue.toFixed(2)}</div>
+            <div className="text-2xl font-bold text-white">{stats.totalRevenue.toLocaleString()} THB</div>
             <p className="text-xs text-zinc-400">
               Completed orders
             </p>
@@ -120,31 +120,38 @@ export default async function DashboardPage() {
         <Card className="border-zinc-800 bg-zinc-900">
           <CardHeader>
             <CardTitle className="text-white">Quick Actions</CardTitle>
-            <CardDescription className="text-zinc-400">
-              Common tasks to get you started
-            </CardDescription>
+            <CardDescription className="text-zinc-400">Most-used actions</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-2">
+          <CardContent className="space-y-3">
             <Link 
               href="/bots"
-              className="flex items-center gap-3 rounded-lg bg-zinc-800 p-3 text-sm text-white hover:bg-zinc-700 transition-colors"
+              className="flex items-center justify-between rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-3 text-sm text-white transition-colors hover:bg-zinc-700"
             >
-              <Bot className="h-4 w-4 text-indigo-400" />
-              Connect a new bot
+              <span className="flex items-center gap-3">
+                <Bot className="h-4 w-4 text-indigo-400" />
+                Connect bot
+              </span>
+              <span className="text-xs text-zinc-400">Open</span>
             </Link>
             <Link 
               href="/menu"
-              className="flex items-center gap-3 rounded-lg bg-zinc-800 p-3 text-sm text-white hover:bg-zinc-700 transition-colors"
+              className="flex items-center justify-between rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-3 text-sm text-white transition-colors hover:bg-zinc-700"
             >
-              <ShoppingCart className="h-4 w-4 text-indigo-400" />
-              Manage menu items
+              <span className="flex items-center gap-3">
+                <ShoppingCart className="h-4 w-4 text-indigo-400" />
+                Manage menu
+              </span>
+              <span className="text-xs text-zinc-400">Open</span>
             </Link>
             <Link 
               href="/orders"
-              className="flex items-center gap-3 rounded-lg bg-zinc-800 p-3 text-sm text-white hover:bg-zinc-700 transition-colors"
+              className="flex items-center justify-between rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-3 text-sm text-white transition-colors hover:bg-zinc-700"
             >
-              <Clock className="h-4 w-4 text-indigo-400" />
-              Review pending orders
+              <span className="flex items-center gap-3">
+                <Clock className="h-4 w-4 text-indigo-400" />
+                Review pending orders
+              </span>
+              <span className="text-xs text-zinc-400">Open</span>
             </Link>
           </CardContent>
         </Card>

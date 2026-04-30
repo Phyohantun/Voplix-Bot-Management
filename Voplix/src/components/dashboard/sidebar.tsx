@@ -48,7 +48,7 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
             <div className="h-8 w-8 rounded-lg bg-indigo-600 flex items-center justify-center">
               <Bot className="h-5 w-5 text-white" />
             </div>
-            <span className="text-xl font-bold text-white">BotManager</span>
+            <span className="text-xl font-bold text-white">Voplix</span>
           </Link>
         </div>
         
@@ -76,12 +76,12 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
             </li>
             
             <li className="-mx-6 mt-auto">
-              <div className="flex items-center gap-x-4 px-6 py-3 text-sm font-semibold leading-6 text-white">
+              <div className="flex items-center gap-x-4 border-t border-zinc-800 px-6 py-4 text-sm font-semibold leading-6 text-white">
                 <div className="h-8 w-8 rounded-full bg-zinc-700 flex items-center justify-center">
                   <span className="text-xs">{user.email?.[0].toUpperCase()}</span>
                 </div>
                 <span className="sr-only">Your profile</span>
-                <span aria-hidden="true">{user.email}</span>
+                <span aria-hidden="true" className="truncate">{user.email}</span>
               </div>
               <button
                 onClick={handleLogout}

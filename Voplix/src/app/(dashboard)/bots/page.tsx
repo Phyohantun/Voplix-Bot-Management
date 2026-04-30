@@ -54,13 +54,13 @@ export default async function BotsPage() {
   
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Your Bots</h1>
-          <p className="text-zinc-400">Manage your connected Telegram bots</p>
+          <h1 className="text-2xl font-bold text-white">Bots</h1>
+          <p className="text-zinc-400">Manage connected Telegram bots and webhook status.</p>
         </div>
         <Link href="/onboarding">
-          <Button className="bg-indigo-600 hover:bg-indigo-700">
+          <Button className="bg-indigo-600 hover:bg-indigo-700 w-full sm:w-auto">
             <Plus className="mr-2 h-4 w-4" />
             Add Bot
           </Button>
@@ -86,7 +86,7 @@ export default async function BotsPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {bots.map((bot) => (
             <Card key={bot.id} className="border-zinc-800 bg-zinc-900">
               <CardHeader className="pb-3">
@@ -111,23 +111,23 @@ export default async function BotsPage() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="flex items-center gap-2 text-sm">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-zinc-300">Webhook</span>
                   <Webhook className="h-4 w-4 text-zinc-400" />
-                  <span className="text-zinc-300">Webhook:</span>
                   {bot.webhook_set ? (
                     <span className="flex items-center gap-1 text-green-400">
                       <CheckCircle className="h-3 w-3" />
-                      Set
+                      Connected
                     </span>
                   ) : (
                     <span className="flex items-center gap-1 text-red-400">
                       <XCircle className="h-3 w-3" />
-                      Not Set
+                      Not connected
                     </span>
                   )}
                 </div>
                 
-                <div className="flex gap-2 pt-2">
+                <div className="grid grid-cols-2 gap-2 pt-2">
                   <Link href={`/menu?bot=${bot.id}`} className="flex-1">
                     <Button variant="outline" className="w-full border-zinc-700 text-zinc-300 hover:bg-zinc-800 text-xs">
                       Menu
@@ -138,8 +138,10 @@ export default async function BotsPage() {
                       Orders
                     </Button>
                   </Link>
-                  <ReconnectWebhookButton botId={bot.id} />
-                  <DeleteBotButton botId={bot.id} botUsername={bot.bot_username} />
+                  <div className="col-span-2 flex gap-2">
+                    <ReconnectWebhookButton botId={bot.id} />
+                    <DeleteBotButton botId={bot.id} botUsername={bot.bot_username} />
+                  </div>
                 </div>
               </CardContent>
             </Card>

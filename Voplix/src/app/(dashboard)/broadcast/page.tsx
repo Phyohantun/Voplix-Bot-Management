@@ -100,18 +100,16 @@ export default function BroadcastPage({ bots: initialBots }: BroadcastPageProps)
 
   return (
     <div className="space-y-6">
-      <div>
+      <div className="space-y-1">
         <h1 className="text-2xl font-bold text-white">Broadcast</h1>
-        <p className="text-zinc-400">Send messages to your bot users</p>
+        <p className="text-zinc-400">Send one message to your selected audience.</p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card className="border-zinc-800 bg-zinc-900">
           <CardHeader>
             <CardTitle className="text-white">Compose Message</CardTitle>
-            <CardDescription className="text-zinc-400">
-              Create your broadcast message
-            </CardDescription>
+            <CardDescription className="text-zinc-400">Set audience, write content, and send.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
@@ -152,10 +150,10 @@ export default function BroadcastPage({ bots: initialBots }: BroadcastPageProps)
                 </SelectTrigger>
                 <SelectContent className="bg-zinc-800 border-zinc-700">
                   <SelectItem value="ALL" className="text-white">
-                    All Users
+                    All users
                   </SelectItem>
                   <SelectItem value="PAID_ONLY" className="text-white">
-                    Paid Customers Only
+                    Paid customers only
                   </SelectItem>
                 </SelectContent>
               </Select>
@@ -173,7 +171,7 @@ export default function BroadcastPage({ bots: initialBots }: BroadcastPageProps)
                 className="bg-zinc-800 border-zinc-700 text-white resize-none"
               />
               <p className="text-xs text-zinc-500">
-                HTML formatting is supported. Use {'<b>'}bold{'</b>'}, {'<i>'}italic{'</i>'}, etc.
+                HTML formatting is supported. Example: {'<b>'}bold text{'</b>'}.
               </p>
             </div>
 
@@ -212,9 +210,7 @@ export default function BroadcastPage({ bots: initialBots }: BroadcastPageProps)
         <Card className="border-zinc-800 bg-zinc-900">
           <CardHeader>
             <CardTitle className="text-white">Preview</CardTitle>
-            <CardDescription className="text-zinc-400">
-              How your message will appear
-            </CardDescription>
+            <CardDescription className="text-zinc-400">Quick preview before sending.</CardDescription>
           </CardHeader>
           <CardContent>
             {selectedBot ? (
@@ -229,7 +225,7 @@ export default function BroadcastPage({ bots: initialBots }: BroadcastPageProps)
                     <p className="text-white font-medium">
                       @{selectedBot.bot_username}
                     </p>
-                    <p className="text-zinc-400 text-sm">Bot</p>
+                    <p className="text-zinc-400 text-sm">Telegram bot</p>
                   </div>
                 </div>
 
@@ -240,7 +236,7 @@ export default function BroadcastPage({ bots: initialBots }: BroadcastPageProps)
                     </div>
                   )}
                   <p className="text-white whitespace-pre-wrap">
-                    {formData.message || 'Your message will appear here...'}
+                    {formData.message || 'Your message preview appears here.'}
                   </p>
                 </div>
 
