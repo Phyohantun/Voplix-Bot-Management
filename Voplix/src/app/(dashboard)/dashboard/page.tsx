@@ -192,7 +192,7 @@ export default async function DashboardPage({
               <span className="text-xs text-zinc-400">Open</span>
             </Link>
             <Link 
-              href="/menu"
+              href={`/menu${selectedBotId ? `?bot=${selectedBotId}` : ''}`}
               className="flex items-center justify-between rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-3 text-sm text-white transition-colors hover:bg-zinc-700"
             >
               <span className="flex items-center gap-3">
@@ -202,7 +202,7 @@ export default async function DashboardPage({
               <span className="text-xs text-zinc-400">Open</span>
             </Link>
             <Link 
-              href="/orders"
+              href={`/orders${selectedBotId ? `?bot=${selectedBotId}` : ''}`}
               className="flex items-center justify-between rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-3 text-sm text-white transition-colors hover:bg-zinc-700"
             >
               <span className="flex items-center gap-3">

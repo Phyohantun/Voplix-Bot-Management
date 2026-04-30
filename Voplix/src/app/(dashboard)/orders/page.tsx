@@ -62,7 +62,7 @@ export default async function OrdersPage({
   }
 
   const params = await searchParams;
-  const selectedBotId = params.bot || null;
+  const selectedBotId = params.bot && bots.some((b: any) => b.id === params.bot) ? params.bot : null;
   
   const orders = await getOrders(selectedBotId, user.id);
   

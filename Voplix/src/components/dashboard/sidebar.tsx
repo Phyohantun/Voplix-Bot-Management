@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { User } from '@supabase/supabase-js';
 import { 
   LayoutDashboard, 
@@ -33,8 +33,10 @@ const navigation = [
 
 export function DashboardSidebar({ user }: DashboardSidebarProps) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const router = useRouter();
   const supabase = createClient();
+  const activeBotId = searchParams.get('bot');
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -60,8 +62,12 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
               <ul role="list" className="-mx-2 space-y-1">
                 {navigation.map((item) => (
                   <li key={item.name}>
+                    {(() => {
+                      const shouldScopeByBot = ['/dashboard', '/menu', '/orders', '/broadcast'].includes(item.href);
+                      const href = shouldScopeByBot && activeBotId ? `${item.href}?bot=${activeBotId}` : item.href;
+                      return (
                     <Link
-                      href={item.href}
+                      href={href}
                       className={cn(
                         'group flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6',
                         pathname === item.href || pathname.startsWith(`${item.href}/`)
@@ -72,6 +78,8 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
                       <item.icon className="h-5 w-5 shrink-0" aria-hidden="true" />
                       {item.name}
                     </Link>
+                      );
+                    })()}
                   </li>
                 ))}
               </ul>
