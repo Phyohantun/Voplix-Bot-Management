@@ -51,7 +51,7 @@ export function DashboardSidebar({ user, mobile = false }: DashboardSidebarProps
     <div className={mobile ? 'flex h-full w-full flex-col' : 'hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-72 lg:flex-col'}>
       <div className={`flex grow flex-col gap-y-5 overflow-y-auto bg-zinc-900 px-6 ${mobile ? '' : 'border-r border-zinc-800'}`}>
         <div className="flex h-16 shrink-0 items-center">
-          <Link href="/dashboard" className="flex items-center gap-2">
+          <Link href="/dashboard" className="flex items-center gap-1.5">
             <div className="h-8 w-8 overflow-hidden rounded-lg ring-1 ring-zinc-700">
               <Image src="/apple-touch-icon.png" alt="Voplix logo" width={32} height={32} className="h-full w-full object-cover" />
             </div>

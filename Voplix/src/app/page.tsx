@@ -11,7 +11,7 @@ export default function HomePage() {
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(99,102,241,0.18),transparent_45%),radial-gradient(circle_at_80%_0%,rgba(59,130,246,0.12),transparent_35%)]" />
       <div className="relative mx-auto flex min-h-screen w-full max-w-6xl flex-col px-4 py-8 sm:px-6 lg:px-8">
         <header className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5">
             <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl ring-1 ring-zinc-700">
               <Image src="/apple-touch-icon.png" alt="Voplix logo" width={36} height={36} className="h-full w-full object-cover" />
             </div>

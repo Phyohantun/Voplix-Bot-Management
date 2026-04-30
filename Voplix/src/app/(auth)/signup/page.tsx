@@ -76,7 +76,7 @@ export default function SignupPage() {
     <Card className="border-zinc-700/70 bg-zinc-900/70 shadow-2xl backdrop-blur-xl">
       <CardHeader className="space-y-4">
         <div className="flex flex-col items-center gap-3 pb-1">
-          <Link href="/" className="flex items-center gap-3 rounded-lg outline-none ring-offset-2 ring-offset-zinc-950 focus-visible:ring-2 focus-visible:ring-indigo-500">
+          <Link href="/" className="flex items-center gap-1.5 rounded-lg outline-none ring-offset-2 ring-offset-zinc-950 focus-visible:ring-2 focus-visible:ring-indigo-500">
             <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl ring-1 ring-zinc-600">
               <Image src="/apple-touch-icon.png" alt="" width={44} height={44} className="h-full w-full object-cover" />
             </div>
