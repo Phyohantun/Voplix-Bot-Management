@@ -55,7 +55,7 @@ export default async function DashboardLayout({
           unreadCount={unreadCount}
           bots={(bots as any[]) || []}
         />
-        <main className="py-8 px-4 sm:px-6 lg:px-8">
+        <main className="px-3 py-5 sm:px-6 sm:py-8 lg:px-8">
           {children}
         </main>
       </div>

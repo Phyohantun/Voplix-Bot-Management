@@ -93,7 +93,7 @@ export function DashboardHeader({ user, profile, announcements, unreadCount, bot
   };
 
   return (
-    <header className="sticky top-0 z-40 flex min-h-20 shrink-0 items-center gap-x-4 border-b border-zinc-800 bg-zinc-900/95 px-4 py-3 backdrop-blur sm:gap-x-6 sm:px-6 lg:px-8">
+    <header className="sticky top-0 z-40 flex min-h-20 shrink-0 items-center gap-x-3 border-b border-zinc-800 bg-zinc-900/95 px-3 py-3 backdrop-blur sm:gap-x-6 sm:px-6 lg:px-8">
       <Sheet>
         <SheetTrigger
           render={<Button variant="ghost" size="icon" className="lg:hidden text-zinc-400" />}
@@ -101,18 +101,18 @@ export function DashboardHeader({ user, profile, announcements, unreadCount, bot
           <List className="h-6 w-6" />
           <span className="sr-only">Open sidebar</span>
         </SheetTrigger>
-        <SheetContent side="left" className="w-72 bg-zinc-900 border-zinc-800 p-0">
-          <DashboardSidebar user={user} />
+        <SheetContent side="left" className="w-[85vw] max-w-72 bg-zinc-900 border-zinc-800 p-0">
+          <DashboardSidebar user={user} mobile />
         </SheetContent>
       </Sheet>
 
-      <div className="flex flex-1 items-center justify-between">
-        <div className="flex-1 text-center lg:text-left">
+      <div className="flex flex-1 items-center justify-between gap-2">
+        <div className="min-w-0 flex-1 text-left">
           <p className="text-sm text-zinc-400 truncate">
             Welcome, {profile?.display_name || user.email?.split('@')[0] || 'Owner'}
           </p>
           {bots.length > 0 ? (
-            <div className="mx-auto mt-1 w-full max-w-[300px] lg:mx-0">
+            <div className="mt-1 w-full max-w-[220px] sm:max-w-[300px]">
               <Select value={selectedBot?.id || ''} onValueChange={handleBotChange}>
                 <SelectTrigger className="h-8 bg-zinc-800 border-zinc-700 text-white" disabled={isSwitchingBot}>
                   <span className="truncate">{selectedBot ? `@${selectedBot.bot_username}` : 'Select bot'}</span>
@@ -134,7 +134,7 @@ export function DashboardHeader({ user, profile, announcements, unreadCount, bot
           )}
         </div>
 
-        <div className="relative ml-3">
+        <div className="relative ml-1 sm:ml-3">
           <Button
             variant="ghost"
             size="icon"
@@ -155,7 +155,7 @@ export function DashboardHeader({ user, profile, announcements, unreadCount, bot
             <span className="sr-only">Notifications</span>
           </Button>
           {openNotifications ? (
-            <div className="absolute right-0 mt-2 w-80 rounded-lg border border-zinc-800 bg-zinc-900 p-2 shadow-xl">
+            <div className="absolute right-0 mt-2 w-[min(20rem,calc(100vw-1rem))] rounded-lg border border-zinc-800 bg-zinc-900 p-2 shadow-xl">
               <p className="px-2 py-1 text-xs uppercase tracking-wide text-zinc-500">System announcements</p>
               <div className="max-h-80 overflow-auto">
                 {announcements.length === 0 ? (
@@ -173,7 +173,7 @@ export function DashboardHeader({ user, profile, announcements, unreadCount, bot
           ) : null}
         </div>
 
-        <div className="relative ml-2">
+        <div className="relative ml-1 sm:ml-2">
           <button
             type="button"
             className="flex items-center gap-2 rounded-md px-2 py-1 hover:bg-zinc-800"

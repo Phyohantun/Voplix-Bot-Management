@@ -241,8 +241,24 @@ export default async function DashboardPage({
           {stats.pendingOrdersData.length === 0 ? (
             <p className="text-sm text-zinc-400">No pending orders.</p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+            <>
+              <div className="space-y-2 md:hidden">
+                {stats.pendingOrdersData.map((order) => (
+                  <div key={order.id} className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-3 text-sm text-zinc-200">
+                    <div className="flex items-center justify-between gap-2">
+                      <Link href={`/orders${selectedBotId ? `?bot=${selectedBotId}` : ''}`} className="font-medium text-indigo-400 hover:text-indigo-300">
+                        #{order.id.slice(0, 8)}
+                      </Link>
+                      <span className="text-xs text-zinc-500">{new Date(order.created_at).toLocaleString()}</span>
+                    </div>
+                    <p className="mt-2 text-zinc-300">{order.menu_items?.name || '-'}</p>
+                    <p className="text-xs text-zinc-400">{order.telegram_username || '-'}</p>
+                    <p className="mt-1 text-xs text-zinc-300">{order.menu_items?.price?.toLocaleString() || 0} THB</p>
+                  </div>
+                ))}
+              </div>
+              <div className="hidden overflow-x-auto md:block">
+                <table className="w-full text-sm">
                 <thead className="text-zinc-400">
                   <tr className="border-b border-zinc-800">
                     <th className="py-2 text-left font-medium">Order</th>
@@ -267,8 +283,9 @@ export default async function DashboardPage({
                     </tr>
                   ))}
                 </tbody>
-              </table>
-            </div>
+                </table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

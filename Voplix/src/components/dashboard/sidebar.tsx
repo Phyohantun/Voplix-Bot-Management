@@ -19,6 +19,7 @@ import { useRouter } from 'next/navigation';
 
 interface DashboardSidebarProps {
   user: User;
+  mobile?: boolean;
 }
 
 const navigation = [
@@ -31,7 +32,7 @@ const navigation = [
   { name: 'Settings', href: '/settings', icon: Gear },
 ];
 
-export function DashboardSidebar({ user }: DashboardSidebarProps) {
+export function DashboardSidebar({ user, mobile = false }: DashboardSidebarProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -45,8 +46,8 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
   };
 
   return (
-    <div className="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-72 lg:flex-col">
-      <div className="flex grow flex-col gap-y-5 overflow-y-auto border-r border-zinc-800 bg-zinc-900 px-6">
+    <div className={mobile ? 'flex h-full w-full flex-col' : 'hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-72 lg:flex-col'}>
+      <div className={`flex grow flex-col gap-y-5 overflow-y-auto bg-zinc-900 px-6 ${mobile ? '' : 'border-r border-zinc-800'}`}>
         <div className="flex h-16 shrink-0 items-center">
           <Link href="/dashboard" className="flex items-center gap-2">
             <div className="h-8 w-8 rounded-lg bg-indigo-600 flex items-center justify-center">

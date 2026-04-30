@@ -108,7 +108,73 @@ export function OrdersDashboard({ orders: initialOrders }: OrdersDashboardProps)
           {orders.length === 0 ? (
             <p className="text-sm text-zinc-400">No orders found.</p>
           ) : (
-            <div className="overflow-x-auto">
+            <>
+            <div className="space-y-3 md:hidden">
+              {orders.map((order: any) => (
+                <div key={order.id} className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-3 text-sm text-zinc-200">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="font-medium">#{order.id.slice(0, 8)}</p>
+                      <p className="text-xs text-zinc-400">{new Date(order.created_at).toLocaleString()}</p>
+                    </div>
+                    <Badge className={`${statusColors[order.status]} text-white`}>
+                      {statusLabels[order.status]}
+                    </Badge>
+                  </div>
+                  <div className="mt-3 space-y-1 text-xs text-zinc-300">
+                    <p>Customer: {order.telegram_username || order.telegram_user_id}</p>
+                    <p>Product: {order.menu_items?.name || '-'}</p>
+                    <p>Price: {Number(order.menu_items?.price || 0).toLocaleString()} THB</p>
+                    <p>
+                      Slip:{' '}
+                      {order.slip_image_url ? (
+                        <button
+                          type="button"
+                          className="text-indigo-400 hover:text-indigo-300"
+                          onClick={() => setSelectedOrder(order)}
+                        >
+                          Click to view
+                        </button>
+                      ) : (
+                        <span className="text-zinc-500">-</span>
+                      )}
+                    </p>
+                  </div>
+                  {order.status === 'SLIP_SUBMITTED' ? (
+                    <div className="mt-3 space-y-2">
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button
+                          onClick={() => handleApprove(order)}
+                          disabled={loading}
+                          className="h-9 bg-green-600 hover:bg-green-700"
+                        >
+                          <CheckCircle className="mr-1 h-4 w-4" />
+                          Confirm
+                        </Button>
+                        <Button
+                          onClick={() => handleReject(order)}
+                          disabled={loading}
+                          variant="outline"
+                          className="h-9 border-red-700 text-red-400 hover:bg-red-950/30"
+                        >
+                          <XCircle className="mr-1 h-4 w-4" />
+                          Reject
+                        </Button>
+                      </div>
+                      <Input
+                        placeholder="Reject reason (optional)"
+                        value={rejectReasons[order.id] || ''}
+                        onChange={(e) =>
+                          setRejectReasons((prev) => ({ ...prev, [order.id]: e.target.value }))
+                        }
+                        className="h-9 bg-zinc-800 border-zinc-700 text-white"
+                      />
+                    </div>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+            <div className="hidden overflow-x-auto md:block">
               <table className="w-full text-sm">
                 <thead className="text-zinc-400">
                   <tr className="border-b border-zinc-800">
@@ -188,6 +254,7 @@ export function OrdersDashboard({ orders: initialOrders }: OrdersDashboardProps)
                 </tbody>
               </table>
             </div>
+            </>
           )}
         </CardContent>
       </Card>
