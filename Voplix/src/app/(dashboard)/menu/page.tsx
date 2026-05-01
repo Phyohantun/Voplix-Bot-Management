@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { MenuBuilder } from '@/components/menu/menu-builder';
+import { paymentInstructionsFromBotRow } from '@/lib/bot-telegram-copy';
 
 interface BotRecord {
   id: string;
@@ -8,6 +9,7 @@ interface BotRecord {
   start_welcome_message: string | null;
   start_show_menu_only: boolean;
   start_show_tip: boolean;
+  payment_instructions: string | null;
 }
 
 interface SupabaseQueryError {
@@ -43,7 +45,21 @@ async function getBots(userId: string) {
     return [];
   }
 
-  return (data ?? []) as BotRecord[];
+  return (data ?? []).map((row) => {
+    const r = row as Record<string, unknown>;
+    const pi = paymentInstructionsFromBotRow({
+      payment_instructions: r.payment_instructions as string | null | undefined,
+      telegram_customer_copy: r.telegram_customer_copy,
+    });
+    return {
+      id: r.id as string,
+      bot_username: r.bot_username as string,
+      start_welcome_message: (r.start_welcome_message as string | null) ?? null,
+      start_show_menu_only: Boolean(r.start_show_menu_only),
+      start_show_tip: Boolean(r.start_show_tip),
+      payment_instructions: pi || null,
+    };
+  });
 }
 
 async function getMenuItems(botId: string) {

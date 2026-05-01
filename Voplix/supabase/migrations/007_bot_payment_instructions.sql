@@ -1,0 +1,6 @@
+-- Payment instructions for customers are stored in `bots.telegram_customer_copy` JSON
+-- under the key "payment_instructions" (plain text). No separate column is required.
+--
+-- If you previously added a standalone `payment_instructions` column and PostgREST shows a schema cache error,
+-- run once in the SQL editor:
+--   NOTIFY pgrst, 'reload schema';

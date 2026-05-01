@@ -10,7 +10,7 @@ export const DEFAULT_BOT_TELEGRAM_COPY = {
   button_confirm_pay: '✅ Confirm & Pay',
   button_cancel: '❌ Cancel',
   slip_request_html:
-    '<b>Order Created!</b>\n\nPlease send your payment slip as a photo now. We will verify it and process your order.',
+    '<b>Order Created!</b>\n\nAfter you have paid, please send your payment slip as a photo. We will verify it and process your order.',
   order_cancelled: 'Order cancelled. Use /start to browse the menu again.',
   help_command_html:
     '<b>Available Commands</b>\n\n/start - Show the menu\n/menu - Show the menu\n/help - Show this help message',
@@ -69,6 +69,7 @@ export const BOT_TELEGRAM_COPY_LABELS: Record<keyof typeof DEFAULT_BOT_TELEGRAM_
   button_cancel: { title: 'Button — Cancel', hint: 'Keep short.' },
   slip_request_html: {
     title: 'After Confirm & Pay — Slip Request',
+    hint: 'Sent after your payment-details message (from Menu → Payment details). HTML.',
   },
   order_cancelled: { title: 'Order Cancelled', hint: 'After user clicks Cancel.' },
   help_command_html: { title: '/help Command Response', hint: 'HTML.' },
@@ -150,6 +151,59 @@ export const BOT_TELEGRAM_COPY_SECTIONS = [
     keys: ['order_confirmed_template_html', 'order_rejected_template_html'],
   },
 ] as const;
+
+/** Stored inside `telegram_customer_copy` JSON (not a separate DB column). */
+export const PAYMENT_INSTRUCTIONS_JSON_KEY = 'payment_instructions' as const;
+
+export function paymentInstructionsFromCustomerCopyJson(data: unknown): string | null {
+  if (!data || typeof data !== 'object') return null;
+  const v = (data as Record<string, unknown>)[PAYMENT_INSTRUCTIONS_JSON_KEY];
+  if (typeof v !== 'string') return null;
+  const t = v.trim();
+  return t.length ? t : null;
+}
+
+/** Prefer legacy `payment_instructions` column if present; else JSON meta key. */
+export function paymentInstructionsFromBotRow(bot: {
+  payment_instructions?: string | null;
+  telegram_customer_copy?: unknown;
+}): string {
+  const col = typeof bot.payment_instructions === 'string' ? bot.payment_instructions.trim() : '';
+  if (col) return col;
+  return paymentInstructionsFromCustomerCopyJson(bot.telegram_customer_copy) ?? '';
+}
+
+function isPlainCopyObject(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null && !Array.isArray(v);
+}
+
+/** Merge template keys from dashboard; keeps `payment_instructions` and other non-template keys unless cleared. */
+export function mergeTelegramCustomerCopyJson(
+  previous: unknown,
+  incomingTemplates: unknown,
+  mode: 'replace_templates' | 'clear_all_templates'
+): Record<string, unknown> {
+  const base = isPlainCopyObject(previous) ? { ...previous } : {};
+
+  if (mode === 'clear_all_templates') {
+    const keep = paymentInstructionsFromCustomerCopyJson(base);
+    const next: Record<string, unknown> = {};
+    if (keep) next[PAYMENT_INSTRUCTIONS_JSON_KEY] = keep;
+    return next;
+  }
+
+  const next = { ...base };
+  if (!incomingTemplates || typeof incomingTemplates !== 'object') return next;
+
+  const inc = incomingTemplates as Record<string, unknown>;
+  for (const k of Object.keys(DEFAULT_BOT_TELEGRAM_COPY)) {
+    if (!(k in inc)) continue;
+    const v = inc[k];
+    if (typeof v === 'string' && v.trim()) next[k] = v;
+    else delete next[k];
+  }
+  return next;
+}
 
 export function mergeBotTelegramCopy(customCopy: any): BotTelegramCopy {
   const result = { ...DEFAULT_BOT_TELEGRAM_COPY };

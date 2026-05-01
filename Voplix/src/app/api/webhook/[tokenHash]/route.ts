@@ -15,6 +15,7 @@ import {
   mergeBotTelegramCopy,
   telegramHtmlToPlain,
   escapeHtml,
+  paymentInstructionsFromBotRow,
   type BotTelegramCopy,
 } from '@/lib/bot-telegram-copy';
 
@@ -84,6 +85,31 @@ async function sendMessageWithFallback(
   return sendMessage(token, chatId, fallbackText, options);
 }
 
+const TELEGRAM_MAX_MESSAGE_LEN = 4096;
+
+/** Owner-defined bank / wallet info — plain text only (no HTML) so special characters stay safe. */
+async function sendCustomerPaymentInstructions(token: string, chatId: number, payText: string) {
+  const headerFirst = '💳 Payment details\n\n';
+  const headerMore = '\n\n💳 Payment details (continued)\n\n';
+
+  const firstChunkRoom = TELEGRAM_MAX_MESSAGE_LEN - headerFirst.length;
+  if (payText.length <= firstChunkRoom) {
+    await sendMessage(token, chatId, headerFirst + payText);
+    return;
+  }
+
+  let offset = 0;
+  let isFirst = true;
+  while (offset < payText.length) {
+    const header = isFirst ? headerFirst : headerMore;
+    const room = TELEGRAM_MAX_MESSAGE_LEN - header.length;
+    const slice = payText.slice(offset, offset + Math.max(room, 1));
+    await sendMessage(token, chatId, header + slice);
+    offset += slice.length;
+    isFirst = false;
+  }
+}
+
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ tokenHash: string }> }
@@ -114,6 +140,7 @@ export async function POST(
     const token = decrypt((bot as any).token_encrypted);
     const botId = (bot as any).id;
     const copy = mergeBotTelegramCopy((bot as any).telegram_customer_copy);
+    const customerPaymentText = paymentInstructionsFromBotRow(bot as any);
 
     // Handle message
     if (update.message) {
@@ -203,7 +230,7 @@ export async function POST(
           copy
         );
       } else if (data === 'confirm_order') {
-        await handleConfirmOrder(token, chatId, botId, telegramUserId, callbackId, copy);
+        await handleConfirmOrder(token, chatId, botId, telegramUserId, callbackId, copy, customerPaymentText);
       } else if (data === 'cancel_order') {
         await handleCancelOrder(token, chatId, botId, telegramUserId, callbackId, copy);
       } else {
@@ -436,7 +463,8 @@ async function handleConfirmOrder(
   botId: string,
   telegramUserId: string,
   callbackId: string,
-  copy: BotTelegramCopy
+  copy: BotTelegramCopy,
+  customerPaymentText: string
 ) {
   const session = await getUserSession(telegramUserId, botId);
 
@@ -459,6 +487,11 @@ async function handleConfirmOrder(
   });
 
   await answerCallbackQuery(token, callbackId);
+
+  const paymentText = customerPaymentText.trim();
+  if (paymentText) {
+    await sendCustomerPaymentInstructions(token, chatId, paymentText);
+  }
 
   await sendMessage(token, chatId, copy.slip_request_html, { parse_mode: 'HTML' });
 }

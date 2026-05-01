@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
 import { Trash } from '@phosphor-icons/react';
 import { toast } from 'sonner';
 import { formatCurrencyAmount } from '@/lib/currency';
@@ -175,7 +175,11 @@ export function StockManager({
             id="stock-product-select"
             className="h-10 w-full border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white"
           >
-            <SelectValue placeholder="Choose product" />
+            <span className="truncate text-left">
+              {activeRow
+                ? `${activeRow.name.length > 42 ? `${activeRow.name.slice(0, 42)}…` : activeRow.name} (${normalizeStockItems(activeRow.stock_items).filter((l) => !l.is_sold).length} in stock)`
+                : 'Choose product'}
+            </span>
           </SelectTrigger>
           <SelectContent className="border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 max-h-[min(50vh,280px)]">
             {items.map((row) => {

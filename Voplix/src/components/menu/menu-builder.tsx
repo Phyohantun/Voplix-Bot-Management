@@ -18,7 +18,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Plus, PencilSimple, Trash, Package } from '@phosphor-icons/react';
+import { Plus, PencilSimple, Trash, Package, Bank } from '@phosphor-icons/react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { formatCurrencyAmount } from '@/lib/currency';
@@ -32,6 +32,7 @@ interface BotOption {
   start_welcome_message: string | null;
   start_show_menu_only: boolean;
   start_show_tip: boolean;
+  payment_instructions: string | null;
 }
 
 interface MenuItem {
@@ -78,12 +79,15 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems }: Menu
   const [menuItems, setMenuItems] = useState(initialItems);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isStartSettingsOpen, setIsStartSettingsOpen] = useState(false);
+  const [isPaymentDetailsOpen, setIsPaymentDetailsOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
   const [loading, setLoading] = useState(false);
   const [startSettingsLoading, setStartSettingsLoading] = useState(false);
   const [startWelcomeMessage, setStartWelcomeMessage] = useState(selectedBot.start_welcome_message ?? '');
   const [startShowMenuOnly, setStartShowMenuOnly] = useState(selectedBot.start_show_menu_only);
   const [startShowTip, setStartShowTip] = useState(selectedBot.start_show_tip);
+  const [paymentInstructions, setPaymentInstructions] = useState(selectedBot.payment_instructions ?? '');
+  const [paymentInstructionsSaving, setPaymentInstructionsSaving] = useState(false);
 
   useEffect(() => {
     setMenuItems(initialItems);
@@ -93,7 +97,14 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems }: Menu
     setStartWelcomeMessage(selectedBot.start_welcome_message ?? '');
     setStartShowMenuOnly(selectedBot.start_show_menu_only);
     setStartShowTip(selectedBot.start_show_tip);
-  }, [selectedBot.id, selectedBot.start_welcome_message, selectedBot.start_show_menu_only, selectedBot.start_show_tip]);
+    setPaymentInstructions(selectedBot.payment_instructions ?? '');
+  }, [
+    selectedBot.id,
+    selectedBot.start_welcome_message,
+    selectedBot.start_show_menu_only,
+    selectedBot.start_show_tip,
+    selectedBot.payment_instructions,
+  ]);
   const [formData, setFormData] = useState<FormState>(emptyForm());
 
   const parsePrice = (): number => {
@@ -236,6 +247,33 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems }: Menu
     }
   };
 
+  const handleSavePaymentInstructions = async (): Promise<boolean> => {
+    setPaymentInstructionsSaving(true);
+    try {
+      const response = await fetch(`/api/bots/${selectedBot.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          payment_instructions: paymentInstructions.trim() || null,
+        }),
+      });
+
+      if (!response.ok) {
+        const j = (await response.json().catch(() => ({}))) as { error?: string };
+        throw new Error(j.error || 'Failed to save payment details');
+      }
+
+      toast.success('Payment details saved — customers will see them after Confirm & Pay');
+      router.refresh();
+      return true;
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to save payment details');
+      return false;
+    } finally {
+      setPaymentInstructionsSaving(false);
+    }
+  };
+
   const formFields = (
     <>
       <div className="space-y-2">
@@ -374,6 +412,63 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems }: Menu
                   className="bg-indigo-600 hover:bg-indigo-700"
                 >
                   {startSettingsLoading ? 'Saving…' : 'Save /start settings'}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={isPaymentDetailsOpen} onOpenChange={setIsPaymentDetailsOpen}>
+            <DialogTrigger
+              render={
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full sm:w-auto border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300"
+                >
+                  <Bank className="mr-2 h-4 w-4" />
+                  Payment details
+                </Button>
+              }
+            />
+            <DialogContent className="border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 sm:max-w-lg">
+              <DialogHeader>
+                <DialogTitle className="text-zinc-900 dark:text-white">Payment details for customers</DialogTitle>
+                <DialogDescription className="text-zinc-600 dark:text-zinc-400">
+                  Bank accounts, mobile wallets, or transfer instructions as plain text. Shown in Telegram right after
+                  the customer taps <span className="font-medium text-zinc-700 dark:text-zinc-300">Confirm &amp; Pay</span>,
+                  before they upload a payment slip. You can list several methods in one box.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-3 py-2 max-h-[70vh] overflow-y-auto pr-1">
+                <Textarea
+                  value={paymentInstructions}
+                  onChange={(e) => setPaymentInstructions(e.target.value)}
+                  placeholder={`Example:\nKBZ Pay — 09xxxxxxxxx (Your Shop Name)\nAYA Bank — 1234567890\nWave — 09xxxxxxxxx`}
+                  maxLength={12000}
+                  rows={10}
+                  className="min-h-[180px] bg-zinc-100 dark:bg-zinc-950 border-zinc-300 dark:border-zinc-700 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-500"
+                />
+                <p className="text-xs text-zinc-500">{paymentInstructions.length} / 12000 characters</p>
+              </div>
+              <DialogFooter className="gap-2 sm:gap-0">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsPaymentDetailsOpen(false)}
+                  className="border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  onClick={async () => {
+                    const ok = await handleSavePaymentInstructions();
+                    if (ok) setIsPaymentDetailsOpen(false);
+                  }}
+                  disabled={paymentInstructionsSaving}
+                  className="bg-indigo-600 hover:bg-indigo-700"
+                >
+                  {paymentInstructionsSaving ? 'Saving…' : 'Save payment details'}
                 </Button>
               </DialogFooter>
             </DialogContent>
