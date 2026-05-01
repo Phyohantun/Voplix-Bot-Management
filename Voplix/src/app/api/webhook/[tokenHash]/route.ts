@@ -7,11 +7,16 @@ import {
   createMainMenuKeyboard,
   createConfirmOrderKeyboard,
   createPersistentMenuReplyKeyboard,
-  TELEGRAM_REPLY_MENU_BUTTON_TEXT,
 } from '@/lib/telegram';
 import { getUserSession, setUserSession, clearUserSession, UserSession } from '@/lib/redis';
 import { getShopCurrencyForBot } from '@/lib/owner-currency';
 import { formatCurrencyAmount } from '@/lib/currency';
+import {
+  mergeBotTelegramCopy,
+  telegramHtmlToPlain,
+  escapeHtml,
+  type BotTelegramCopy,
+} from '@/lib/bot-telegram-copy';
 
 interface TelegramUpdate {
   message?: {
@@ -42,14 +47,6 @@ interface TelegramUpdate {
 }
 
 type MenuItemType = 'DIGITAL_DELIVERY' | 'MANUAL_DELIVERY';
-
-function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
 
 interface MenuItemRecord {
   id: string;
@@ -116,6 +113,7 @@ export async function POST(
 
     const token = decrypt((bot as any).token_encrypted);
     const botId = (bot as any).id;
+    const copy = mergeBotTelegramCopy((bot as any).telegram_customer_copy);
 
     // Handle message
     if (update.message) {
@@ -132,31 +130,26 @@ export async function POST(
       const session = await getUserSession(telegramUserId, botId);
 
       // Same label as the reply keyboard we show after /start
-      if (normalizedText === TELEGRAM_REPLY_MENU_BUTTON_TEXT) {
-        await handleStart(token, chat.id, botId, telegramUserId);
+      if (normalizedText === copy.browse_menu_button) {
+        await handleStart(token, chat.id, botId, telegramUserId, copy);
         return NextResponse.json({ ok: true });
       }
 
       // Handle /start command (including deep-link payloads like /start ref123)
       if (lowerText.startsWith('/start')) {
-        await handleStart(token, chat.id, botId, telegramUserId);
+        await handleStart(token, chat.id, botId, telegramUserId, copy);
         return NextResponse.json({ ok: true });
       }
 
       // Handle /menu command
       if (lowerText === '/menu') {
-        await handleStart(token, chat.id, botId, telegramUserId);
+        await handleStart(token, chat.id, botId, telegramUserId, copy);
         return NextResponse.json({ ok: true });
       }
 
       // Handle /help command
       if (lowerText === '/help') {
-        await sendMessage(
-          token,
-          chat.id,
-          '<b>Available commands</b>\n\n/start - Show menu\n/menu - Show menu\n/help - Show this help message',
-          { parse_mode: 'HTML' }
-        );
+        await sendMessage(token, chat.id, copy.help_text_html, { parse_mode: 'HTML' });
         return NextResponse.json({ ok: true });
       }
 
@@ -169,24 +162,20 @@ export async function POST(
           telegramUserId,
           telegramUsername,
           photo[photo.length - 1].file_id,
-          session
+          session,
+          copy
         );
         return NextResponse.json({ ok: true });
       }
 
       // Photos outside the slip step (e.g. many slips after submit): short reply instead of full /start menu
       if (photo) {
-        await sendMessage(
-          token,
-          chat.id,
-          '<b>Payment slip</b>\n\nSlips are only accepted right after you tap <b>Confirm &amp; Pay</b> on an order. If you already sent one, please wait for verification — extra photos are not needed.',
-          { parse_mode: 'HTML' }
-        );
+        await sendMessage(token, chat.id, copy.slip_out_of_band_html, { parse_mode: 'HTML' });
         return NextResponse.json({ ok: true });
       }
 
       // Default response
-      await handleStart(token, chat.id, botId, telegramUserId);
+      await handleStart(token, chat.id, botId, telegramUserId, copy);
     }
 
     // Handle callback queries
@@ -210,14 +199,15 @@ export async function POST(
           telegramUserId,
           telegramUsername,
           menuItemId,
-          callbackId
+          callbackId,
+          copy
         );
       } else if (data === 'confirm_order') {
-        await handleConfirmOrder(token, chatId, botId, telegramUserId, callbackId);
+        await handleConfirmOrder(token, chatId, botId, telegramUserId, callbackId, copy);
       } else if (data === 'cancel_order') {
-        await handleCancelOrder(token, chatId, botId, telegramUserId, callbackId);
+        await handleCancelOrder(token, chatId, botId, telegramUserId, callbackId, copy);
       } else {
-        await answerCallbackQuery(token, callbackId, 'Unknown action');
+        await answerCallbackQuery(token, callbackId, copy.callback_unknown_action);
       }
     }
 
@@ -252,7 +242,13 @@ async function trackTelegramUser(botId: string, telegramUserId: string, telegram
   }
 }
 
-async function handleStart(token: string, chatId: number, botId: string, telegramUserId: string) {
+async function handleStart(
+  token: string,
+  chatId: number,
+  botId: string,
+  telegramUserId: string,
+  copy: BotTelegramCopy
+) {
   const { data: botConfigData } = await (supabaseAdmin
     .from('bots') as any)
     .select('start_welcome_message, start_show_menu_only, start_show_tip')
@@ -277,8 +273,8 @@ async function handleStart(token: string, chatId: number, botId: string, telegra
     await sendMessageWithFallback(
       token,
       chatId,
-      '<b>Welcome!</b>\n\nThere are no products in the menu yet. Please try again later.',
-      'Welcome!\n\nThere are no products in the menu yet. Please try again later.'
+      copy.empty_menu_html,
+      telegramHtmlToPlain(copy.empty_menu_html)
     );
     return;
   }
@@ -309,23 +305,22 @@ async function handleStart(token: string, chatId: number, botId: string, telegra
       : `${index + 1}. ${item.name}`
   );
 
+  const introHtml = botConfig.start_welcome_message?.trim()
+    ? `${escapeHtml(botConfig.start_welcome_message.trim())}\n\n`
+    : copy.menu_intro_html;
+  const introPlain = botConfig.start_welcome_message?.trim()
+    ? `${botConfig.start_welcome_message.trim()}\n\n`
+    : telegramHtmlToPlain(copy.menu_intro_html);
+
   const main = await sendMessageWithFallback(
     token,
     chatId,
     botConfig.start_show_menu_only
       ? `${menuLines.join('\n')}`
-      : `${
-          botConfig.start_welcome_message?.trim()
-            ? `${escapeHtml(botConfig.start_welcome_message.trim())}\n\n`
-            : '<b>Welcome!</b>\n\n'
-        }<b>Your menu</b>\n${menuLines.join('\n')}\n\n<i>Tap a product button below to continue.</i>`,
+      : `${introHtml}\n\n${menuLines.join('\n')}${copy.menu_footer_html}`,
     botConfig.start_show_menu_only
       ? `${plainMenuLines.join('\n')}`
-      : `${
-          botConfig.start_welcome_message?.trim()
-            ? `${botConfig.start_welcome_message.trim()}\n\n`
-            : 'Welcome!\n\n'
-        }Your menu\n${plainMenuLines.join('\n')}\n\nTap a product button below to continue.`,
+      : `${introPlain}\n\n${plainMenuLines.join('\n')}${telegramHtmlToPlain(copy.menu_footer_html)}`,
     { reply_markup: keyboard }
   );
 
@@ -334,12 +329,19 @@ async function handleStart(token: string, chatId: number, botId: string, telegra
   }
 
   if (botConfig.start_show_tip) {
+    const tipHtml = copy.help_text_html.replace(
+      /\{\{browse_menu_button\}\}/g,
+      escapeHtml(copy.browse_menu_button)
+    );
+    const tipPlain = telegramHtmlToPlain(
+      copy.help_text_html.replace(/\{\{browse_menu_button\}\}/g, copy.browse_menu_button)
+    );
     const tip = await sendMessageWithFallback(
       token,
       chatId,
-      `<i>Tip: use ${escapeHtml(TELEGRAM_REPLY_MENU_BUTTON_TEXT)} or type /menu anytime to see this list again.</i>`,
-      `Tip: use ${TELEGRAM_REPLY_MENU_BUTTON_TEXT} or type /menu anytime to see this list again.`,
-      { reply_markup: createPersistentMenuReplyKeyboard() }
+      tipHtml,
+      tipPlain,
+      { reply_markup: createPersistentMenuReplyKeyboard(copy.browse_menu_button) }
     );
 
     if (!tip.ok) {
@@ -357,7 +359,8 @@ async function handleMenuSelection(
   telegramUserId: string,
   telegramUsername: string,
   menuItemId: string,
-  callbackId: string
+  callbackId: string,
+  copy: BotTelegramCopy
 ) {
   // Get menu item
   const { data: menuItem } = await (supabaseAdmin
@@ -369,7 +372,7 @@ async function handleMenuSelection(
     .single();
 
   if (!menuItem) {
-    await answerCallbackQuery(token, callbackId, 'Item not found');
+    await answerCallbackQuery(token, callbackId, copy.callback_item_not_found);
     return;
   }
 
@@ -385,8 +388,7 @@ async function handleMenuSelection(
       .eq('is_sold', false);
 
     if (!count || count === 0) {
-      await answerCallbackQuery(token, callbackId, 'This item is out of stock');
-      await sendMessage(token, chatId, 'Sorry, this item is currently out of stock.');
+      await answerCallbackQuery(token, callbackId, copy.callback_out_of_stock);
       return;
     }
   }
@@ -413,16 +415,17 @@ async function handleMenuSelection(
 
   await answerCallbackQuery(token, callbackId);
 
-  const keyboard = createConfirmOrderKeyboard();
+  const keyboard = createConfirmOrderKeyboard(copy.button_confirm_pay, copy.button_cancel);
+
+  const pricePart =
+    typedMenuItem.price > 0
+      ? `\n${escapeHtml(copy.purchase_price_label)}: ${escapeHtml(formatCurrencyAmount(typedMenuItem.price, shopCurrency))}`
+      : '';
 
   await sendMessage(
     token,
     chatId,
-    `<b>${typedMenuItem.name}</b>${
-      typedMenuItem.price > 0
-        ? `\nPrice: ${escapeHtml(formatCurrencyAmount(typedMenuItem.price, shopCurrency))}`
-        : ''
-    }\n\nWould you like to purchase this item?`,
+    `<b>${escapeHtml(typedMenuItem.name)}</b>${pricePart}\n\n${copy.purchase_question}`,
     { parse_mode: 'HTML', reply_markup: keyboard }
   );
 }
@@ -432,12 +435,13 @@ async function handleConfirmOrder(
   chatId: number,
   botId: string,
   telegramUserId: string,
-  callbackId: string
+  callbackId: string,
+  copy: BotTelegramCopy
 ) {
   const session = await getUserSession(telegramUserId, botId);
 
   if (!session?.order_id || !session?.menu_item_id) {
-    await answerCallbackQuery(token, callbackId, 'Order expired');
+    await answerCallbackQuery(token, callbackId, copy.callback_order_expired);
     return;
   }
 
@@ -456,12 +460,7 @@ async function handleConfirmOrder(
 
   await answerCallbackQuery(token, callbackId);
 
-  await sendMessage(
-    token,
-    chatId,
-    'Please upload your payment slip.\n\nSupported payment methods:\n- Bank Transfer\n- QR Code Payment',
-    { parse_mode: 'HTML' }
-  );
+  await sendMessage(token, chatId, copy.slip_request_html, { parse_mode: 'HTML' });
 }
 
 async function handleCancelOrder(
@@ -469,7 +468,8 @@ async function handleCancelOrder(
   chatId: number,
   botId: string,
   telegramUserId: string,
-  callbackId: string
+  callbackId: string,
+  copy: BotTelegramCopy
 ) {
   const session = await getUserSession(telegramUserId, botId);
 
@@ -486,12 +486,7 @@ async function handleCancelOrder(
 
   await answerCallbackQuery(token, callbackId);
 
-  await sendMessage(
-    token,
-    chatId,
-    'Order cancelled. Use /start to browse the menu again.',
-    { parse_mode: 'HTML' }
-  );
+  await sendMessage(token, chatId, copy.order_cancelled, { parse_mode: 'HTML' });
 }
 
 async function handleSlipUpload(
@@ -501,7 +496,8 @@ async function handleSlipUpload(
   telegramUserId: string,
   telegramUsername: string,
   photoFileId: string,
-  session: UserSession
+  session: UserSession,
+  copy: BotTelegramCopy
 ) {
   if (!session.order_id) return;
 
@@ -513,12 +509,7 @@ async function handleSlipUpload(
     .single();
 
   if (!order) {
-    await sendMessage(
-      token,
-      chatId,
-      'We could not find your order. Please use /start and try again.',
-      { parse_mode: 'HTML' }
-    );
+    await sendMessage(token, chatId, copy.slip_order_not_found, { parse_mode: 'HTML' });
     await clearUserSession(telegramUserId, botId);
     return;
   }
@@ -528,15 +519,13 @@ async function handleSlipUpload(
   if (status !== 'PENDING_PAYMENT') {
     let msg: string;
     if (status === 'SLIP_SUBMITTED') {
-      msg =
-        'We already have your payment slip for this order. Please wait for verification — sending more photos is not needed.';
+      msg = copy.slip_already_received;
     } else if (status === 'COMPLETED' || status === 'APPROVED') {
-      msg = 'This order is already completed. Use /start if you need something else.';
+      msg = copy.slip_order_completed;
     } else if (status === 'REJECTED') {
-      msg =
-        'This order was rejected. Use /start to place a new order if you still need the product.';
+      msg = copy.slip_order_rejected;
     } else {
-      msg = 'We cannot accept another slip for this order in its current state. Use /start if you need help.';
+      msg = copy.slip_wrong_state;
     }
     await sendMessage(token, chatId, msg, { parse_mode: 'HTML' });
     await clearUserSession(telegramUserId, botId);
@@ -558,32 +547,17 @@ async function handleSlipUpload(
 
   if (updateError) {
     console.error('[webhook] slip update failed:', updateError);
-    await sendMessage(
-      token,
-      chatId,
-      'Something went wrong saving your slip. Please try again in a moment or contact support.',
-      { parse_mode: 'HTML' }
-    );
+    await sendMessage(token, chatId, copy.slip_save_failed, { parse_mode: 'HTML' });
     return;
   }
 
   if (!updatedRows?.length) {
-    await sendMessage(
-      token,
-      chatId,
-      'We already received your payment slip for this order. Please wait for verification — no need to send it again.',
-      { parse_mode: 'HTML' }
-    );
+    await sendMessage(token, chatId, copy.slip_already_received, { parse_mode: 'HTML' });
     await clearUserSession(telegramUserId, botId);
     return;
   }
 
   await clearUserSession(telegramUserId, botId);
 
-  await sendMessage(
-    token,
-    chatId,
-    '<b>Thank you!</b>\n\nYour payment slip has been submitted. We will verify it shortly and send your order.',
-    { parse_mode: 'HTML' }
-  );
+  await sendMessage(token, chatId, copy.slip_submitted_thanks_html, { parse_mode: 'HTML' });
 }

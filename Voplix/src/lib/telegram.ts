@@ -216,13 +216,10 @@ export async function answerCallbackQuery(
   }
 }
 
-/** Reply keyboard label — must match webhook handler for the same string. */
-export const TELEGRAM_REPLY_MENU_BUTTON_TEXT = '📋 Browse menu';
-
 /** Persistent bottom keyboard so users can reopen the catalog without typing /menu. */
-export function createPersistentMenuReplyKeyboard() {
+export function createPersistentMenuReplyKeyboard(browseMenuButtonLabel: string) {
   return {
-    keyboard: [[{ text: TELEGRAM_REPLY_MENU_BUTTON_TEXT }]],
+    keyboard: [[{ text: browseMenuButtonLabel }]],
     resize_keyboard: true,
   };
 }
@@ -256,12 +253,12 @@ export function createMainMenuKeyboard(
   };
 }
 
-export function createConfirmOrderKeyboard() {
+export function createConfirmOrderKeyboard(confirmLabel: string, cancelLabel: string) {
   return {
     inline_keyboard: [
       [
-        { text: '✅ Confirm & Pay', callback_data: 'confirm_order' },
-        { text: '❌ Cancel', callback_data: 'cancel_order' },
+        { text: confirmLabel, callback_data: 'confirm_order' },
+        { text: cancelLabel, callback_data: 'cancel_order' },
       ],
     ],
   };

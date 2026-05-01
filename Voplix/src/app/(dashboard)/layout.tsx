@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { DashboardSidebar } from '@/components/dashboard/sidebar';
 import { DashboardHeader } from '@/components/dashboard/header';
 import { CurrencyProvider } from '@/components/dashboard/currency-context';
+import { LanguageProvider } from '@/lib/i18n/LanguageContext';
 import { getOwnerProfileForLayout } from '@/lib/owner-profile';
 import { shopCurrencyFromUser } from '@/lib/currency';
 
@@ -47,20 +48,22 @@ export default async function DashboardLayout({
   const currency = shopCurrencyFromUser(user);
 
   return (
-    <CurrencyProvider value={currency}>
-      <div className="min-h-screen bg-zinc-100 dark:bg-zinc-950">
-        <DashboardSidebar user={user} />
-        <div className="lg:pl-72">
-          <DashboardHeader
-            user={user}
-            profile={profile}
-            announcements={(announcements as any[]) || []}
-            unreadCount={unreadCount}
-            bots={(bots as any[]) || []}
-          />
-          <main className="px-3 py-5 sm:px-6 sm:py-8 lg:px-8">{children}</main>
+    <LanguageProvider>
+      <CurrencyProvider value={currency}>
+        <div className="min-h-screen bg-zinc-100 dark:bg-zinc-950">
+          <DashboardSidebar user={user} />
+          <div className="lg:pl-72">
+            <DashboardHeader
+              user={user}
+              profile={profile}
+              announcements={(announcements as any[]) || []}
+              unreadCount={unreadCount}
+              bots={(bots as any[]) || []}
+            />
+            <main className="px-3 py-5 sm:px-6 sm:py-8 lg:px-8">{children}</main>
+          </div>
         </div>
-      </div>
-    </CurrencyProvider>
+      </CurrencyProvider>
+    </LanguageProvider>
   );
 }

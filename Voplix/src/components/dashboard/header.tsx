@@ -10,6 +10,8 @@ import { createClient } from '@/lib/supabase/client';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { LanguageToggle } from '@/components/language-toggle';
+import { useLanguage } from '@/lib/i18n/LanguageContext';
 
 interface DashboardHeaderProps {
   user: User;
@@ -27,6 +29,7 @@ interface DashboardHeaderProps {
 const BOT_SCOPED_PAGES = ['/dashboard', '/menu', '/stock', '/orders', '/broadcast'];
 
 export function DashboardHeader({ user, profile, announcements, unreadCount, bots }: DashboardHeaderProps) {
+  const { t } = useLanguage();
   const [openProfile, setOpenProfile] = useState(false);
   const [openNotifications, setOpenNotifications] = useState(false);
   const supabase = createClient();
@@ -121,7 +124,7 @@ export function DashboardHeader({ user, profile, announcements, unreadCount, bot
       <div className="flex flex-1 items-center justify-between gap-2">
         <div className="min-w-0 flex-1 text-left">
           <p className="truncate text-sm text-zinc-600 dark:text-zinc-400">
-            Welcome, {fullName || profile?.display_name || user.email?.split('@')[0] || 'Owner'}
+            {t('Welcome')}, {fullName || profile?.display_name || user.email?.split('@')[0] || 'Owner'}
           </p>
           {bots.length > 0 ? (
             <div className="mt-1 w-full max-w-[220px] sm:max-w-[300px]">
@@ -130,7 +133,7 @@ export function DashboardHeader({ user, profile, announcements, unreadCount, bot
                   className="h-8 border-zinc-300 bg-zinc-100 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
                   disabled={isSwitchingBot}
                 >
-                  <span className="truncate">{selectedBot ? `@${selectedBot.bot_username}` : 'Select bot'}</span>
+                  <span className="truncate">{selectedBot ? `@${selectedBot.bot_username}` : t('Select bot')}</span>
                 </SelectTrigger>
                 <SelectContent className="border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-800">
                   {bots.map((bot) => (
@@ -145,7 +148,7 @@ export function DashboardHeader({ user, profile, announcements, unreadCount, bot
                 </SelectContent>
               </Select>
               {isSwitchingBot ? (
-                <p className="mt-1 text-sm font-medium text-zinc-500 dark:text-zinc-500">Switching bot…</p>
+                <p className="mt-1 text-sm font-medium text-zinc-500 dark:text-zinc-500">{t('Switching bot…')}</p>
               ) : null}
             </div>
           ) : (
@@ -156,6 +159,7 @@ export function DashboardHeader({ user, profile, announcements, unreadCount, bot
         </div>
 
         <div className="ml-1 flex items-center gap-0.5 sm:ml-3 sm:gap-1">
+          <LanguageToggle />
           <ThemeToggle />
           <div className="relative">
           <Button

@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { decrypt } from '@/lib/encryption';
 import { sendMessage } from '@/lib/telegram';
+import { mergeBotTelegramCopy, applyTemplate, escapeHtml } from '@/lib/bot-telegram-copy';
 
 export async function POST(
   request: Request,
@@ -45,15 +46,15 @@ export async function POST(
       return NextResponse.json({ error: updateError.message }, { status: 500 });
     }
 
-    // Send rejection message via Telegram
+    const copy = mergeBotTelegramCopy(order.bots.telegram_customer_copy);
+    const reasonBlock = reason ? `\n\nReason: ${escapeHtml(reason)}` : '';
+    const rejectHtml = applyTemplate(copy.order_rejected_template_html, {
+      product_name: escapeHtml(String(order.menu_items.name)),
+      reason_block: reasonBlock,
+    });
+
     const token = decrypt(order.bots.token_encrypted);
-    
-    await sendMessage(
-      token,
-      order.telegram_user_id,
-      `<b>Order Update</b>\n\nYour order for ${order.menu_items.name} has been cancelled.${reason ? `\n\nReason: ${reason}` : ''}\n\nIf you believe this is an error, please contact support.`,
-      { parse_mode: 'HTML' }
-    );
+    await sendMessage(token, order.telegram_user_id, rejectHtml, { parse_mode: 'HTML' });
 
     return NextResponse.json({ success: true });
   } catch (error) {

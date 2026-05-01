@@ -19,6 +19,7 @@ import { cn } from '@/lib/utils';
 import { VoplixWordmark } from '@/components/brand/voplix-wordmark';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
+import { useLanguage } from '@/lib/i18n/LanguageContext';
 
 interface DashboardSidebarProps {
   user: User;
@@ -41,6 +42,7 @@ export function DashboardSidebar({ user, mobile = false }: DashboardSidebarProps
   const router = useRouter();
   const supabase = createClient();
   const activeBotId = searchParams.get('bot');
+  const { t } = useLanguage();
 
   useEffect(() => {
     navigation.forEach((item) => {
@@ -92,7 +94,7 @@ export function DashboardSidebar({ user, mobile = false }: DashboardSidebarProps
                       )}
                     >
                       <item.icon className="h-5 w-5 shrink-0" aria-hidden="true" />
-                      {item.name}
+                      {t(item.name)}
                     </Link>
                       );
                     })()}
@@ -114,7 +116,7 @@ export function DashboardSidebar({ user, mobile = false }: DashboardSidebarProps
                 className="flex w-full items-center gap-x-3 rounded-md px-6 py-2 text-sm font-semibold text-zinc-600 hover:bg-zinc-200 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-white"
               >
                 <SignOut className="h-5 w-5 shrink-0" />
-                Logout
+                {t('Logout')}
               </button>
             </li>
           </ul>

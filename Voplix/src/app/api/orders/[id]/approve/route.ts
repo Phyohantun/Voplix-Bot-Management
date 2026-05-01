@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { decrypt } from '@/lib/encryption';
 import { sendMessage } from '@/lib/telegram';
+import { mergeBotTelegramCopy, applyTemplate, escapeHtml } from '@/lib/bot-telegram-copy';
 
 export async function POST(
   request: Request,
@@ -18,7 +19,7 @@ export async function POST(
     }
 
     const body = await request.json();
-    const { manual_delivery_data } = body;
+    const { manual_delivery_data, manual_message } = body;
 
     // Get order with bot and menu item
     const { data: order } = await (supabaseAdmin
@@ -60,22 +61,30 @@ export async function POST(
       } else {
         deliveryContent = order.menu_items.delivery_content || 'Your order is ready!';
       }
-    } else if (order.menu_items.type === 'MANUAL_DELIVERY' && manual_delivery_data) {
-      // Format manual delivery data
-      deliveryContent = Object.entries(manual_delivery_data)
-        .filter(([_, value]) => value)
-        .map(([key, value]) => `${key}: ${value}`)
-        .join('\n');
+    } else if (order.menu_items.type === 'MANUAL_DELIVERY') {
+      const pasted = typeof manual_message === 'string' ? manual_message.trim() : '';
+      if (pasted) {
+        deliveryContent = pasted;
+      } else if (manual_delivery_data && typeof manual_delivery_data === 'object') {
+        deliveryContent = Object.entries(manual_delivery_data)
+          .filter(([_, value]) => value)
+          .map(([key, value]) => `${key}: ${value}`)
+          .join('\n');
+      } else {
+        deliveryContent = order.menu_items.delivery_content || 'Thank you for your purchase!';
+      }
     } else {
       deliveryContent = order.menu_items.delivery_content || 'Thank you for your purchase!';
     }
 
-    // Update order
+    const storedManual =
+      order.menu_items.type === 'MANUAL_DELIVERY' ? { message: deliveryContent } : null;
+
     const { error: updateError } = await (supabaseAdmin
       .from('orders') as any)
       .update({
         status: 'COMPLETED',
-        manual_delivery_data: manual_delivery_data || null,
+        manual_delivery_data: storedManual,
         updated_at: new Date().toISOString(),
       })
       .eq('id', id);
@@ -84,15 +93,14 @@ export async function POST(
       return NextResponse.json({ error: updateError.message }, { status: 500 });
     }
 
-    // Send delivery message via Telegram
+    const copy = mergeBotTelegramCopy(order.bots.telegram_customer_copy);
+    const confirmHtml = applyTemplate(copy.order_confirmed_template_html, {
+      product_name: escapeHtml(String(order.menu_items.name)),
+      delivery: escapeHtml(deliveryContent),
+    });
+
     const token = decrypt(order.bots.token_encrypted);
-    
-    await sendMessage(
-      token,
-      order.telegram_user_id,
-      `<b>Order Confirmed!</b>\n\n${order.menu_items.name}\n\n<b>Your Delivery:</b>\n${deliveryContent}`,
-      { parse_mode: 'HTML' }
-    );
+    await sendMessage(token, order.telegram_user_id, confirmHtml, { parse_mode: 'HTML' });
 
     return NextResponse.json({ success: true });
   } catch (error) {

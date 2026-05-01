@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { decrypt } from '@/lib/encryption';
 import { deleteWebhook } from '@/lib/telegram';
+import { parseTelegramCustomerCopyFromClient } from '@/lib/bot-telegram-copy';
 
 export async function PATCH(
   request: Request,
@@ -42,6 +43,18 @@ export async function PATCH(
         return NextResponse.json({ error: 'start_show_tip must be boolean' }, { status: 400 });
       }
       updates.start_show_tip = body.start_show_tip;
+    }
+
+    if ('telegram_customer_copy' in body) {
+      if (body.telegram_customer_copy === null) {
+        updates.telegram_customer_copy = null;
+      } else {
+        const parsed = parseTelegramCustomerCopyFromClient(body.telegram_customer_copy);
+        if (!parsed.ok) {
+          return NextResponse.json({ error: parsed.error }, { status: 400 });
+        }
+        updates.telegram_customer_copy = parsed.value;
+      }
     }
 
     if (Object.keys(updates).length === 0) {
