@@ -33,16 +33,16 @@ export function ReconnectWebhookButton({ botId }: ReconnectWebhookButtonProps) {
       });
       const data = (await response.json()) as ReconnectResponse;
       if (!response.ok) {
-        toast.error(data.error || 'Failed to reconnect webhook');
+        toast.error(data.error || 'Could not refresh the Telegram link');
         return;
       }
 
       if (data.webhookInfoError) {
-        toast.warning(`Webhook set, but status check failed: ${data.webhookInfoError}`);
+        toast.warning(`Link updated, but status check failed: ${data.webhookInfoError}`);
       } else if (data.webhookInfo?.last_error_message) {
-        toast.warning(`Webhook warning: ${data.webhookInfo.last_error_message}`);
+        toast.warning(`Telegram reported an issue: ${data.webhookInfo.last_error_message}`);
       } else {
-        toast.success('Webhook reconnected and healthy');
+        toast.success('Telegram link is healthy');
       }
 
       console.log('[webhook reconnect]', {
@@ -54,7 +54,7 @@ export function ReconnectWebhookButton({ botId }: ReconnectWebhookButtonProps) {
 
       router.refresh();
     } catch {
-      toast.error('Failed to reconnect webhook');
+      toast.error('Could not refresh the Telegram link');
     } finally {
       setLoading(false);
     }
@@ -66,14 +66,14 @@ export function ReconnectWebhookButton({ botId }: ReconnectWebhookButtonProps) {
       size="sm"
       onClick={handleReconnect}
       disabled={loading}
-      className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 text-xs"
+      className="border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-300 dark:hover:bg-zinc-200 dark:bg-zinc-800 text-xs"
     >
       {loading ? (
         <SpinnerGap className="mr-1 h-3 w-3 animate-spin" />
       ) : (
         <ArrowClockwise className="mr-1 h-3 w-3" />
       )}
-      Reconnect
+      Refresh link
     </Button>
   );
 }

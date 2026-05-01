@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 
-const MENU_TYPES = ['DIGITAL_DELIVERY', 'MANUAL_DELIVERY', 'MESSAGE_ONLY'] as const;
+const MENU_TYPES = ['DIGITAL_DELIVERY', 'MANUAL_DELIVERY'] as const;
 type MenuType = (typeof MENU_TYPES)[number];
 
 function isMenuType(v: unknown): v is MenuType {
@@ -36,7 +36,7 @@ export async function POST(request: Request) {
         ? Math.floor(price)
         : 0;
 
-    const itemType: MenuType = isMenuType(type) ? type : 'MESSAGE_ONLY';
+    const itemType: MenuType = isMenuType(type) ? type : 'DIGITAL_DELIVERY';
 
     let delivery: string | null = null;
     if (delivery_content != null) {

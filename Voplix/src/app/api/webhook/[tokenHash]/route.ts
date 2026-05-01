@@ -10,6 +10,8 @@ import {
   TELEGRAM_REPLY_MENU_BUTTON_TEXT,
 } from '@/lib/telegram';
 import { getUserSession, setUserSession, clearUserSession, UserSession } from '@/lib/redis';
+import { getShopCurrencyForBot } from '@/lib/owner-currency';
+import { formatCurrencyAmount } from '@/lib/currency';
 
 interface TelegramUpdate {
   message?: {
@@ -39,7 +41,7 @@ interface TelegramUpdate {
   };
 }
 
-type MenuItemType = 'DIGITAL_DELIVERY' | 'MANUAL_DELIVERY' | 'MESSAGE_ONLY';
+type MenuItemType = 'DIGITAL_DELIVERY' | 'MANUAL_DELIVERY';
 
 function escapeHtml(text: string): string {
   return text
@@ -172,6 +174,17 @@ export async function POST(
         return NextResponse.json({ ok: true });
       }
 
+      // Photos outside the slip step (e.g. many slips after submit): short reply instead of full /start menu
+      if (photo) {
+        await sendMessage(
+          token,
+          chat.id,
+          '<b>Payment slip</b>\n\nSlips are only accepted right after you tap <b>Confirm &amp; Pay</b> on an order. If you already sent one, please wait for verification — extra photos are not needed.',
+          { parse_mode: 'HTML' }
+        );
+        return NextResponse.json({ ok: true });
+      }
+
       // Default response
       await handleStart(token, chat.id, botId, telegramUserId);
     }
@@ -190,7 +203,15 @@ export async function POST(
 
       if (data.startsWith('menu_')) {
         const menuItemId = data.replace('menu_', '');
-        await handleMenuSelection(token, chatId, botId, telegramUserId, telegramUsername, menuItemId, callbackId);
+        await handleMenuSelection(
+          token,
+          chatId,
+          botId,
+          telegramUserId,
+          telegramUsername,
+          menuItemId,
+          callbackId
+        );
       } else if (data === 'confirm_order') {
         await handleConfirmOrder(token, chatId, botId, telegramUserId, callbackId);
       } else if (data === 'cancel_order') {
@@ -263,26 +284,28 @@ async function handleStart(token: string, chatId: number, botId: string, telegra
   }
 
   const typedMenuItems = menuItems as MenuItemRecord[];
+  const shopCurrency = await getShopCurrencyForBot(botId);
 
   const keyboard = createMainMenuKeyboard(
     typedMenuItems.map((item) => ({
       id: item.id,
       name: item.name,
       price: item.price,
-    }))
+    })),
+    shopCurrency
   );
 
   const menuLines = typedMenuItems.map((item, index) => {
     const safe = escapeHtml(item.name);
     if (item.price > 0) {
-      return `${index + 1}. ${safe} — ${item.price.toLocaleString()} THB`;
+      return `${index + 1}. ${safe} — ${escapeHtml(formatCurrencyAmount(item.price, shopCurrency))}`;
     }
     return `${index + 1}. ${safe}`;
   });
 
   const plainMenuLines = typedMenuItems.map((item, index) =>
     item.price > 0
-      ? `${index + 1}. ${item.name} — ${item.price.toLocaleString()} THB`
+      ? `${index + 1}. ${item.name} — ${formatCurrencyAmount(item.price, shopCurrency)}`
       : `${index + 1}. ${item.name}`
   );
 
@@ -351,20 +374,7 @@ async function handleMenuSelection(
   }
 
   const typedMenuItem = menuItem as MenuItemRecord;
-
-  if (typedMenuItem.type === 'MESSAGE_ONLY') {
-    await answerCallbackQuery(token, callbackId);
-
-    const message = typedMenuItem.delivery_content?.trim() || 'Thank you for contacting us.';
-
-    await sendMessage(
-      token,
-      chatId,
-      `<b>${typedMenuItem.name}</b>\n\n${message}`,
-      { parse_mode: 'HTML' }
-    );
-    return;
-  }
+  const shopCurrency = await getShopCurrencyForBot(botId);
 
   // Check stock for digital delivery
   if (typedMenuItem.type === 'DIGITAL_DELIVERY') {
@@ -408,7 +418,11 @@ async function handleMenuSelection(
   await sendMessage(
     token,
     chatId,
-    `<b>${typedMenuItem.name}</b>${typedMenuItem.price > 0 ? `\nPrice: ${typedMenuItem.price.toLocaleString()} THB` : ''}\n\nWould you like to purchase this item?`,
+    `<b>${typedMenuItem.name}</b>${
+      typedMenuItem.price > 0
+        ? `\nPrice: ${escapeHtml(formatCurrencyAmount(typedMenuItem.price, shopCurrency))}`
+        : ''
+    }\n\nWould you like to purchase this item?`,
     { parse_mode: 'HTML', reply_markup: keyboard }
   );
 }
@@ -491,26 +505,79 @@ async function handleSlipUpload(
 ) {
   if (!session.order_id) return;
 
-  // Get order details
   const { data: order } = await (supabaseAdmin
     .from('orders') as any)
-    .select('*, menu_items(*)')
+    .select('id, status, bot_id')
     .eq('id', session.order_id)
+    .eq('bot_id', botId)
     .single();
 
-  if (!order) return;
+  if (!order) {
+    await sendMessage(
+      token,
+      chatId,
+      'We could not find your order. Please use /start and try again.',
+      { parse_mode: 'HTML' }
+    );
+    await clearUserSession(telegramUserId, botId);
+    return;
+  }
 
-  // Update order with slip and status
-  await (supabaseAdmin
+  const status = order.status as string;
+
+  if (status !== 'PENDING_PAYMENT') {
+    let msg: string;
+    if (status === 'SLIP_SUBMITTED') {
+      msg =
+        'We already have your payment slip for this order. Please wait for verification — sending more photos is not needed.';
+    } else if (status === 'COMPLETED' || status === 'APPROVED') {
+      msg = 'This order is already completed. Use /start if you need something else.';
+    } else if (status === 'REJECTED') {
+      msg =
+        'This order was rejected. Use /start to place a new order if you still need the product.';
+    } else {
+      msg = 'We cannot accept another slip for this order in its current state. Use /start if you need help.';
+    }
+    await sendMessage(token, chatId, msg, { parse_mode: 'HTML' });
+    await clearUserSession(telegramUserId, botId);
+    return;
+  }
+
+  // Only one successful transition: burst uploads / parallel webhooks race here; losers get no row updated.
+  const { data: updatedRows, error: updateError } = await (supabaseAdmin
     .from('orders') as any)
     .update({
       status: 'SLIP_SUBMITTED',
       slip_image_url: photoFileId,
       telegram_username: telegramUsername,
+      updated_at: new Date().toISOString(),
     })
-    .eq('id', session.order_id);
+    .eq('id', session.order_id)
+    .eq('status', 'PENDING_PAYMENT')
+    .select('id');
 
-  // Clear user state
+  if (updateError) {
+    console.error('[webhook] slip update failed:', updateError);
+    await sendMessage(
+      token,
+      chatId,
+      'Something went wrong saving your slip. Please try again in a moment or contact support.',
+      { parse_mode: 'HTML' }
+    );
+    return;
+  }
+
+  if (!updatedRows?.length) {
+    await sendMessage(
+      token,
+      chatId,
+      'We already received your payment slip for this order. Please wait for verification — no need to send it again.',
+      { parse_mode: 'HTML' }
+    );
+    await clearUserSession(telegramUserId, botId);
+    return;
+  }
+
   await clearUserSession(telegramUserId, botId);
 
   await sendMessage(

@@ -1,8 +1,10 @@
 import { createClient } from '@/lib/supabase/server';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Robot, ShoppingCart, CurrencyDollar, Clock } from '@phosphor-icons/react/dist/ssr';
+import { ChatCircle, ShoppingCart, CurrencyDollar, Clock } from '@phosphor-icons/react/dist/ssr';
 import Link from 'next/link';
 import { AutoRefresh } from '@/components/dashboard/auto-refresh';
+import { formatOrderTimestamp } from '@/lib/format-order';
+import { formatCurrencyAmount, shopCurrencyFromUser } from '@/lib/currency';
 
 interface BotRecord {
   id: string;
@@ -89,65 +91,68 @@ export default async function DashboardPage({
   const bots = await getBots(user.id);
   const selectedBotId = params.bot && bots.some((b) => b.id === params.bot) ? params.bot : null;
   const stats = await getDashboardStats(user.id, selectedBotId);
+  const currency = shopCurrencyFromUser(user);
   
   return (
     <div className="space-y-6">
       <AutoRefresh intervalMs={30000} />
       <div className="space-y-1">
-        <h1 className="text-2xl font-bold text-white">Dashboard</h1>
-        <p className="text-zinc-400">A quick view of your bot activity and sales performance.</p>
+        <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Dashboard</h1>
+        <p className="text-zinc-600 dark:text-zinc-400">A quick view of your bot activity and sales performance.</p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-zinc-800 bg-zinc-900">
+        <Card className="border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-zinc-300">Total Bots</CardTitle>
-            <Robot className="h-4 w-4 text-zinc-400" />
+            <CardTitle className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Total Bots</CardTitle>
+            <ChatCircle className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">{stats.totalBots}</div>
-            <p className="text-xs text-zinc-400">
+            <div className="text-2xl font-bold text-zinc-900 dark:text-white">{stats.totalBots}</div>
+            <p className="text-xs text-zinc-600 dark:text-zinc-400">
               Active bots
             </p>
           </CardContent>
         </Card>
         
         <Link href={`/orders${selectedBotId ? `?bot=${selectedBotId}` : ''}`}>
-          <Card className="border-zinc-800 bg-zinc-900 transition-colors hover:bg-zinc-800/50 cursor-pointer">
+          <Card className="cursor-pointer border-zinc-200 bg-white transition-colors hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:bg-zinc-800/80">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-zinc-300">Pending Approvals</CardTitle>
-              <Clock className="h-4 w-4 text-yellow-500" />
+              <CardTitle className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Pending Approvals</CardTitle>
+              <Clock className="h-4 w-4 text-zinc-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-white">{stats.pendingOrders}</div>
-              <p className="text-xs text-zinc-400">
+              <div className="text-2xl font-bold text-zinc-900 dark:text-white">{stats.pendingOrders}</div>
+              <p className="text-xs text-zinc-600 dark:text-zinc-400">
                 Awaiting slip verification
               </p>
             </CardContent>
           </Card>
         </Link>
         
-        <Card className="border-zinc-800 bg-zinc-900">
+        <Card className="border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-zinc-300">Total Orders</CardTitle>
-            <ShoppingCart className="h-4 w-4 text-zinc-400" />
+            <CardTitle className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Total Orders</CardTitle>
+            <ShoppingCart className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">{stats.totalOrders}</div>
-            <p className="text-xs text-zinc-400">
+            <div className="text-2xl font-bold text-zinc-900 dark:text-white">{stats.totalOrders}</div>
+            <p className="text-xs text-zinc-600 dark:text-zinc-400">
               All time orders
             </p>
           </CardContent>
         </Card>
         
-        <Card className="border-zinc-800 bg-zinc-900">
+        <Card className="border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-zinc-300">Revenue</CardTitle>
-            <CurrencyDollar className="h-4 w-4 text-green-500" />
+            <CardTitle className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Revenue</CardTitle>
+            <CurrencyDollar className="h-4 w-4 text-zinc-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">{stats.totalRevenue.toLocaleString()} THB</div>
-            <p className="text-xs text-zinc-400">
+            <div className="text-2xl font-bold text-zinc-900 dark:text-white">
+              {formatCurrencyAmount(stats.totalRevenue, currency)}
+            </div>
+            <p className="text-xs text-zinc-600 dark:text-zinc-400">
               Completed paid orders
             </p>
           </CardContent>
@@ -155,112 +160,117 @@ export default async function DashboardPage({
       </div>
       
       <div className="grid gap-4 lg:grid-cols-2">
-        <Card className="border-zinc-800 bg-zinc-900">
+        <Card className="border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
           <CardHeader>
-            <CardTitle className="text-white">Quick Actions</CardTitle>
-            <CardDescription className="text-zinc-400">Most-used actions</CardDescription>
+            <CardTitle className="text-zinc-900 dark:text-white">Quick Actions</CardTitle>
+            <CardDescription className="text-zinc-600 dark:text-zinc-400">Most-used actions</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <Link 
               href="/bots"
-              className="flex items-center justify-between rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-3 text-sm text-white transition-colors hover:bg-zinc-700"
+              className="flex items-center justify-between rounded-lg border border-zinc-300 bg-zinc-100 px-4 py-3 text-sm text-zinc-900 transition-colors hover:bg-zinc-200 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700"
             >
               <span className="flex items-center gap-3">
-                <Robot className="h-4 w-4 text-indigo-400" />
+                <ChatCircle className="h-4 w-4 text-zinc-500" />
                 Connect bot
               </span>
-              <span className="text-xs text-zinc-400">Open</span>
+              <span className="text-xs text-zinc-600 dark:text-zinc-400">Open</span>
             </Link>
             <Link 
               href={`/menu${selectedBotId ? `?bot=${selectedBotId}` : ''}`}
-              className="flex items-center justify-between rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-3 text-sm text-white transition-colors hover:bg-zinc-700"
+              className="flex items-center justify-between rounded-lg border border-zinc-300 bg-zinc-100 px-4 py-3 text-sm text-zinc-900 transition-colors hover:bg-zinc-200 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700"
             >
               <span className="flex items-center gap-3">
-                <ShoppingCart className="h-4 w-4 text-indigo-400" />
+                <ShoppingCart className="h-4 w-4 text-zinc-500" />
                 Manage menu
               </span>
-              <span className="text-xs text-zinc-400">Open</span>
+              <span className="text-xs text-zinc-600 dark:text-zinc-400">Open</span>
             </Link>
             <Link 
               href={`/orders${selectedBotId ? `?bot=${selectedBotId}` : ''}`}
-              className="flex items-center justify-between rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-3 text-sm text-white transition-colors hover:bg-zinc-700"
+              className="flex items-center justify-between rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-200 dark:bg-zinc-800 px-4 py-3 text-sm text-zinc-900 dark:text-white transition-colors hover:bg-zinc-700"
             >
               <span className="flex items-center gap-3">
-                <Clock className="h-4 w-4 text-indigo-400" />
+                <Clock className="h-4 w-4 text-zinc-500" />
                 Review pending orders
               </span>
-              <span className="text-xs text-zinc-400">Open</span>
+              <span className="text-xs text-zinc-600 dark:text-zinc-400">Open</span>
             </Link>
           </CardContent>
         </Card>
         
-        <Card className="border-zinc-800 bg-zinc-900">
+        <Card className="border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
           <CardHeader>
-            <CardTitle className="text-white">Getting Started</CardTitle>
-            <CardDescription className="text-zinc-400">
+            <CardTitle className="text-zinc-900 dark:text-white">Getting Started</CardTitle>
+            <CardDescription className="text-zinc-600 dark:text-zinc-400">
               Steps to set up your bot
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex items-center gap-3">
-              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-600 text-xs text-white">
+              <div className="flex h-6 w-6 items-center justify-center rounded-full border border-zinc-600 bg-zinc-200 dark:bg-zinc-800 text-xs font-medium text-zinc-800 dark:text-zinc-200">
                 1
               </div>
-              <span className="text-sm text-zinc-300">Connect your Telegram bot</span>
+              <span className="text-sm text-zinc-700 dark:text-zinc-300">Connect your Telegram bot</span>
             </div>
             <div className="flex items-center gap-3">
-              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-600 text-xs text-white">
+              <div className="flex h-6 w-6 items-center justify-center rounded-full border border-zinc-600 bg-zinc-200 dark:bg-zinc-800 text-xs font-medium text-zinc-800 dark:text-zinc-200">
                 2
               </div>
-              <span className="text-sm text-zinc-300">Create menu items for your products</span>
+              <span className="text-sm text-zinc-700 dark:text-zinc-300">Create menu items for your products</span>
             </div>
             <div className="flex items-center gap-3">
-              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-600 text-xs text-white">
+              <div className="flex h-6 w-6 items-center justify-center rounded-full border border-zinc-600 bg-zinc-200 dark:bg-zinc-800 text-xs font-medium text-zinc-800 dark:text-zinc-200">
                 3
               </div>
-              <span className="text-sm text-zinc-300">Add stock for digital products</span>
+              <span className="text-sm text-zinc-700 dark:text-zinc-300">Add stock for digital products</span>
             </div>
             <div className="flex items-center gap-3">
-              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-zinc-700 text-xs text-zinc-300">
+              <div className="flex h-6 w-6 items-center justify-center rounded-full border border-zinc-300 bg-zinc-200/80 text-xs font-medium text-zinc-600 dark:border-zinc-700 dark:bg-zinc-800/50 dark:text-zinc-400">
                 4
               </div>
-              <span className="text-sm text-zinc-400">Start receiving orders!</span>
+              <span className="text-sm text-zinc-600 dark:text-zinc-400">Start receiving orders!</span>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <Card className="border-zinc-800 bg-zinc-900">
+      <Card className="border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
         <CardHeader>
-          <CardTitle className="text-white">Pending Orders</CardTitle>
-          <CardDescription className="text-zinc-400">
+          <CardTitle className="text-zinc-900 dark:text-white">Pending Orders</CardTitle>
+          <CardDescription className="text-zinc-600 dark:text-zinc-400">
             Latest orders waiting for payment verification.
           </CardDescription>
         </CardHeader>
         <CardContent>
           {stats.pendingOrdersData.length === 0 ? (
-            <p className="text-sm text-zinc-400">No pending orders.</p>
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">No pending orders.</p>
           ) : (
             <>
               <div className="space-y-2 md:hidden">
                 {stats.pendingOrdersData.map((order) => (
-                  <div key={order.id} className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-3 text-sm text-zinc-200">
+                  <div key={order.id} className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-100/90 dark:bg-zinc-900/60 p-3 text-sm text-zinc-800 dark:text-zinc-200">
                     <div className="flex items-center justify-between gap-2">
-                      <Link href={`/orders${selectedBotId ? `?bot=${selectedBotId}` : ''}`} className="font-medium text-indigo-400 hover:text-indigo-300">
+                      <Link
+                        href={`/orders${selectedBotId ? `?bot=${selectedBotId}` : ''}`}
+                        className="font-medium text-zinc-800 dark:text-zinc-200 underline decoration-zinc-600 underline-offset-2 hover:text-zinc-950 dark:hover:text-zinc-900 dark:text-white"
+                      >
                         #{order.id.slice(0, 8)}
                       </Link>
-                      <span className="text-xs text-zinc-500">{new Date(order.created_at).toLocaleString()}</span>
+                      <span className="text-xs text-zinc-500 tabular-nums">{formatOrderTimestamp(order.created_at)}</span>
                     </div>
-                    <p className="mt-2 text-zinc-300">{order.menu_items?.name || '-'}</p>
-                    <p className="text-xs text-zinc-400">{order.telegram_username || '-'}</p>
-                    <p className="mt-1 text-xs text-zinc-300">{order.menu_items?.price?.toLocaleString() || 0} THB</p>
+                    <p className="mt-2 text-zinc-700 dark:text-zinc-300">{order.menu_items?.name || '-'}</p>
+                    <p className="text-xs text-zinc-600 dark:text-zinc-400">{order.telegram_username || '-'}</p>
+                    <p className="mt-1 text-xs text-zinc-700 dark:text-zinc-300">
+                      {formatCurrencyAmount(Number(order.menu_items?.price || 0), currency)}
+                    </p>
                   </div>
                 ))}
               </div>
               <div className="hidden overflow-x-auto md:block">
                 <table className="w-full text-sm">
-                <thead className="text-zinc-400">
-                  <tr className="border-b border-zinc-800">
+                <thead className="text-zinc-600 dark:text-zinc-400">
+                  <tr className="border-b border-zinc-200 dark:border-zinc-800">
                     <th className="py-2 text-left font-medium">Order</th>
                     <th className="py-2 text-left font-medium">Customer</th>
                     <th className="py-2 text-left font-medium">Product</th>
@@ -270,16 +280,21 @@ export default async function DashboardPage({
                 </thead>
                 <tbody>
                   {stats.pendingOrdersData.map((order) => (
-                    <tr key={order.id} className="border-b border-zinc-800/70 text-zinc-200">
+                    <tr key={order.id} className="border-b border-zinc-200 dark:border-zinc-800/70 text-zinc-800 dark:text-zinc-200">
                       <td className="py-2">
-                        <Link href={`/orders${selectedBotId ? `?bot=${selectedBotId}` : ''}`} className="text-indigo-400 hover:text-indigo-300">
+                        <Link
+                          href={`/orders${selectedBotId ? `?bot=${selectedBotId}` : ''}`}
+                          className="text-zinc-800 dark:text-zinc-200 underline decoration-zinc-600 underline-offset-2 hover:text-zinc-950 dark:hover:text-zinc-900 dark:text-white"
+                        >
                           #{order.id.slice(0, 8)}
                         </Link>
                       </td>
                       <td className="py-2">{order.telegram_username || '-'}</td>
                       <td className="py-2">{order.menu_items?.name || '-'}</td>
-                      <td className="py-2">{order.menu_items?.price?.toLocaleString() || 0} THB</td>
-                      <td className="py-2">{new Date(order.created_at).toLocaleString()}</td>
+                      <td className="py-2">
+                        {formatCurrencyAmount(Number(order.menu_items?.price || 0), currency)}
+                      </td>
+                      <td className="py-2 tabular-nums">{formatOrderTimestamp(order.created_at)}</td>
                     </tr>
                   ))}
                 </tbody>

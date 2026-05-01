@@ -1,3 +1,6 @@
+import type { ShopCurrency } from '@/lib/currency';
+import { formatCurrencyAmount } from '@/lib/currency';
+
 const TELEGRAM_API_BASE = 'https://api.telegram.org/bot';
 const TELEGRAM_REQUEST_TIMEOUT_MS = 10000;
 
@@ -231,11 +234,14 @@ function truncateTelegramButtonLabel(text: string, maxChars = 58): string {
   return `${chars.slice(0, maxChars - 1).join('')}…`;
 }
 
-export function createMainMenuKeyboard(menuItems: Array<{ id: string; name: string; price: number }>) {
+export function createMainMenuKeyboard(
+  menuItems: Array<{ id: string; name: string; price: number }>,
+  currency: ShopCurrency = 'THB'
+) {
   const buttons = menuItems.map((item) => {
     const label =
       item.price > 0
-        ? `${item.name} · ${item.price.toLocaleString()} THB`
+        ? `${item.name} · ${formatCurrencyAmount(item.price, currency)}`
         : item.name;
     return [
       {

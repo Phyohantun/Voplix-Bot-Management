@@ -61,7 +61,7 @@ export type Database = {
           bot_id: string;
           name: string;
           price: number;
-          type: 'DIGITAL_DELIVERY' | 'MANUAL_DELIVERY' | 'MESSAGE_ONLY';
+          type: 'DIGITAL_DELIVERY' | 'MANUAL_DELIVERY';
           delivery_content: string | null;
           stock_count: number;
           sort_order: number;

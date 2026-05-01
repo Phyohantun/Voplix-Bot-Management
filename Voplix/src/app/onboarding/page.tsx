@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { Robot, CheckCircle, SpinnerGap } from '@phosphor-icons/react';
+import { ChatCircle, CheckCircle, SpinnerGap } from '@phosphor-icons/react';
 import { validateBotToken } from '@/lib/telegram';
 
 export default function OnboardingPage() {
@@ -68,24 +68,24 @@ export default function OnboardingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md border-zinc-800 bg-zinc-900">
+    <div className="min-h-screen bg-zinc-100 dark:bg-zinc-950 flex items-center justify-center p-4">
+      <Card className="w-full max-w-md border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
         <CardHeader className="space-y-1">
           <div className="flex items-center gap-2">
             <div className="h-10 w-10 rounded-lg bg-indigo-600 flex items-center justify-center">
-              <Robot className="h-6 w-6 text-white" />
+              <ChatCircle className="h-6 w-6 text-zinc-900 dark:text-white" />
             </div>
             <div>
-              <CardTitle className="text-2xl text-white">Connect Your Bot</CardTitle>
+              <CardTitle className="text-2xl text-zinc-900 dark:text-white">Connect Your Bot</CardTitle>
             </div>
           </div>
-          <CardDescription className="text-zinc-400">
+          <CardDescription className="text-zinc-600 dark:text-zinc-400">
             Enter your Telegram bot token to get started. You can get this from @BotFather.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="token" className="text-zinc-300">Bot Token</Label>
+            <Label htmlFor="token" className="text-zinc-700 dark:text-zinc-300">Bot Token</Label>
             <Input
               id="token"
               type="password"
@@ -96,7 +96,7 @@ export default function OnboardingPage() {
                 setValidatedBot(null);
               }}
               disabled={loading || validating}
-              className="bg-zinc-800 border-zinc-700 text-white"
+              className="bg-zinc-200 dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-white"
             />
             <p className="text-xs text-zinc-500">
               Your token is encrypted and never exposed. Format: numbers:letters
@@ -118,7 +118,7 @@ export default function OnboardingPage() {
               onClick={handleValidate}
               disabled={!token.trim() || validating || loading || !!validatedBot}
               variant="outline"
-              className="flex-1 border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+              className="flex-1 border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-300 dark:hover:bg-zinc-200 dark:bg-zinc-800"
             >
               {validating ? (
                 <>
@@ -148,9 +148,9 @@ export default function OnboardingPage() {
             </Button>
           </div>
 
-          <div className="rounded-lg bg-zinc-800 p-4 space-y-2">
-            <p className="text-sm font-medium text-zinc-300">How to get your bot token:</p>
-            <ol className="text-xs text-zinc-400 space-y-1 list-decimal list-inside">
+          <div className="rounded-lg bg-zinc-200 dark:bg-zinc-800 p-4 space-y-2">
+            <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">How to get your bot token:</p>
+            <ol className="text-xs text-zinc-600 dark:text-zinc-400 space-y-1 list-decimal list-inside">
               <li>Open Telegram and search for @BotFather</li>
               <li>Send /newbot and follow the instructions</li>
               <li>Once created, copy the token provided</li>

@@ -8,7 +8,7 @@ export function VoplixWordmark({ className }: { className?: string }) {
   return (
     <span
       className={cn(
-        'inline-flex items-baseline gap-x-px text-white [font-family:var(--font-voplix-wordmark),ui-sans-serif,system-ui,sans-serif] font-semibold',
+        'inline-flex items-baseline gap-x-px text-zinc-900 dark:text-white [font-family:var(--font-voplix-wordmark),ui-sans-serif,system-ui,sans-serif] font-semibold',
         className
       )}
     >

@@ -18,7 +18,7 @@ interface MenuItemRecord {
   id: string;
   name: string;
   price: number;
-  type: 'DIGITAL_DELIVERY' | 'MANUAL_DELIVERY' | 'MESSAGE_ONLY';
+  type: 'DIGITAL_DELIVERY' | 'MANUAL_DELIVERY';
   delivery_content: string | null;
   stock_items?: { count: number } | { count: number }[] | null;
 }
@@ -90,9 +90,9 @@ export default async function MenuPage({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-white">Bot menu</h1>
-        <p className="text-zinc-400">
-          Products here are sent to Telegram when someone sends <code className="text-zinc-300">/start</code> or taps
+        <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Bot menu</h1>
+        <p className="text-zinc-600 dark:text-zinc-400">
+          Products here are sent to Telegram when someone sends <code className="text-zinc-700 dark:text-zinc-300">/start</code> or taps
           &quot;Browse menu&quot;.
         </p>
       </div>

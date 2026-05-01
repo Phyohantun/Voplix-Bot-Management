@@ -2,6 +2,9 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { DashboardSidebar } from '@/components/dashboard/sidebar';
 import { DashboardHeader } from '@/components/dashboard/header';
+import { CurrencyProvider } from '@/components/dashboard/currency-context';
+import { getOwnerProfileForLayout } from '@/lib/owner-profile';
+import { shopCurrencyFromUser } from '@/lib/currency';
 
 export default async function DashboardLayout({
   children,
@@ -9,18 +12,16 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   if (!user) {
     redirect('/login');
   }
 
-  const [profileResult, announcementsResult, botsResult] = await Promise.all([
-    (supabase as any)
-      .from('owner_profiles')
-      .select('display_name, business_name, avatar_data_url, notification_last_seen_at')
-      .eq('user_id', user.id)
-      .maybeSingle(),
+  const [profile, announcementsResult, botsResult] = await Promise.all([
+    getOwnerProfileForLayout(user.id),
     (supabase as any)
       .from('system_announcements')
       .select('id, title, message, created_at')
@@ -35,7 +36,6 @@ export default async function DashboardLayout({
       .order('created_at', { ascending: false }),
   ]);
 
-  const profile = profileResult?.data ?? null;
   const announcements = (announcementsResult?.data as any[]) || [];
   const bots = (botsResult?.data as any[]) || [];
 
@@ -44,21 +44,23 @@ export default async function DashboardLayout({
     return new Date(a.created_at).getTime() > new Date(profile.notification_last_seen_at).getTime();
   }).length;
 
+  const currency = shopCurrencyFromUser(user);
+
   return (
-    <div className="min-h-screen bg-zinc-950">
-      <DashboardSidebar user={user} />
-      <div className="lg:pl-72">
-        <DashboardHeader
-          user={user}
-          profile={profile}
-          announcements={(announcements as any[]) || []}
-          unreadCount={unreadCount}
-          bots={(bots as any[]) || []}
-        />
-        <main className="px-3 py-5 sm:px-6 sm:py-8 lg:px-8">
-          {children}
-        </main>
+    <CurrencyProvider value={currency}>
+      <div className="min-h-screen bg-zinc-100 dark:bg-zinc-950">
+        <DashboardSidebar user={user} />
+        <div className="lg:pl-72">
+          <DashboardHeader
+            user={user}
+            profile={profile}
+            announcements={(announcements as any[]) || []}
+            unreadCount={unreadCount}
+            bots={(bots as any[]) || []}
+          />
+          <main className="px-3 py-5 sm:px-6 sm:py-8 lg:px-8">{children}</main>
+        </div>
       </div>
-    </div>
+    </CurrencyProvider>
   );
 }

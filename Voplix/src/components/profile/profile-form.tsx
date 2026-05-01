@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,6 +21,7 @@ export function ProfileForm({
   mode,
 }: ProfileFormProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const supabase = createClient();
   const [firstName, setFirstName] = useState(initialFirstName);
   const [lastName, setLastName] = useState(initialLastName);
@@ -63,9 +64,13 @@ export function ProfileForm({
         throw new Error(j.error || 'Failed to save profile');
       }
 
-      toast.success('Profile saved');
-      router.push('/dashboard');
-      router.refresh();
+      toast.success('Saved');
+      if (pathname.startsWith('/settings')) {
+        router.refresh();
+      } else {
+        router.push('/dashboard');
+        router.refresh();
+      }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to save profile');
     } finally {
@@ -74,50 +79,52 @@ export function ProfileForm({
   };
 
   return (
-    <Card className="border-zinc-800 bg-zinc-900">
-      <CardHeader>
-        <CardTitle className="text-white">
-          {mode === 'setup' ? 'Set up your name' : 'Edit profile'}
-        </CardTitle>
-        <CardDescription className="text-zinc-400">
+    <Card className="border-zinc-200 dark:border-zinc-800/80 bg-zinc-50 dark:bg-zinc-900/50 shadow-none">
+      <CardHeader className="pb-4">
+        <CardTitle className="text-base font-medium text-zinc-900 dark:text-white">Your name</CardTitle>
+        <CardDescription className="text-zinc-500">
           {mode === 'setup'
-            ? 'Complete your first and last name before using your dashboard.'
-            : 'Update your account name details.'}
+            ? 'Add your name to finish setup.'
+            : 'Shown in the app header and on receipts where a name is used.'}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="rounded-md border border-zinc-800 bg-zinc-900/60 p-3 text-sm text-zinc-400">
+        <div className="rounded-lg border border-zinc-200 dark:border-zinc-800/80 bg-zinc-100 dark:bg-zinc-950/30 p-3 text-sm text-zinc-500">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-800 text-zinc-200">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-zinc-300 bg-zinc-200 text-sm font-medium text-zinc-800 dark:border-zinc-700/80 dark:bg-zinc-800/80 dark:text-zinc-200">
               {(firstName.trim() || 'U').slice(0, 1).toUpperCase()}
             </div>
-            <p>Profile image upload is disabled. The app uses your first-name initial.</p>
+            <p>Avatars use your first initial. Photo upload is not available.</p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="space-y-2">
-            <Label className="text-zinc-300">First Name</Label>
+            <Label className="text-zinc-700 dark:text-zinc-300">First Name</Label>
             <Input
               value={firstName}
               onChange={(e) => setFirstName(e.target.value)}
               placeholder="e.g. John"
-              className="bg-zinc-800 border-zinc-700 text-white"
+              className="bg-zinc-200 dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-white"
             />
           </div>
           <div className="space-y-2">
-            <Label className="text-zinc-300">Last Name</Label>
+            <Label className="text-zinc-700 dark:text-zinc-300">Last Name</Label>
             <Input
               value={lastName}
               onChange={(e) => setLastName(e.target.value)}
               placeholder="e.g. Doe"
-              className="bg-zinc-800 border-zinc-700 text-white"
+              className="bg-zinc-200 dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-white"
             />
           </div>
         </div>
 
-        <Button onClick={onSave} disabled={loading} className="w-full bg-indigo-600 hover:bg-indigo-700">
-          {loading ? 'Saving...' : mode === 'setup' ? 'Continue to dashboard' : 'Save profile'}
+        <Button
+          onClick={onSave}
+          disabled={loading}
+          className="w-full bg-zinc-100 font-medium text-zinc-900 hover:bg-white"
+        >
+          {loading ? 'Saving...' : mode === 'setup' ? 'Continue' : 'Save'}
         </Button>
       </CardContent>
     </Card>

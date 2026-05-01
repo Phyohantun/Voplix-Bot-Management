@@ -50,14 +50,14 @@ export function DeleteBotButton({ botId, botUsername }: DeleteBotButtonProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger
-        className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-700 text-red-400 hover:bg-red-950/30 hover:text-red-300"
+        className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-300 dark:border-zinc-700 text-red-400 hover:bg-red-950/30 hover:text-red-300"
       >
         <Trash className="h-4 w-4" />
       </DialogTrigger>
-      <DialogContent className="border-zinc-800 bg-zinc-900">
+      <DialogContent className="border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
         <DialogHeader>
-          <DialogTitle className="text-white">Disconnect Bot</DialogTitle>
-          <DialogDescription className="text-zinc-400">
+          <DialogTitle className="text-zinc-900 dark:text-white">Disconnect Bot</DialogTitle>
+          <DialogDescription className="text-zinc-600 dark:text-zinc-400">
             Are you sure you want to disconnect @{botUsername}? This will remove the webhook and deactivate the bot.
           </DialogDescription>
         </DialogHeader>
@@ -65,7 +65,7 @@ export function DeleteBotButton({ botId, botUsername }: DeleteBotButtonProps) {
           <Button 
             variant="outline" 
             onClick={() => setOpen(false)}
-            className="border-zinc-700 text-zinc-300"
+            className="border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300"
             disabled={loading}
           >
             Cancel

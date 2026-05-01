@@ -82,17 +82,17 @@ export function BroadcastClient({ bots, initialBotId }: BroadcastClientProps) {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold text-white">Broadcast</h1>
-          <p className="text-zinc-400">Send messages to your bot users</p>
+          <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Broadcast</h1>
+          <p className="text-zinc-600 dark:text-zinc-400">Send messages to your bot users</p>
         </div>
 
-        <Card className="border-zinc-800 bg-zinc-900">
+        <Card className="border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <div className="h-12 w-12 rounded-full bg-zinc-800 flex items-center justify-center mb-4">
-              <Megaphone className="h-6 w-6 text-zinc-400" />
+            <div className="h-12 w-12 rounded-full bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center mb-4">
+              <Megaphone className="h-6 w-6 text-zinc-600 dark:text-zinc-400" />
             </div>
-            <h3 className="text-lg font-medium text-white mb-2">No bots connected</h3>
-            <p className="text-zinc-400 text-center max-w-sm mb-4">
+            <h3 className="text-lg font-medium text-zinc-900 dark:text-white mb-2">No bots connected</h3>
+            <p className="text-zinc-600 dark:text-zinc-400 text-center max-w-sm mb-4">
               Connect a bot first to start broadcasting messages.
             </p>
             <Button onClick={() => router.push('/onboarding')} className="bg-indigo-600 hover:bg-indigo-700">
@@ -107,38 +107,38 @@ export function BroadcastClient({ bots, initialBotId }: BroadcastClientProps) {
   return (
     <div className="space-y-6">
       <div className="space-y-1">
-        <h1 className="text-2xl font-bold text-white">Broadcast</h1>
-        <p className="text-zinc-400">Send one message to your selected audience.</p>
+        <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Broadcast</h1>
+        <p className="text-zinc-600 dark:text-zinc-400">Send one message to your selected audience.</p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card className="border-zinc-800 bg-zinc-900">
+        <Card className="border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
           <CardHeader>
-            <CardTitle className="text-white">Compose Message</CardTitle>
-            <CardDescription className="text-zinc-400">Set audience, write content, and send.</CardDescription>
+            <CardTitle className="text-zinc-900 dark:text-white">Compose Message</CardTitle>
+            <CardDescription className="text-zinc-600 dark:text-zinc-400">Set audience, write content, and send.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label className="text-zinc-300">Selected Bot</Label>
-              <div className="rounded-md border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white">
+              <Label className="text-zinc-700 dark:text-zinc-300">Selected Bot</Label>
+              <div className="rounded-md border border-zinc-300 dark:border-zinc-700 bg-zinc-200 dark:bg-zinc-800 px-3 py-2 text-sm text-zinc-900 dark:text-white">
                 {selectedBot ? `@${selectedBot.bot_username}` : 'No bot selected'}
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label className="text-zinc-300">Target Audience</Label>
+              <Label className="text-zinc-700 dark:text-zinc-300">Target Audience</Label>
               <Select
                 value={formData.target_type}
                 onValueChange={(value) => setFormData({ ...formData, target_type: value as 'ALL' | 'PAID_ONLY' })}
               >
-                <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
+                <SelectTrigger className="bg-zinc-200 dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-white">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-zinc-800 border-zinc-700">
-                  <SelectItem value="ALL" className="text-white">
+                <SelectContent className="bg-zinc-200 dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700">
+                  <SelectItem value="ALL" className="text-zinc-900 dark:text-white">
                     All users
                   </SelectItem>
-                  <SelectItem value="PAID_ONLY" className="text-white">
+                  <SelectItem value="PAID_ONLY" className="text-zinc-900 dark:text-white">
                     Paid customers only
                   </SelectItem>
                 </SelectContent>
@@ -146,23 +146,23 @@ export function BroadcastClient({ bots, initialBotId }: BroadcastClientProps) {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-zinc-300">Message</Label>
+              <Label className="text-zinc-700 dark:text-zinc-300">Message</Label>
               <Textarea
                 value={formData.message}
                 onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                 placeholder="Enter your message here..."
                 rows={6}
-                className="bg-zinc-800 border-zinc-700 text-white resize-none"
+                className="bg-zinc-200 dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-white resize-none"
               />
             </div>
 
             <div className="space-y-2">
-              <Label className="text-zinc-300">Image URL (Optional)</Label>
+              <Label className="text-zinc-700 dark:text-zinc-300">Image URL (Optional)</Label>
               <Input
                 value={formData.image_url}
                 onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
                 placeholder="https://example.com/image.jpg"
-                className="bg-zinc-800 border-zinc-700 text-white"
+                className="bg-zinc-200 dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-white"
               />
             </div>
 
@@ -182,34 +182,34 @@ export function BroadcastClient({ bots, initialBotId }: BroadcastClientProps) {
           </CardContent>
         </Card>
 
-        <Card className="border-zinc-800 bg-zinc-900">
+        <Card className="border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
           <CardHeader>
-            <CardTitle className="text-white">Preview</CardTitle>
-            <CardDescription className="text-zinc-400">Quick preview before sending.</CardDescription>
+            <CardTitle className="text-zinc-900 dark:text-white">Preview</CardTitle>
+            <CardDescription className="text-zinc-600 dark:text-zinc-400">Quick preview before sending.</CardDescription>
           </CardHeader>
           <CardContent>
             {selectedBot ? (
               <div className="space-y-4">
-                <div className="flex items-center gap-3 p-3 bg-zinc-800 rounded-lg">
+                <div className="flex items-center gap-3 p-3 bg-zinc-200 dark:bg-zinc-800 rounded-lg">
                   <div className="h-10 w-10 rounded-full bg-indigo-600 flex items-center justify-center">
-                    <span className="text-white text-sm font-bold">@{selectedBot.bot_username[0].toUpperCase()}</span>
+                    <span className="text-zinc-900 dark:text-white text-sm font-bold">@{selectedBot.bot_username[0].toUpperCase()}</span>
                   </div>
                   <div>
-                    <p className="text-white font-medium">@{selectedBot.bot_username}</p>
-                    <p className="text-zinc-400 text-sm">Telegram bot</p>
+                    <p className="text-zinc-900 dark:text-white font-medium">@{selectedBot.bot_username}</p>
+                    <p className="text-zinc-600 dark:text-zinc-400 text-sm">Telegram bot</p>
                   </div>
                 </div>
 
-                <div className="bg-zinc-800 rounded-lg p-4">
+                <div className="bg-zinc-200 dark:bg-zinc-800 rounded-lg p-4">
                   {formData.image_url && (
                     <div className="mb-3 aspect-video bg-zinc-700 rounded flex items-center justify-center">
                       <p className="text-zinc-500 text-sm">Image Preview</p>
                     </div>
                   )}
-                  <p className="text-white whitespace-pre-wrap">{formData.message || 'Your message preview appears here.'}</p>
+                  <p className="text-zinc-900 dark:text-white whitespace-pre-wrap">{formData.message || 'Your message preview appears here.'}</p>
                 </div>
 
-                <div className="flex items-center gap-2 text-sm text-zinc-400">
+                <div className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">
                   <Users className="h-4 w-4" />
                   <span>Will be sent to {formData.target_type === 'ALL' ? 'all users' : 'paid customers only'}</span>
                 </div>
