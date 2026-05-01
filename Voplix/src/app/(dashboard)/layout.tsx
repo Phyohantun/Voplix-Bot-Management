@@ -15,30 +15,34 @@ export default async function DashboardLayout({
     redirect('/login');
   }
 
-  const { data: profile } = await (supabase as any)
-    .from('owner_profiles')
-    .select('*')
-    .eq('user_id', user.id)
-    .maybeSingle();
+  const [profileResult, announcementsResult, botsResult] = await Promise.all([
+    (supabase as any)
+      .from('owner_profiles')
+      .select('display_name, business_name, avatar_data_url, notification_last_seen_at')
+      .eq('user_id', user.id)
+      .maybeSingle(),
+    (supabase as any)
+      .from('system_announcements')
+      .select('id, title, message, created_at')
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+      .limit(20),
+    (supabase as any)
+      .from('bots')
+      .select('id, bot_username')
+      .eq('user_id', user.id)
+      .eq('is_active', true)
+      .order('created_at', { ascending: false }),
+  ]);
 
-  const { data: announcements } = await (supabase as any)
-    .from('system_announcements')
-    .select('id, title, message, created_at')
-    .eq('is_active', true)
-    .order('created_at', { ascending: false })
-    .limit(20);
+  const profile = profileResult?.data ?? null;
+  const announcements = (announcementsResult?.data as any[]) || [];
+  const bots = (botsResult?.data as any[]) || [];
 
-  const unreadCount = ((announcements as any[]) || []).filter((a) => {
-    if (!profile.notification_last_seen_at) return true;
+  const unreadCount = announcements.filter((a) => {
+    if (!profile?.notification_last_seen_at) return true;
     return new Date(a.created_at).getTime() > new Date(profile.notification_last_seen_at).getTime();
   }).length;
-
-  const { data: bots } = await (supabase as any)
-    .from('bots')
-    .select('id, bot_username')
-    .eq('user_id', user.id)
-    .eq('is_active', true)
-    .order('created_at', { ascending: false });
 
   return (
     <div className="min-h-screen bg-zinc-950">

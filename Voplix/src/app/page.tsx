@@ -18,12 +18,12 @@ export default function HomePage() {
             <VoplixWordmark className="text-lg" />
           </div>
           <div className="flex items-center gap-2">
-            <Link href="/login">
+            <Link href="/login" prefetch>
               <Button variant="ghost" className="text-zinc-200 hover:bg-zinc-800 hover:text-white">
                 Login
               </Button>
             </Link>
-            <Link href="/signup">
+            <Link href="/signup" prefetch>
               <Button className="bg-indigo-600 text-white hover:bg-indigo-700">Sign up</Button>
             </Link>
           </div>
@@ -41,13 +41,13 @@ export default function HomePage() {
                 creators and digital shops.
               </p>
               <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
-                <Link href="/signup">
+                <Link href="/signup" prefetch>
                   <Button className="w-full bg-indigo-600 text-white hover:bg-indigo-700 sm:w-auto">
                     Get started
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 </Link>
-                <Link href="/login">
+                <Link href="/login" prefetch>
                   <Button
                     variant="outline"
                     className="w-full border-zinc-700 bg-zinc-900/70 text-zinc-200 hover:bg-zinc-800 sm:w-auto"
