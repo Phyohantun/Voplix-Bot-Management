@@ -20,7 +20,7 @@ export async function POST(request: Request) {
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    if (!user?.id || !user.email) {
+    if (!user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -90,21 +90,44 @@ export async function POST(request: Request) {
 
     if (upErr) {
       console.error('[subscription slip upload]', upErr);
+      const msg = (upErr.message || '').toLowerCase();
+      const bucketMissing =
+        /bucket not found/i.test(upErr.message || '') || (msg.includes('not found') && msg.includes('bucket'));
+      if (bucketMissing) {
+        return NextResponse.json(
+          {
+            error:
+              'Storage bucket "platform-subscription-slips" is missing. In Supabase: run SQL migration 012_platform_subscription_slips_bucket.sql, or Storage → New bucket → name exactly platform-subscription-slips (private).',
+          },
+          { status: 503 }
+        );
+      }
       return NextResponse.json({ error: upErr.message || 'Upload failed' }, { status: 500 });
     }
 
-    const { error: insErr } = await (supabaseAdmin.from('platform_subscription_requests') as any).insert({
-      id: requestId,
-      user_id: user.id,
-      requester_email: user.email,
-      plan_tier,
-      slip_storage_path: path,
-      status: 'pending',
-    });
+    const { data: inserted, error: insErr } = await (supabaseAdmin.from('platform_subscription_requests') as any)
+      .insert({
+        id: requestId,
+        user_id: user.id,
+        requester_email: user.email ?? '',
+        plan_tier,
+        slip_storage_path: path,
+        status: 'pending',
+      })
+      .select('id')
+      .single();
 
-    if (insErr) {
+    if (insErr || !inserted?.id) {
       await supabaseAdmin.storage.from(PLATFORM_SUBSCRIPTION_SLIPS_BUCKET).remove([path]);
-      return NextResponse.json({ error: insErr.message }, { status: 500 });
+      console.error('[subscription] DB insert failed:', insErr);
+      return NextResponse.json(
+        {
+          error:
+            insErr?.message ||
+            'Could not save subscription request. Confirm migration 011 ran (table platform_subscription_requests).',
+        },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({ success: true, id: requestId });

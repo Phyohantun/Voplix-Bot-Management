@@ -23,19 +23,46 @@ export type SubscriptionRequestRow = {
 export function AdminSubscriptionsClient({
   initialBankHtml,
   initialRequests,
+  loadWarnings = [],
 }: {
   initialBankHtml: string;
   initialRequests: SubscriptionRequestRow[];
+  loadWarnings?: string[];
 }) {
   const router = useRouter();
   const [bankHtml, setBankHtml] = useState(initialBankHtml);
+  const [rows, setRows] = useState<SubscriptionRequestRow[]>(initialRequests);
   const [savingBank, setSavingBank] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [rejectNote, setRejectNote] = useState<Record<string, string>>({});
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     setBankHtml(initialBankHtml);
   }, [initialBankHtml]);
+
+  useEffect(() => {
+    setRows(initialRequests);
+  }, [initialRequests]);
+
+  const refreshList = async (opts?: { silent?: boolean }) => {
+    setRefreshing(true);
+    try {
+      const res = await fetch('/api/admin/subscription-requests', { cache: 'no-store' });
+      const j = (await res.json().catch(() => ({}))) as { requests?: SubscriptionRequestRow[]; error?: string };
+      if (!res.ok) {
+        throw new Error(j.error || 'Refresh failed');
+      }
+      setRows(j.requests ?? []);
+      if (!opts?.silent) {
+        toast.success('List updated');
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Refresh failed');
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const saveBank = async () => {
     setSavingBank(true);
@@ -81,6 +108,7 @@ export function AdminSubscriptionsClient({
         throw new Error(j.error || 'Approve failed');
       }
       toast.success('Approved — plan updated');
+      await refreshList({ silent: true });
       router.refresh();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Approve failed');
@@ -103,6 +131,7 @@ export function AdminSubscriptionsClient({
         throw new Error(j.error || 'Reject failed');
       }
       toast.success('Rejected');
+      await refreshList({ silent: true });
       router.refresh();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Reject failed');
@@ -111,11 +140,27 @@ export function AdminSubscriptionsClient({
     }
   };
 
-  const pending = initialRequests.filter((r) => r.status === 'pending');
-  const history = initialRequests.filter((r) => r.status !== 'pending');
+  const pending = rows.filter((r) => r.status === 'pending');
+  const history = rows.filter((r) => r.status !== 'pending');
 
   return (
     <div className="mx-auto max-w-7xl space-y-10 px-4 py-8 sm:px-6">
+      {loadWarnings.length > 0 ? (
+        <div className="rounded-lg border border-amber-900/50 bg-amber-950/30 p-4 text-sm text-amber-200">
+          <p className="font-medium text-amber-100">Some data could not load</p>
+          <ul className="mt-2 list-inside list-disc space-y-1 text-amber-200/90">
+            {loadWarnings.map((w) => (
+              <li key={w}>{w}</li>
+            ))}
+          </ul>
+          <p className="mt-2 text-xs text-amber-200/70">
+            Run migrations <code className="rounded bg-black/30 px-1">011_platform_subscription_slips.sql</code> and{' '}
+            <code className="rounded bg-black/30 px-1">012_platform_subscription_slips_bucket.sql</code> if tables or
+            bucket are missing.
+          </p>
+        </div>
+      ) : null}
+
       <section className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-5 sm:p-6">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">Bank &amp; payment instructions</h2>
         <p className="mt-1 text-sm text-zinc-500">
@@ -144,8 +189,24 @@ export function AdminSubscriptionsClient({
       </section>
 
       <section>
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">Pending slips</h2>
-        <p className="mt-1 text-sm text-zinc-500">Approve to set plan to Pro or Plus (and Plus unlocks broadcast). Reject to decline without changing plan.</p>
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">Pending slips</h2>
+            <p className="mt-1 text-sm text-zinc-500">
+              Approve to set plan to Pro or Plus (Plus unlocks broadcast). Reject to decline without changing plan.
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="border-zinc-600 text-zinc-200"
+            disabled={refreshing}
+            onClick={() => void refreshList()}
+          >
+            {refreshing ? 'Refreshing…' : 'Refresh list'}
+          </Button>
+        </div>
 
         {pending.length === 0 ? (
           <p className="mt-4 rounded-lg border border-zinc-800 bg-zinc-900/30 p-6 text-center text-sm text-zinc-500">

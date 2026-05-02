@@ -3,6 +3,8 @@ import { createClient } from '@/lib/supabase/server';
 import { getPlatformAccountForUser } from '@/lib/platform-account';
 import { SubscriptionClient } from '@/components/subscription/subscription-client';
 
+export const dynamic = 'force-dynamic';
+
 export default async function SubscriptionPage() {
   const supabase = await createClient();
   const {

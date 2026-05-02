@@ -53,8 +53,6 @@ CREATE POLICY "Users read own subscription requests"
 
 -- Writes go through Next.js API (service role). No INSERT/UPDATE from browser.
 
--- Storage: in Supabase Dashboard → Storage, create a private bucket named exactly:
---   platform-subscription-slips
--- Optional: limit file size to 5 MB; allow image/jpeg, image/png, image/webp, application/pdf.
+-- Storage bucket: run migration 012_platform_subscription_slips_bucket.sql (or create the bucket in Dashboard).
 
 NOTIFY pgrst, 'reload schema';
