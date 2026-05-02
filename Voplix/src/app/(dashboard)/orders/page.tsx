@@ -2,6 +2,9 @@ import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { OrdersDashboard } from '@/components/orders/orders-dashboard';
 import { AutoRefresh } from '@/components/dashboard/auto-refresh';
+import { FreePlanUpgradeBanner } from '@/components/dashboard/free-plan-banner';
+import { getPlanEnforcementSnapshot } from '@/lib/plan-limits';
+import { applyOrderStatusFilter, parseOrderStatusFilter, type OrderStatusFilter } from '@/lib/owner-orders-filter';
 
 async function getBots(userId: string) {
   const supabase = await createClient();
@@ -20,14 +23,15 @@ async function getBots(userId: string) {
   return (data as any[]) || [];
 }
 
-const DEFAULT_PAGE_SIZE = 50;
+const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 100;
 
 async function getOrdersPage(
   botId: string | null,
   userId: string,
   page: number,
-  pageSize: number
+  pageSize: number,
+  statusFilter: OrderStatusFilter
 ) {
   const supabase = await createClient();
   const from = (page - 1) * pageSize;
@@ -44,6 +48,8 @@ async function getOrdersPage(
     query = query.eq('bot_id', botId);
   }
 
+  query = applyOrderStatusFilter(query, statusFilter);
+
   const { data, error, count } = await query;
 
   if (error) {
@@ -54,10 +60,36 @@ async function getOrdersPage(
   return { orders: (data as any[]) || [], total: count ?? 0 };
 }
 
+async function countSlipSubmittedForOwner(userId: string, botId: string | null) {
+  const supabase = await createClient();
+  const { data: botRows, error: bErr } = await (supabase as any)
+    .from('bots')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('is_active', true);
+  if (bErr) return 0;
+  const ids = ((botRows as { id: string }[]) || []).map((b) => b.id);
+  if (ids.length === 0) return 0;
+
+  let q = (supabase as any)
+    .from('orders')
+    .select('id', { count: 'exact', head: true })
+    .in('bot_id', ids)
+    .eq('status', 'SLIP_SUBMITTED');
+
+  if (botId && ids.includes(botId)) {
+    q = q.eq('bot_id', botId);
+  }
+
+  const { count, error } = await q;
+  if (error) return 0;
+  return count ?? 0;
+}
+
 export default async function OrdersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ bot?: string; page?: string; pageSize?: string }>;
+  searchParams: Promise<{ bot?: string; page?: string; pageSize?: string; filter?: string }>;
 }) {
   const supabase = await createClient();
   const {
@@ -81,7 +113,13 @@ export default async function OrdersPage({
   const rawSize = parseInt(params.pageSize || String(DEFAULT_PAGE_SIZE), 10) || DEFAULT_PAGE_SIZE;
   const pageSize = Math.min(MAX_PAGE_SIZE, Math.max(10, rawSize));
 
-  const { orders, total } = await getOrdersPage(selectedBotId, user.id, page, pageSize);
+  const statusFilter = parseOrderStatusFilter(params.filter);
+
+  const [{ orders, total }, reviewCountTotal, planSnapshot] = await Promise.all([
+    getOrdersPage(selectedBotId, user.id, page, pageSize, statusFilter),
+    countSlipSubmittedForOwner(user.id, selectedBotId),
+    getPlanEnforcementSnapshot(user.id),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -89,9 +127,11 @@ export default async function OrdersPage({
       <div>
         <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Orders</h1>
         <p className="text-zinc-600 dark:text-zinc-400">
-          Review payments, confirm or reject orders, and remove old history when you want a shorter list.
+          Review slips first, then approve or reject. Tabs help you focus on what needs attention.
         </p>
       </div>
+
+      {planSnapshot.plan === 'free' ? <FreePlanUpgradeBanner /> : null}
 
       <OrdersDashboard
         orders={orders}
@@ -99,6 +139,8 @@ export default async function OrdersPage({
         page={page}
         pageSize={pageSize}
         selectedBotId={selectedBotId}
+        reviewCountTotal={reviewCountTotal}
+        statusFilter={statusFilter}
       />
     </div>
   );

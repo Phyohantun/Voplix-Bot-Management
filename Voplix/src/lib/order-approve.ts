@@ -1,0 +1,116 @@
+import { supabaseAdmin } from '@/lib/supabase/admin';
+import { decrypt } from '@/lib/encryption';
+import { sendMessage } from '@/lib/telegram';
+import { mergeBotTelegramCopy, applyTemplate, escapeHtml } from '@/lib/bot-telegram-copy';
+
+type ApproveBody = {
+  manual_delivery_data?: Record<string, unknown> | null;
+  manual_message?: string | null;
+};
+
+/**
+ * Completes an order after slip verification: assigns delivery, marks COMPLETED, notifies customer on Telegram.
+ * Only orders in SLIP_SUBMITTED can be approved (dashboard + orders UI).
+ */
+export async function approveSlipOrderForOwner(
+  orderId: string,
+  ownerUserId: string,
+  body: ApproveBody = {}
+): Promise<{ ok: true } | { ok: false; error: string; status?: number }> {
+  const { data: order } = await (supabaseAdmin
+    .from('orders') as any)
+    .select('*, bots(*), menu_items(*)')
+    .eq('id', orderId)
+    .single();
+
+  if (!order || order.bots.user_id !== ownerUserId) {
+    return { ok: false, error: 'Order not found', status: 404 };
+  }
+
+  if (order.status !== 'SLIP_SUBMITTED') {
+    return { ok: false, error: 'Order is not waiting for slip approval', status: 400 };
+  }
+
+  const { manual_delivery_data, manual_message } = body;
+
+  let deliveryContent = '';
+
+  if (order.menu_items.type === 'DIGITAL_DELIVERY') {
+    const { data: stockItem } = await (supabaseAdmin
+      .from('stock_items') as any)
+      .select('*')
+      .eq('menu_item_id', order.menu_item_id)
+      .eq('is_sold', false)
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .single();
+
+    if (stockItem) {
+      deliveryContent = stockItem.content_text;
+
+      await (supabaseAdmin
+        .from('stock_items') as any)
+        .update({
+          is_sold: true,
+          sold_at: new Date().toISOString(),
+          order_id: orderId,
+        })
+        .eq('id', stockItem.id);
+
+      const { count: remaining } = await (supabaseAdmin
+        .from('stock_items') as any)
+        .select('*', { count: 'exact', head: true })
+        .eq('menu_item_id', order.menu_item_id)
+        .eq('is_sold', false);
+
+      if ((remaining ?? 0) === 0) {
+        await (supabaseAdmin.from('menu_items') as any)
+          .update({ is_active: false, updated_at: new Date().toISOString() })
+          .eq('id', order.menu_item_id);
+      }
+    } else {
+      deliveryContent = order.menu_items.delivery_content || 'Your order is ready!';
+    }
+  } else if (order.menu_items.type === 'MANUAL_DELIVERY') {
+    const pasted = typeof manual_message === 'string' ? manual_message.trim() : '';
+    if (pasted) {
+      deliveryContent = pasted;
+    } else if (manual_delivery_data && typeof manual_delivery_data === 'object') {
+      deliveryContent = Object.entries(manual_delivery_data)
+        .filter(([_, value]) => value)
+        .map(([key, value]) => `${key}: ${value}`)
+        .join('\n');
+    } else {
+      deliveryContent = order.menu_items.delivery_content || 'Thank you for your purchase!';
+    }
+  } else {
+    deliveryContent = order.menu_items.delivery_content || 'Thank you for your purchase!';
+  }
+
+  const storedManual =
+    order.menu_items.type === 'MANUAL_DELIVERY' ? { message: deliveryContent } : null;
+
+  const { error: updateError } = await (supabaseAdmin
+    .from('orders') as any)
+    .update({
+      status: 'COMPLETED',
+      manual_delivery_data: storedManual,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', orderId);
+
+  if (updateError) {
+    return { ok: false, error: updateError.message, status: 500 };
+  }
+
+  const copy = mergeBotTelegramCopy(order.bots.telegram_customer_copy);
+  const confirmHtml = applyTemplate(copy.order_confirmed_template_html, {
+    product_name: escapeHtml(String(order.menu_items.name)),
+    delivery: escapeHtml(deliveryContent),
+  });
+
+  const token = decrypt(order.bots.token_encrypted);
+  await sendMessage(token, order.telegram_user_id, confirmHtml, { parse_mode: 'HTML' });
+
+  return { ok: true };
+}

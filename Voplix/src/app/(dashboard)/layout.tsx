@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { DashboardSidebar } from '@/components/dashboard/sidebar';
@@ -7,6 +8,7 @@ import { LanguageProvider } from '@/lib/i18n/LanguageContext';
 import { getOwnerProfileForLayout } from '@/lib/owner-profile';
 import { shopCurrencyFromUser } from '@/lib/currency';
 import { getPlatformAccountForUser } from '@/lib/platform-account';
+import { MobileBottomNav } from '@/components/dashboard/mobile-bottom-nav';
 
 export default async function DashboardLayout({
   children,
@@ -67,8 +69,11 @@ export default async function DashboardLayout({
               unreadCount={unreadCount}
               bots={(bots as any[]) || []}
             />
-            <main className="px-3 py-5 sm:px-6 sm:py-8 lg:px-8">{children}</main>
+            <main className="px-4 py-6 pb-28 sm:px-6 sm:py-8 lg:px-8 lg:pb-8">{children}</main>
           </div>
+          <Suspense fallback={null}>
+            <MobileBottomNav />
+          </Suspense>
         </div>
       </CurrencyProvider>
     </LanguageProvider>

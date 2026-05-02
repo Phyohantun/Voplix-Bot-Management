@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -13,13 +13,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { ClockCounterClockwise, CaretLeft, CaretRight } from '@phosphor-icons/react';
+import { CaretLeft, CaretRight } from '@phosphor-icons/react';
 import { toast } from 'sonner';
 import { formatOrderTimestamp } from '@/lib/format-order';
 import { formatCurrencyAmount } from '@/lib/currency';
 import { useShopCurrency } from '@/components/dashboard/currency-context';
+import type { OrderStatusFilter } from '@/lib/owner-orders-filter';
 import { cn } from '@/lib/utils';
 
 interface OrdersDashboardProps {
@@ -28,36 +28,57 @@ interface OrdersDashboardProps {
   page: number;
   pageSize: number;
   selectedBotId: string | null;
+  reviewCountTotal: number;
+  statusFilter: OrderStatusFilter;
 }
 
-const DEFAULT_PAGE_SIZE = 50;
+const DEFAULT_PAGE_SIZE = 20;
 
-/** Muted, neutral status chips (no bright / neon fills). */
-const statusBadgeClass: Record<string, string> = {
-  PENDING_PAYMENT: 'border-zinc-400 bg-zinc-200 dark:border-zinc-600 dark:bg-zinc-800/80 text-zinc-800 dark:text-zinc-200',
-  SLIP_SUBMITTED: 'border-zinc-400 bg-zinc-200 dark:border-zinc-500 dark:bg-zinc-800/80 text-zinc-800 dark:text-zinc-200',
-  APPROVED: 'border-zinc-400 bg-zinc-200 dark:border-zinc-600 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300',
-  COMPLETED: 'border-zinc-400 bg-zinc-200/90 dark:border-zinc-600 dark:bg-zinc-800/60 text-zinc-700 dark:text-zinc-300',
-  REJECTED:
-    'border-red-300 bg-red-50 dark:border-red-900/40 dark:bg-zinc-900 text-red-800 dark:text-red-200/90',
+const statusVisual: Record<
+  string,
+  { label: string; className: string; pulse?: boolean }
+> = {
+  PENDING_PAYMENT: {
+    label: '⚪ Waiting payment',
+    className: 'border-zinc-400 bg-zinc-100 text-zinc-800 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-200',
+  },
+  SLIP_SUBMITTED: {
+    label: '🟡 Needs review',
+    className:
+      'border-amber-400/80 bg-amber-50 text-amber-950 dark:border-amber-500/50 dark:bg-amber-950/40 dark:text-amber-100 animate-slip-review-pulse',
+    pulse: true,
+  },
+  APPROVED: {
+    label: '🟢 Approved',
+    className: 'border-emerald-500/60 bg-emerald-50 text-emerald-950 dark:border-emerald-600/50 dark:bg-emerald-950/30 dark:text-emerald-100',
+  },
+  COMPLETED: {
+    label: '🔵 Completed',
+    className: 'border-sky-500/50 bg-sky-50 text-sky-950 dark:border-sky-600/40 dark:bg-sky-950/30 dark:text-sky-100',
+  },
+  REJECTED: {
+    label: '🔴 Rejected',
+    className: 'border-red-400/70 bg-red-50 text-red-950 dark:border-red-800/50 dark:bg-red-950/40 dark:text-red-100',
+  },
 };
 
-const statusLabels: Record<string, string> = {
-  PENDING_PAYMENT: 'Pending Payment',
-  SLIP_SUBMITTED: 'Slip Submitted',
-  APPROVED: 'Approved',
-  COMPLETED: 'Completed',
-  REJECTED: 'Rejected',
-};
-
-function ordersHref(botId: string | null, p: number, ps: number) {
+function ordersHref(botId: string | null, p: number, ps: number, filter: OrderStatusFilter) {
   const u = new URLSearchParams();
   if (botId) u.set('bot', botId);
   if (p > 1) u.set('page', String(p));
   if (ps !== DEFAULT_PAGE_SIZE) u.set('pageSize', String(ps));
+  if (filter !== 'review') u.set('filter', filter);
   const q = u.toString();
   return q ? `/orders?${q}` : '/orders';
 }
+
+const FILTER_TABS: { id: OrderStatusFilter; label: string; badge?: 'review' }[] = [
+  { id: 'review', label: 'Needs review', badge: 'review' },
+  { id: 'all', label: 'All' },
+  { id: 'waiting', label: 'Waiting payment' },
+  { id: 'completed', label: 'Completed' },
+  { id: 'rejected', label: 'Rejected' },
+];
 
 export function OrdersDashboard({
   orders: initialOrders,
@@ -65,29 +86,43 @@ export function OrdersDashboard({
   page,
   pageSize,
   selectedBotId,
+  reviewCountTotal,
+  statusFilter,
 }: OrdersDashboardProps) {
   const router = useRouter();
   const currency = useShopCurrency();
   const [orders, setOrders] = useState(initialOrders);
+  const [appendOrders, setAppendOrders] = useState<any[]>([]);
+  const [nextFetchPage, setNextFetchPage] = useState(page + 1);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMoreClient, setHasMoreClient] = useState(true);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [selectedOrder, setSelectedOrder] = useState<any>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [rejectReasons, setRejectReasons] = useState<Record<string, string>>({});
-  const [cleanupDays, setCleanupDays] = useState(90);
-  const [historyOpen, setHistoryOpen] = useState(false);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkApproveOpen, setBulkApproveOpen] = useState(false);
+
+  const isDeepPage = page > 1;
+  const combinedOrders = useMemo(() => [...orders, ...appendOrders], [orders, appendOrders]);
 
   useEffect(() => {
     setOrders(initialOrders);
+    setAppendOrders([]);
+    setNextFetchPage(page + 1);
+    setHasMoreClient(true);
     setSelected(new Set());
-  }, [initialOrders, page, pageSize, selectedBotId]);
+    setExpandedId(null);
+  }, [initialOrders, page, pageSize, selectedBotId, statusFilter]);
 
-  const pendingOrders = useMemo(
-    () => orders.filter((o: any) => o.status === 'SLIP_SUBMITTED'),
-    [orders]
+  const pendingOnPage = useMemo(
+    () => combinedOrders.filter((o: any) => o.status === 'SLIP_SUBMITTED'),
+    [combinedOrders]
   );
 
-  const pageIds = useMemo(() => orders.map((o: any) => o.id as string), [orders]);
+  const pageIds = useMemo(() => combinedOrders.map((o: any) => o.id as string), [combinedOrders]);
   const allOnPageSelected =
     pageIds.length > 0 && pageIds.every((id) => selected.has(id));
   const someOnPageSelected = pageIds.some((id) => selected.has(id));
@@ -95,6 +130,85 @@ export function OrdersDashboard({
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
   const showingFrom = totalCount === 0 ? 0 : (page - 1) * pageSize + 1;
   const showingTo = Math.min(page * pageSize, totalCount);
+
+  const selectedSlipIds = useMemo(
+    () =>
+      [...selected].filter((id) => {
+        const o = combinedOrders.find((x: any) => x.id === id);
+        return o?.status === 'SLIP_SUBMITTED';
+      }),
+    [selected, combinedOrders]
+  );
+
+  const loadMore = useCallback(async () => {
+    if (typeof window !== 'undefined' && !window.matchMedia('(max-width: 767px)').matches) return;
+    if (loadingMore || isDeepPage || !hasMoreClient) return;
+    const loaded = orders.length + appendOrders.length;
+    if (loaded >= totalCount) {
+      setHasMoreClient(false);
+      return;
+    }
+    setLoadingMore(true);
+    try {
+      const u = new URLSearchParams();
+      u.set('page', String(nextFetchPage));
+      u.set('pageSize', String(pageSize));
+      u.set('filter', statusFilter);
+      if (selectedBotId) u.set('bot', selectedBotId);
+      const res = await fetch(`/api/orders/feed?${u.toString()}`);
+      const j = (await res.json().catch(() => ({}))) as { orders?: any[]; error?: string };
+      if (!res.ok) {
+        throw new Error(j.error || 'Failed to load');
+      }
+      const chunk = j.orders || [];
+      if (chunk.length === 0) {
+        setHasMoreClient(false);
+      } else {
+        setAppendOrders((prev) => {
+          const seen = new Set(
+            [...orders, ...prev].map((x: any) => x.id)
+          );
+          const next = chunk.filter((row: any) => !seen.has(row.id));
+          return [...prev, ...next];
+        });
+        setNextFetchPage((p) => p + 1);
+        if (chunk.length < pageSize) setHasMoreClient(false);
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Could not load more');
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [
+    appendOrders.length,
+    hasMoreClient,
+    isDeepPage,
+    loadingMore,
+    nextFetchPage,
+    orders,
+    pageSize,
+    selectedBotId,
+    statusFilter,
+    totalCount,
+  ]);
+
+  useEffect(() => {
+    const el = loadMoreRef.current;
+    if (!el || isDeepPage) return;
+    const mq = window.matchMedia('(max-width: 767px)');
+    if (!mq.matches) return;
+
+    const obs = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          void loadMore();
+        }
+      },
+      { rootMargin: '120px' }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [isDeepPage, loadMore, combinedOrders.length]);
 
   const toggleOne = (id: string) => {
     setSelected((prev) => {
@@ -121,63 +235,45 @@ export function OrdersDashboard({
     }
   };
 
-  const openHistoryTool = () => {
-    if (!selectedBotId) {
-      toast.message('Choose a bot in the header first', {
-        description: 'Cleanup runs for one shop at a time.',
-      });
-      return;
-    }
-    setHistoryOpen(true);
-  };
-
   const handleApprove = async (order: any) => {
     setLoading(true);
-
     try {
       const response = await fetch(`/api/orders/${order.id}/approve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ manual_delivery_data: null }),
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to approve order');
-      }
-
-      setOrders(orders.map((o: any) => (o.id === order.id ? { ...o, status: 'COMPLETED' } : o)));
+      if (!response.ok) throw new Error('Failed to approve order');
+      setOrders((prev) => prev.map((o: any) => (o.id === order.id ? { ...o, status: 'COMPLETED' } : o)));
+      setAppendOrders((prev) => prev.map((o: any) => (o.id === order.id ? { ...o, status: 'COMPLETED' } : o)));
       toast.success('Order confirmed');
       router.refresh();
     } catch {
       toast.error('Failed to approve order');
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   const handleReject = async (order: any) => {
     setLoading(true);
     const reason = (rejectReasons[order.id] || '').trim();
-
     try {
       const response = await fetch(`/api/orders/${order.id}/reject`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reason }),
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to reject order');
-      }
-
-      setOrders(orders.map((o: any) => (o.id === order.id ? { ...o, status: 'REJECTED' } : o)));
+      if (!response.ok) throw new Error('Failed to reject order');
+      setOrders((prev) => prev.map((o: any) => (o.id === order.id ? { ...o, status: 'REJECTED' } : o)));
+      setAppendOrders((prev) => prev.map((o: any) => (o.id === order.id ? { ...o, status: 'REJECTED' } : o)));
       toast.success('Order rejected');
       router.refresh();
     } catch {
       toast.error('Failed to reject order');
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   const deleteOne = async (order: any) => {
@@ -191,7 +287,8 @@ export function OrdersDashboard({
         const j = (await res.json().catch(() => ({}))) as { error?: string };
         throw new Error(j.error || 'Delete failed');
       }
-      setOrders(orders.filter((o: any) => o.id !== order.id));
+      setOrders((prev) => prev.filter((o: any) => o.id !== order.id));
+      setAppendOrders((prev) => prev.filter((o: any) => o.id !== order.id));
       setSelected((prev) => {
         const next = new Set(prev);
         next.delete(order.id);
@@ -216,9 +313,7 @@ export function OrdersDashboard({
         body: JSON.stringify({ ids: [...selected] }),
       });
       const j = (await res.json().catch(() => ({}))) as { error?: string; deleted?: number };
-      if (!res.ok) {
-        throw new Error(j.error || 'Bulk delete failed');
-      }
+      if (!res.ok) throw new Error(j.error || 'Bulk delete failed');
       toast.success(`Deleted ${j.deleted ?? selected.size} order(s)`);
       setSelected(new Set());
       setBulkDeleteOpen(false);
@@ -230,114 +325,159 @@ export function OrdersDashboard({
     }
   };
 
-  const runCleanup = async () => {
-    if (!selectedBotId) {
-      toast.error('Select a bot in the header first');
-      return;
-    }
-    const msg = `Remove completed and rejected orders older than ${cleanupDays} days for this shop? This cannot be undone.`;
-    if (!confirm(msg)) return;
-
+  const bulkApproveSelected = async () => {
+    if (selectedSlipIds.length === 0) return;
     setLoading(true);
     try {
-      const res = await fetch('/api/orders/cleanup', {
+      const res = await fetch('/api/orders/bulk-approve', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bot_id: selectedBotId, older_than_days: cleanupDays }),
+        body: JSON.stringify({ ids: selectedSlipIds }),
       });
       const j = (await res.json().catch(() => ({}))) as {
         error?: string;
-        deleted?: number;
-        truncated?: boolean;
+        approved?: number;
+        failures?: string[];
       };
-      if (!res.ok) {
-        throw new Error(j.error || 'Cleanup failed');
+      if (!res.ok) throw new Error(j.error || 'Bulk approve failed');
+      toast.success(`Approved ${j.approved ?? 0} order(s)`);
+      if (j.failures?.length) {
+        toast.message('Some orders were skipped', { description: j.failures.slice(0, 5).join('\n') });
       }
-      toast.success(
-        j.deleted === 0
-          ? 'No old finished orders matched those settings — nothing was removed.'
-          : `Removed ${j.deleted} old order(s) from your list.` +
-              (j.truncated
-                ? ' If the list is still long, open this tool again to remove another batch.'
-                : '')
-      );
-      setHistoryOpen(false);
+      setBulkApproveOpen(false);
+      setSelected(new Set());
       router.refresh();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Cleanup failed');
+      toast.error(e instanceof Error ? e.message : 'Bulk approve failed');
     } finally {
       setLoading(false);
     }
   };
 
-  const slipLinkClass =
-    'text-sm text-zinc-700 dark:text-zinc-300 underline decoration-zinc-600 underline-offset-2 hover:text-zinc-950 dark:hover:text-zinc-900 dark:text-white hover:decoration-zinc-400';
-
-  const actionsBlock = (order: any, compact: boolean) => (
-    <div
-      className={cn(
-        'flex flex-col gap-2.5',
-        compact ? 'mt-4 w-full' : 'min-w-[11rem] max-w-[14rem]'
-      )}
-    >
-      {order.status === 'SLIP_SUBMITTED' ? (
-        <>
-          <Button
-            type="button"
-            onClick={() => handleApprove(order)}
-            disabled={loading}
-            className={cn(
-              'w-full justify-center border border-zinc-600 bg-zinc-100 text-zinc-900 hover:bg-white',
-              compact ? 'h-10' : 'h-9 text-sm'
-            )}
-          >
-            Confirm
-          </Button>
-          <Button
-            type="button"
-            onClick={() => handleReject(order)}
-            disabled={loading}
-            variant="outline"
-            className={cn(
-              'w-full justify-center border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-300 dark:hover:bg-zinc-200 dark:bg-zinc-800',
-              compact ? 'h-10' : 'h-9 text-sm'
-            )}
-          >
-            Reject
-          </Button>
-          <Input
-            placeholder="Reject reason (optional)"
-            value={rejectReasons[order.id] || ''}
-            onChange={(e) =>
-              setRejectReasons((prev) => ({ ...prev, [order.id]: e.target.value }))
-            }
-            className={cn(
-              'border-zinc-300 dark:border-zinc-700 bg-zinc-200 dark:bg-zinc-800/80 text-zinc-900 dark:text-white placeholder:text-zinc-500',
-              compact ? 'h-10' : 'h-9 text-sm'
-            )}
-          />
-        </>
-      ) : null}
-      <Button
-        type="button"
-        variant="outline"
-        disabled={loading}
-        onClick={() => deleteOne(order)}
+  const statusBadge = (status: string) => {
+    const cfg = statusVisual[status] ?? statusVisual.PENDING_PAYMENT;
+    return (
+      <span
         className={cn(
-          'w-full justify-center border-zinc-600 text-zinc-600 dark:text-zinc-400 hover:border-red-900/50 hover:bg-red-950/20 hover:text-red-200',
-          compact ? 'h-10' : 'h-9 text-sm'
+          'inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium',
+          cfg.className
         )}
       >
-        Delete from list
-      </Button>
+        {cfg.label}
+      </span>
+    );
+  };
+
+  const slipThumb = (order: any, size: 'sm' | 'md') => {
+    if (!order.slip_image_url) {
+      return <span className="text-xs text-zinc-500">—</span>;
+    }
+    const h = size === 'sm' ? 'h-11 w-11' : 'h-28 w-28';
+    return (
+      <button
+        type="button"
+        onClick={() => setExpandedId((id) => (id === order.id ? null : order.id))}
+        className={cn(
+          'relative shrink-0 overflow-hidden rounded-md border border-zinc-300 bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900',
+          h
+        )}
+        aria-label="Toggle slip preview"
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={`/api/orders/${order.id}/slip`}
+          alt=""
+          className="h-full w-full object-cover"
+        />
+      </button>
+    );
+  };
+
+  const expandedPanel = (order: any) => (
+    <div className="space-y-4 border-t border-zinc-200 bg-zinc-50/80 p-4 dark:border-zinc-800 dark:bg-zinc-950/50">
+      <div className="flex flex-col gap-4 md:flex-row md:items-start">
+        {order.slip_image_url ? (
+          <div className="shrink-0 overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-800">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={`/api/orders/${order.id}/slip`}
+              alt="Payment slip"
+              className="max-h-[min(70vh,420px)] w-full max-w-md object-contain"
+            />
+          </div>
+        ) : null}
+        <div className="min-w-0 flex-1 space-y-3">
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+            Order <span className="font-mono text-zinc-800 dark:text-zinc-200">#{order.id.slice(0, 8)}</span>
+          </p>
+          {order.status === 'SLIP_SUBMITTED' ? (
+            <div className="flex max-w-sm flex-col gap-2">
+              <Button
+                type="button"
+                onClick={() => handleApprove(order)}
+                disabled={loading}
+                className="border border-zinc-600 bg-zinc-100 text-zinc-900 hover:bg-white dark:border-zinc-500 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700"
+              >
+                Approve &amp; complete
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => handleReject(order)}
+                disabled={loading}
+                className="border-zinc-600 dark:border-zinc-600"
+              >
+                Reject
+              </Button>
+              <Input
+                placeholder="Reject reason (optional)"
+                value={rejectReasons[order.id] || ''}
+                onChange={(e) =>
+                  setRejectReasons((prev) => ({ ...prev, [order.id]: e.target.value }))
+                }
+                className="border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900"
+              />
+            </div>
+          ) : (
+            <p className="text-sm text-zinc-500">This order is not awaiting slip approval.</p>
+          )}
+        </div>
+      </div>
     </div>
   );
 
   return (
     <div className="space-y-5">
+      <div className="flex flex-wrap gap-2 border-b border-zinc-200 pb-3 dark:border-zinc-800">
+        {FILTER_TABS.map((tab) => {
+          const active = statusFilter === tab.id;
+          const badge =
+            tab.badge === 'review' && reviewCountTotal > 0 ? (
+              <span className="ml-1 rounded-full bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-amber-900 dark:text-amber-100">
+                {reviewCountTotal}
+              </span>
+            ) : null;
+          return (
+            <Link
+              key={tab.id}
+              href={ordersHref(selectedBotId, 1, pageSize, tab.id)}
+              className={cn(
+                'inline-flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                active
+                  ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900'
+                  : 'text-zinc-600 hover:bg-zinc-200 dark:text-zinc-400 dark:hover:bg-zinc-800'
+              )}
+            >
+              {tab.label}
+              {badge}
+            </Link>
+          );
+        })}
+      </div>
+
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
         <p className="text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
-          <span className="text-zinc-700 dark:text-zinc-300">{pendingOrders.length} pending verification</span>
+          <span className="text-zinc-700 dark:text-zinc-300">{pendingOnPage.length} on this page need review</span>
           {totalCount > 0 ? (
             <span className="text-zinc-500">
               {' '}
@@ -345,18 +485,18 @@ export function OrdersDashboard({
             </span>
           ) : null}
         </p>
-        <div className="flex flex-col gap-3 sm:items-end">
+        <div className="hidden flex-col gap-3 md:flex md:items-end">
           <div className="flex flex-wrap items-center gap-x-1 gap-y-2 text-sm">
             <span className="mr-1 text-zinc-500">Rows per page</span>
-            {[25, 50, 100].map((n) => (
+            {[20, 50, 100].map((n) => (
               <Link
                 key={n}
-                href={ordersHref(selectedBotId, 1, n)}
+                href={ordersHref(selectedBotId, 1, n, statusFilter)}
                 className={cn(
                   'rounded-md px-2.5 py-1 font-medium transition-colors',
                   pageSize === n
-                    ? 'bg-zinc-700 text-zinc-900 dark:text-white'
-                    : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-300 dark:hover:bg-zinc-200 dark:bg-zinc-800 hover:text-zinc-800 dark:text-zinc-200'
+                    ? 'bg-zinc-700 text-white dark:bg-zinc-600 dark:text-white'
+                    : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-800'
                 )}
               >
                 {n}
@@ -366,14 +506,14 @@ export function OrdersDashboard({
           {totalPages > 1 ? (
             <div className="flex flex-wrap items-center gap-2">
               {page <= 1 ? (
-                <span className="inline-flex h-8 cursor-not-allowed items-center rounded-md border border-zinc-200 dark:border-zinc-800 px-3 text-sm text-zinc-600">
+                <span className="inline-flex h-8 cursor-not-allowed items-center rounded-md border border-zinc-200 px-3 text-sm text-zinc-600 dark:border-zinc-800">
                   <CaretLeft className="mr-1 h-4 w-4 opacity-60" aria-hidden />
                   Newer
                 </span>
               ) : (
                 <Link
-                  href={ordersHref(selectedBotId, page - 1, pageSize)}
-                  className="inline-flex h-8 items-center rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 text-sm text-zinc-800 dark:text-zinc-200 hover:bg-zinc-300 dark:hover:bg-zinc-200 dark:bg-zinc-800"
+                  href={ordersHref(selectedBotId, page - 1, pageSize, statusFilter)}
+                  className="inline-flex h-8 items-center rounded-md border border-zinc-300 bg-white px-3 text-sm dark:border-zinc-700 dark:bg-zinc-900"
                 >
                   <CaretLeft className="mr-1 h-4 w-4" aria-hidden />
                   Newer
@@ -383,14 +523,14 @@ export function OrdersDashboard({
                 Page {page} / {totalPages}
               </span>
               {page >= totalPages ? (
-                <span className="inline-flex h-8 cursor-not-allowed items-center rounded-md border border-zinc-200 dark:border-zinc-800 px-3 text-sm text-zinc-600">
+                <span className="inline-flex h-8 cursor-not-allowed items-center rounded-md border border-zinc-200 px-3 text-sm text-zinc-600 dark:border-zinc-800">
                   Older
                   <CaretRight className="ml-1 h-4 w-4 opacity-60" aria-hidden />
                 </span>
               ) : (
                 <Link
-                  href={ordersHref(selectedBotId, page + 1, pageSize)}
-                  className="inline-flex h-8 items-center rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 text-sm text-zinc-800 dark:text-zinc-200 hover:bg-zinc-300 dark:hover:bg-zinc-200 dark:bg-zinc-800"
+                  href={ordersHref(selectedBotId, page + 1, pageSize, statusFilter)}
+                  className="inline-flex h-8 items-center rounded-md border border-zinc-300 bg-white px-3 text-sm dark:border-zinc-700 dark:bg-zinc-900"
                 >
                   Older
                   <CaretRight className="ml-1 h-4 w-4" aria-hidden />
@@ -403,14 +543,25 @@ export function OrdersDashboard({
 
       {selected.size > 0 ? (
         <div
-          className="flex flex-col gap-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900/90 px-4 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between"
+          className="flex flex-col gap-3 rounded-lg border border-zinc-300 bg-white px-4 py-3 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/90 sm:flex-row sm:items-center sm:justify-between"
           role="status"
         >
           <p className="text-sm text-zinc-700 dark:text-zinc-300">
-            <span className="font-medium text-zinc-900 dark:text-white">{selected.size}</span> selected — removes rows from this list only;
-            customers are not notified.
+            <span className="font-medium text-zinc-900 dark:text-white">{selected.size}</span> selected — removes rows
+            from this list only; customers are not notified.
           </p>
           <div className="flex flex-wrap gap-2 sm:gap-3">
+            {selectedSlipIds.length > 0 ? (
+              <Button
+                type="button"
+                size="sm"
+                className="border border-amber-700/40 bg-amber-950/30 text-amber-100 hover:bg-amber-950/50"
+                onClick={() => setBulkApproveOpen(true)}
+                disabled={loading}
+              >
+                Approve selected slips…
+              </Button>
+            ) : null}
             <Button
               type="button"
               variant="outline"
@@ -434,41 +585,24 @@ export function OrdersDashboard({
       ) : null}
 
       <Card className="border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
-        <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 space-y-0 pb-4">
-          <div>
-            <CardTitle className="text-base font-semibold text-zinc-900 dark:text-white">Orders</CardTitle>
-            <CardDescription className="mt-1 text-zinc-500">
-              Confirm payments, reject if needed, or delete rows. Open history to clear many old finished orders at once.
-            </CardDescription>
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={openHistoryTool}
-            className="shrink-0 gap-2 border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-300 dark:hover:bg-zinc-200 dark:bg-zinc-800 hover:text-zinc-950 dark:hover:text-zinc-900 dark:text-white"
-            title={
-              selectedBotId
-                ? 'Remove many old finished orders at once'
-                : 'Choose a bot in the header first'
-            }
-          >
-            <ClockCounterClockwise className="h-4 w-4 text-zinc-600 dark:text-zinc-400" weight="regular" aria-hidden />
-            History
-          </Button>
+        <CardHeader className="pb-4">
+          <CardTitle className="text-base font-semibold text-zinc-900 dark:text-white">Orders</CardTitle>
+          <CardDescription className="mt-1 text-zinc-500">
+            Review slips first, then approve or reject. Use tabs to focus on what needs attention.
+          </CardDescription>
         </CardHeader>
         <CardContent className="pt-0">
-          {orders.length === 0 ? (
-            <p className="text-sm text-zinc-500">No orders on this page.</p>
+          {combinedOrders.length === 0 ? (
+            <p className="text-sm text-zinc-500">No orders match this filter.</p>
           ) : (
             <>
-              <div className="space-y-4 md:hidden">
-                {orders.map((order: any) => (
+              <div className="space-y-3 md:hidden">
+                {combinedOrders.map((order: any) => (
                   <div
                     key={order.id}
-                    className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-950/40 p-4 text-sm text-zinc-800 dark:text-zinc-200"
+                    className="rounded-lg border border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950/40"
                   >
-                    <div className="flex gap-3">
+                    <div className="flex gap-3 p-3">
                       <input
                         type="checkbox"
                         checked={selected.has(order.id)}
@@ -476,62 +610,92 @@ export function OrdersDashboard({
                         className="mt-1 h-4 w-4 shrink-0 rounded border-zinc-600"
                         aria-label={`Select order ${order.id.slice(0, 8)}`}
                       />
-                      <div className="min-w-0 flex-1 space-y-3">
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="font-medium text-zinc-900 dark:text-white">#{order.id.slice(0, 8)}</p>
-                            <p className="mt-0.5 text-xs tabular-nums text-zinc-500">
-                              {formatOrderTimestamp(order.created_at)}
+                      <div className="min-w-0 flex-1 space-y-2">
+                        <div className="flex flex-wrap items-start gap-2">
+                          <div className="min-w-0 flex-1">
+                            <p className="font-medium text-zinc-900 dark:text-white">
+                              {order.telegram_username || order.telegram_user_id}
+                            </p>
+                            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                              {order.menu_items?.name || '—'}
                             </p>
                           </div>
-                          <Badge
-                            variant="outline"
-                            className={cn('shrink-0 border', statusBadgeClass[order.status] ?? statusBadgeClass.PENDING_PAYMENT)}
-                          >
-                            {statusLabels[order.status]}
-                          </Badge>
+                          {slipThumb(order, 'sm')}
                         </div>
-                        <dl className="space-y-1.5 text-xs text-zinc-600 dark:text-zinc-400">
-                          <div>
-                            <dt className="text-zinc-500">Customer</dt>
-                            <dd className="text-zinc-700 dark:text-zinc-300">{order.telegram_username || order.telegram_user_id}</dd>
+                        <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-500">
+                          <span className="tabular-nums font-medium text-zinc-800 dark:text-zinc-200">
+                            {formatCurrencyAmount(Number(order.menu_items?.price || 0), currency)}
+                          </span>
+                          <span>·</span>
+                          <span className="tabular-nums">{formatOrderTimestamp(order.created_at)}</span>
+                        </div>
+                        <div>{statusBadge(order.status)}</div>
+                        {order.status === 'SLIP_SUBMITTED' ? (
+                          <div className="flex flex-col gap-2">
+                            <div className="flex flex-wrap gap-2">
+                              <Button
+                                type="button"
+                                size="sm"
+                                className="border border-amber-800/50 bg-amber-950/40 text-amber-50"
+                                disabled={loading}
+                                onClick={() => handleApprove(order)}
+                              >
+                                Approve
+                              </Button>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                disabled={loading}
+                                onClick={() => handleReject(order)}
+                              >
+                                Reject
+                              </Button>
+                            </div>
+                            <Input
+                              placeholder="Reject reason (optional)"
+                              value={rejectReasons[order.id] || ''}
+                              onChange={(e) =>
+                                setRejectReasons((prev) => ({ ...prev, [order.id]: e.target.value }))
+                              }
+                              className="h-9 text-sm"
+                            />
                           </div>
-                          <div>
-                            <dt className="text-zinc-500">Product</dt>
-                            <dd className="break-words text-zinc-700 dark:text-zinc-300">{order.menu_items?.name || '—'}</dd>
-                          </div>
-                          <div>
-                            <dt className="text-zinc-500">Price</dt>
-                            <dd className="tabular-nums text-zinc-700 dark:text-zinc-300">
-                              {formatCurrencyAmount(Number(order.menu_items?.price || 0), currency)}
-                            </dd>
-                          </div>
-                          <div>
-                            <dt className="text-zinc-500">Slip</dt>
-                            <dd>
-                              {order.slip_image_url ? (
-                                <button type="button" className={slipLinkClass} onClick={() => setSelectedOrder(order)}>
-                                  View slip
-                                </button>
-                              ) : (
-                                <span className="text-zinc-600">—</span>
-                              )}
-                            </dd>
-                          </div>
-                        </dl>
-                        {actionsBlock(order, true)}
+                        ) : null}
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="text-zinc-500 hover:text-red-400"
+                          disabled={loading}
+                          onClick={() => deleteOne(order)}
+                        >
+                          Delete from list
+                        </Button>
                       </div>
                     </div>
+                    {expandedId === order.id ? expandedPanel(order) : null}
                   </div>
                 ))}
+                {!isDeepPage && hasMoreClient && orders.length + appendOrders.length < totalCount ? (
+                  <div ref={loadMoreRef} className="flex justify-center py-4">
+                    {loadingMore ? (
+                      <span className="text-sm text-zinc-500">Loading…</span>
+                    ) : (
+                      <Button type="button" variant="outline" size="sm" onClick={() => void loadMore()}>
+                        Load more
+                      </Button>
+                    )}
+                  </div>
+                ) : null}
               </div>
 
               <div className="hidden md:block">
                 <div className="overflow-x-auto rounded-md border border-zinc-200 dark:border-zinc-800">
-                  <table className="w-full min-w-[900px] border-collapse text-sm">
+                  <table className="w-full min-w-[860px] border-collapse text-sm">
                     <thead>
-                      <tr className="border-b border-zinc-200 dark:border-zinc-800 bg-zinc-100/90 dark:bg-zinc-950/50 text-left text-xs font-medium uppercase tracking-wide text-zinc-500">
-                        <th className="w-10 px-3 py-3">
+                      <tr className="border-b border-zinc-200 bg-zinc-100/90 text-left text-xs font-medium uppercase tracking-wide text-zinc-500 dark:border-zinc-800 dark:bg-zinc-950/50">
+                        <th className="w-10 px-2 py-3">
                           <input
                             type="checkbox"
                             checked={allOnPageSelected}
@@ -540,68 +704,91 @@ export function OrdersDashboard({
                             }}
                             onChange={toggleAllOnPage}
                             className="h-4 w-4 rounded border-zinc-600"
-                            aria-label="Select all orders on this page"
+                            aria-label="Select all on this page"
                           />
                         </th>
-                        <th className="px-3 py-3 whitespace-nowrap">Order</th>
-                        <th className="min-w-[7rem] px-3 py-3">Customer</th>
-                        <th className="min-w-[8rem] max-w-[14rem] px-3 py-3">Product</th>
-                        <th className="px-3 py-3 whitespace-nowrap">Price</th>
-                        <th className="min-w-[10rem] px-3 py-3 whitespace-nowrap">Time</th>
-                        <th className="px-3 py-3">Slip</th>
-                        <th className="min-w-[7.5rem] px-3 py-3">Status</th>
-                        <th className="w-[15rem] px-3 py-3">Actions</th>
+                        <th className="min-w-[10rem] px-2 py-3">Customer / product</th>
+                        <th className="px-2 py-3 whitespace-nowrap">Price</th>
+                        <th className="min-w-[9rem] px-2 py-3 whitespace-nowrap">Time</th>
+                        <th className="px-2 py-3">Slip</th>
+                        <th className="min-w-[8rem] px-2 py-3">Status</th>
+                        <th className="min-w-[9rem] px-2 py-3">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800/80">
-                      {orders.map((order: any) => (
-                        <tr key={order.id} className="align-top text-zinc-800 dark:text-zinc-200">
-                          <td className="px-3 py-4">
-                            <input
-                              type="checkbox"
-                              checked={selected.has(order.id)}
-                              onChange={() => toggleOne(order.id)}
-                              className="h-4 w-4 rounded border-zinc-600"
-                              aria-label={`Select order ${order.id.slice(0, 8)}`}
-                            />
-                          </td>
-                          <td className="px-3 py-4 whitespace-nowrap font-medium text-zinc-900 dark:text-white">
-                            #{order.id.slice(0, 8)}
-                          </td>
-                          <td className="px-3 py-4 text-zinc-700 dark:text-zinc-300 break-words">
-                            {order.telegram_username || order.telegram_user_id}
-                          </td>
-                          <td className="max-w-[14rem] px-3 py-4 break-words text-zinc-700 dark:text-zinc-300">
-                            {order.menu_items?.name || '—'}
-                          </td>
-                          <td className="px-3 py-4 tabular-nums whitespace-nowrap text-zinc-700 dark:text-zinc-300">
-                            {formatCurrencyAmount(Number(order.menu_items?.price || 0), currency)}
-                          </td>
-                          <td className="px-3 py-4 tabular-nums text-xs text-zinc-500 whitespace-nowrap">
-                            {formatOrderTimestamp(order.created_at)}
-                          </td>
-                          <td className="px-3 py-4">
-                            {order.slip_image_url ? (
-                              <button type="button" className={slipLinkClass} onClick={() => setSelectedOrder(order)}>
-                                View
-                              </button>
-                            ) : (
-                              <span className="text-zinc-600">—</span>
-                            )}
-                          </td>
-                          <td className="px-3 py-4">
-                            <Badge
-                              variant="outline"
-                              className={cn(
-                                'border font-normal',
-                                statusBadgeClass[order.status] ?? statusBadgeClass.PENDING_PAYMENT
+                      {combinedOrders.map((order: any) => (
+                        <Fragment key={order.id}>
+                          <tr className="align-middle text-zinc-800 dark:text-zinc-200">
+                            <td className="px-2 py-3">
+                              <input
+                                type="checkbox"
+                                checked={selected.has(order.id)}
+                                onChange={() => toggleOne(order.id)}
+                                className="h-4 w-4 rounded border-zinc-600"
+                                aria-label={`Select order ${order.id.slice(0, 8)}`}
+                              />
+                            </td>
+                            <td className="max-w-[16rem] px-2 py-3">
+                              <p className="font-medium text-zinc-900 dark:text-white">
+                                {order.telegram_username || order.telegram_user_id}
+                              </p>
+                              <p className="break-words text-zinc-600 dark:text-zinc-400">{order.menu_items?.name || '—'}</p>
+                            </td>
+                            <td className="px-2 py-3 tabular-nums whitespace-nowrap">
+                              {formatCurrencyAmount(Number(order.menu_items?.price || 0), currency)}
+                            </td>
+                            <td className="px-2 py-3 tabular-nums text-xs text-zinc-500 whitespace-nowrap">
+                              {formatOrderTimestamp(order.created_at)}
+                            </td>
+                            <td className="px-2 py-3">{slipThumb(order, 'sm')}</td>
+                            <td className="px-2 py-3">{statusBadge(order.status)}</td>
+                            <td className="px-2 py-3">
+                              {order.status === 'SLIP_SUBMITTED' ? (
+                                <div className="flex flex-col gap-1.5">
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    className="h-8 border border-amber-800/50 bg-amber-950/40 text-amber-50 hover:bg-amber-950/60"
+                                    disabled={loading}
+                                    onClick={() => handleApprove(order)}
+                                  >
+                                    Approve
+                                  </Button>
+                                  <Button type="button" size="sm" variant="outline" className="h-8" disabled={loading} onClick={() => handleReject(order)}>
+                                    Reject
+                                  </Button>
+                                  <Input
+                                    placeholder="Reject reason"
+                                    value={rejectReasons[order.id] || ''}
+                                    onChange={(e) =>
+                                      setRejectReasons((p) => ({ ...p, [order.id]: e.target.value }))
+                                    }
+                                    className="h-8 text-xs"
+                                  />
+                                </div>
+                              ) : (
+                                <span className="text-xs text-zinc-500">—</span>
                               )}
-                            >
-                              {statusLabels[order.status]}
-                            </Badge>
-                          </td>
-                          <td className="px-3 py-4">{actionsBlock(order, false)}</td>
-                        </tr>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="mt-1 h-7 px-0 text-xs text-zinc-500 hover:text-red-400"
+                                disabled={loading}
+                                onClick={() => deleteOne(order)}
+                              >
+                                Delete
+                              </Button>
+                            </td>
+                          </tr>
+                          {expandedId === order.id ? (
+                            <tr className="bg-zinc-50/80 dark:bg-zinc-950/30">
+                              <td colSpan={7} className="p-0">
+                                {expandedPanel(order)}
+                              </td>
+                            </tr>
+                          ) : null}
+                        </Fragment>
                       ))}
                     </tbody>
                   </table>
@@ -612,52 +799,17 @@ export function OrdersDashboard({
         </CardContent>
       </Card>
 
-      <Dialog open={!!selectedOrder} onOpenChange={() => setSelectedOrder(null)}>
-        <DialogContent className="max-w-2xl border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
-          <DialogHeader>
-            <DialogTitle className="text-zinc-900 dark:text-white">Payment slip</DialogTitle>
-            <DialogDescription className="text-zinc-500">
-              Order #{selectedOrder?.id?.slice(0, 8)}
-            </DialogDescription>
-          </DialogHeader>
-
-          {selectedOrder && (
-            <div className="space-y-4">
-              {selectedOrder.slip_image_url && (
-                <div className="overflow-hidden rounded-md border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-950">
-                  <img
-                    src={`/api/orders/${selectedOrder.id}/slip`}
-                    alt="Payment slip"
-                    className="max-h-80 w-full object-contain"
-                  />
-                </div>
-              )}
-
-              <DialogFooter>
-                <Button
-                  variant="outline"
-                  onClick={() => setSelectedOrder(null)}
-                  className="border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300"
-                >
-                  Close
-                </Button>
-              </DialogFooter>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
       <Dialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
         <DialogContent className="border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
           <DialogHeader>
             <DialogTitle className="text-zinc-900 dark:text-white">Delete selected orders?</DialogTitle>
             <DialogDescription className="text-zinc-500">
-              This permanently removes <strong className="text-zinc-700 dark:text-zinc-300">{selected.size}</strong> row(s) from your list.
-              Customers are not messaged on Telegram.
+              This permanently removes <strong className="text-zinc-700 dark:text-zinc-300">{selected.size}</strong>{' '}
+              row(s). Customers are not messaged on Telegram.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-3">
-            <Button variant="outline" className="border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300" onClick={() => setBulkDeleteOpen(false)}>
+            <Button variant="outline" onClick={() => setBulkDeleteOpen(false)}>
               Cancel
             </Button>
             <Button
@@ -671,45 +823,26 @@ export function OrdersDashboard({
         </DialogContent>
       </Dialog>
 
-      <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
-        <DialogContent className="max-w-md border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
+      <Dialog open={bulkApproveOpen} onOpenChange={setBulkApproveOpen}>
+        <DialogContent className="border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
           <DialogHeader>
-            <DialogTitle className="text-zinc-900 dark:text-white">Order history</DialogTitle>
-            <DialogDescription className="text-zinc-500 leading-relaxed">
-              Remove many <strong className="text-zinc-600 dark:text-zinc-400">completed</strong> and{' '}
-              <strong className="text-zinc-600 dark:text-zinc-400">rejected</strong> orders at once so the list stays short. Waiting and
-              in-progress orders are never removed. Only affects this dashboard — not your bot.
+            <DialogTitle className="text-zinc-900 dark:text-white">Approve multiple orders?</DialogTitle>
+            <DialogDescription className="text-zinc-500">
+              You are about to approve <strong className="text-zinc-800 dark:text-zinc-200">{selectedSlipIds.length}</strong>{' '}
+              order(s) that have a slip submitted. Each one is completed and the customer is notified. This cannot be
+              undone.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-3 py-2">
-            <div className="space-y-1.5">
-              <label htmlFor="hist-days" className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
-                Older than (days)
-              </label>
-              <Input
-                id="hist-days"
-                type="number"
-                min={7}
-                max={3650}
-                value={cleanupDays}
-                onChange={(e) => setCleanupDays(Math.max(7, parseInt(e.target.value, 10) || 90))}
-                className="h-10 border-zinc-300 dark:border-zinc-700 bg-zinc-200/80 dark:bg-zinc-800/50 text-zinc-900 dark:text-white"
-              />
-            </div>
-            <p className="text-xs leading-relaxed text-zinc-600">
-              Use the pager above the table to browse newer or older pages before cleaning up.
-            </p>
-          </div>
-          <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-end sm:gap-3">
-            <Button variant="outline" className="border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300" onClick={() => setHistoryOpen(false)}>
-              Close
+          <DialogFooter className="gap-2 sm:gap-3">
+            <Button variant="outline" onClick={() => setBulkApproveOpen(false)}>
+              Cancel
             </Button>
             <Button
-              className="border border-zinc-600 bg-zinc-100 text-zinc-900 hover:bg-white"
-              onClick={runCleanup}
-              disabled={loading}
+              className="border border-amber-800/50 bg-amber-950/50 text-amber-50 hover:bg-amber-950/70"
+              onClick={bulkApproveSelected}
+              disabled={loading || selectedSlipIds.length === 0}
             >
-              Remove old orders
+              Approve {selectedSlipIds.length} order(s)
             </Button>
           </DialogFooter>
         </DialogContent>

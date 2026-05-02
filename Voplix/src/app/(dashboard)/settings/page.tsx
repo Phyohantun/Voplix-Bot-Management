@@ -5,6 +5,19 @@ import { redirect } from 'next/navigation';
 import { ProfileForm } from '@/components/profile/profile-form';
 import { CurrencyPreferenceCard } from '@/components/account/currency-preference-card';
 import { shopCurrencyFromUser } from '@/lib/currency';
+import { OrderHistoryCleanup } from '@/components/settings/order-history-cleanup';
+
+async function getBotsForCleanup(userId: string) {
+  const supabase = await createClient();
+  const { data, error } = await (supabase as any)
+    .from('bots')
+    .select('id, bot_username')
+    .eq('user_id', userId)
+    .eq('is_active', true)
+    .order('created_at', { ascending: false });
+  if (error) return [];
+  return (data as { id: string; bot_username: string }[]) || [];
+}
 
 export default async function SettingsPage() {
   const supabase = await createClient();
@@ -31,6 +44,7 @@ export default async function SettingsPage() {
   const initialFirstName = metadataFirstName || fallbackFirstName;
   const initialLastName = metadataLastName || fallbackLastName;
   const shopCurrency = shopCurrencyFromUser(user);
+  const cleanupBots = await getBotsForCleanup(user.id);
 
   return (
     <div className="space-y-8">
@@ -55,6 +69,8 @@ export default async function SettingsPage() {
         <ProfileForm mode="edit" initialFirstName={initialFirstName} initialLastName={initialLastName} />
 
         <CurrencyPreferenceCard initialCurrency={shopCurrency} />
+
+        <OrderHistoryCleanup bots={cleanupBots} />
 
         <Card className="border-zinc-200 dark:border-zinc-800/80 bg-zinc-50 dark:bg-zinc-900/50 shadow-none">
           <CardHeader className="pb-4">

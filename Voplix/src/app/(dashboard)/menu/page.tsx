@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { MenuBuilder } from '@/components/menu/menu-builder';
 import { paymentInstructionsFromBotRow } from '@/lib/bot-telegram-copy';
 import { getPlanEnforcementSnapshot } from '@/lib/plan-limits';
+import { FreePlanUpgradeBanner } from '@/components/dashboard/free-plan-banner';
 
 interface BotRecord {
   id: string;
@@ -17,13 +18,19 @@ interface SupabaseQueryError {
   code?: string;
 }
 
+interface StockRow {
+  id: string;
+  is_sold: boolean;
+}
+
 interface MenuItemRecord {
   id: string;
   name: string;
   price: number;
   type: 'DIGITAL_DELIVERY' | 'MANUAL_DELIVERY';
   delivery_content: string | null;
-  stock_items?: { count: number } | { count: number }[] | null;
+  is_active: boolean | null;
+  stock_items?: StockRow[] | StockRow | null;
 }
 
 async function getBots(userId: string) {
@@ -63,13 +70,17 @@ async function getBots(userId: string) {
   });
 }
 
+function normalizeStockRows(raw: MenuItemRecord['stock_items']): StockRow[] {
+  if (!raw) return [];
+  return Array.isArray(raw) ? raw : [raw];
+}
+
 async function getMenuItems(botId: string) {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from('menu_items')
-    .select('*, stock_items(count)')
+    .select('id, name, price, type, delivery_content, is_active, stock_items ( id, is_sold )')
     .eq('bot_id', botId)
-    .eq('is_active', true)
     .order('sort_order', { ascending: true });
 
   if (error) {
@@ -77,7 +88,20 @@ async function getMenuItems(botId: string) {
     return [];
   }
 
-  return (data ?? []) as MenuItemRecord[];
+  return (data ?? []).map((row) => {
+    const r = row as MenuItemRecord;
+    const stocks = normalizeStockRows(r.stock_items);
+    const unsold_stock_count = stocks.filter((s) => !s.is_sold).length;
+    return {
+      id: r.id,
+      name: r.name,
+      price: r.price,
+      type: r.type,
+      delivery_content: r.delivery_content,
+      is_active: r.is_active !== false,
+      unsold_stock_count,
+    };
+  });
 }
 
 export default async function MenuPage({
@@ -86,14 +110,16 @@ export default async function MenuPage({
   searchParams: Promise<{ bot?: string | string[] }>;
 }) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   if (!user) {
     redirect('/login');
   }
-  
+
   const bots = await getBots(user.id);
-  
+
   if (bots.length === 0) {
     redirect('/onboarding');
   }
@@ -101,7 +127,7 @@ export default async function MenuPage({
   const params = await searchParams;
   const selectedBotId = Array.isArray(params.bot) ? params.bot[0] : params.bot;
   const selectedBot = bots.find((bot) => bot.id === selectedBotId) ?? bots[0];
-  
+
   const menuItems = await getMenuItems(selectedBot.id);
   const planSnapshot = await getPlanEnforcementSnapshot(user.id);
 
@@ -113,16 +139,9 @@ export default async function MenuPage({
           Products here are sent to Telegram when someone sends <code className="text-zinc-700 dark:text-zinc-300">/start</code> or taps
           &quot;Browse menu&quot;.
         </p>
-        {planSnapshot.maxMenuItems != null ? (
-          <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-500">
-            Active products across all your bots: {planSnapshot.activeMenuItems} / {planSnapshot.maxMenuItems} (Free).
-            <a href="/subscription" className="ml-1 text-indigo-600 underline-offset-2 hover:underline dark:text-indigo-400">
-              Upgrade
-            </a>{' '}
-            for unlimited.
-          </p>
-        ) : null}
       </div>
+
+      {planSnapshot.plan === 'free' ? <FreePlanUpgradeBanner /> : null}
 
       <MenuBuilder bots={bots} selectedBot={selectedBot} menuItems={menuItems} planSnapshot={planSnapshot} />
     </div>

@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { StockManager, type DigitalMenuWithStock } from '@/components/stock/stock-manager';
 import { getPlanEnforcementSnapshot } from '@/lib/plan-limits';
+import { FreePlanUpgradeBanner } from '@/components/dashboard/free-plan-banner';
 
 interface BotRecord {
   id: string;
@@ -45,7 +46,6 @@ async function getDigitalWithStock(botId: string): Promise<DigitalMenuWithStock[
     )
     .eq('bot_id', botId)
     .eq('type', 'DIGITAL_DELIVERY')
-    .eq('is_active', true)
     .order('sort_order', { ascending: true });
 
   if (error) {
@@ -92,15 +92,14 @@ export default async function StockPage({
           delivery text. Oldest unsold line is used first when you approve an order.
         </p>
         <p className="text-xs text-zinc-500">@{selectedBot.bot_username}</p>
-        {!planSnapshot.canUseStockManagement ? (
-          <p className="max-w-xl text-xs text-zinc-500 dark:text-zinc-500">
-            Stock management is available on Pro and Plus.{' '}
-            <a href="/subscription" className="text-indigo-600 underline-offset-2 hover:underline dark:text-indigo-400">
-              Subscription
-            </a>
-          </p>
-        ) : null}
       </div>
+
+      {planSnapshot.plan === 'free' ? <FreePlanUpgradeBanner /> : null}
+      {!planSnapshot.canUseStockManagement && planSnapshot.plan !== 'free' ? (
+        <p className="max-w-xl text-sm text-amber-800 dark:text-amber-200/90">
+          Stock management is turned off for your account. Contact support if this is unexpected.
+        </p>
+      ) : null}
 
       <StockManager
         botId={selectedBot.id}

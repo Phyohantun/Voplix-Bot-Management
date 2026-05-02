@@ -117,6 +117,34 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+@keyframes pulse-orange-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(251, 146, 60, 0.45);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(251, 146, 60, 0);
+  }
+}
+
+.animate-pulse-orange {
+  animation: pulse-orange-glow 2s ease-in-out infinite;
+}
+
+@keyframes slip-review-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(245, 158, 11, 0);
+  }
+}
+
+.animate-slip-review-pulse {
+  animation: slip-review-pulse 1.6s ease-in-out infinite;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

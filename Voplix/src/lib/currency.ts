@@ -52,3 +52,9 @@ export function formatCurrencyAmount(amount: number, currency: ShopCurrency): st
     return `${amount.toLocaleString('en-US')} ${currency}`;
   }
 }
+
+/** e.g. `45,000 MMK` — amount + code explicit for dashboards. */
+export function formatCurrencyVerbose(amount: number, currency: ShopCurrency): string {
+  const n = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(Math.round(amount));
+  return `${n} ${currency}`;
+}

@@ -91,13 +91,10 @@ export async function POST(request: Request) {
     const body = await request.json();
     const menuItemId = body?.menu_item_id;
     const contentText = body?.content_text;
+    const linesRaw = body?.lines;
 
     if (typeof menuItemId !== 'string' || !menuItemId) {
       return NextResponse.json({ error: 'menu_item_id is required' }, { status: 400 });
-    }
-
-    if (typeof contentText !== 'string' || !contentText.trim()) {
-      return NextResponse.json({ error: 'content_text is required' }, { status: 400 });
     }
 
     const { data: rawMenu, error: menuErr } = await supabaseAdmin
@@ -116,20 +113,47 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Stock applies only to digital products' }, { status: 400 });
     }
 
-    const { data: row, error } = await (supabaseAdmin as any)
+    const MAX_BULK = 500;
+    let texts: string[] = [];
+
+    if (Array.isArray(linesRaw)) {
+      texts = linesRaw
+        .map((l: unknown) => (typeof l === 'string' ? l.trim() : ''))
+        .filter((t: string) => t.length > 0)
+        .slice(0, MAX_BULK);
+      if (texts.length === 0) {
+        return NextResponse.json({ error: 'lines must be a non-empty array of strings' }, { status: 400 });
+      }
+    } else {
+      if (typeof contentText !== 'string' || !contentText.trim()) {
+        return NextResponse.json({ error: 'content_text or lines is required' }, { status: 400 });
+      }
+      texts = [contentText.trim()];
+    }
+
+    const rowsToInsert = texts.map((content_text) => ({ menu_item_id: menuItemId, content_text }));
+
+    const { data: inserted, error } = await (supabaseAdmin as any)
       .from('stock_items')
-      .insert({
-        menu_item_id: menuItemId,
-        content_text: contentText.trim(),
-      })
-      .select()
-      .single();
+      .insert(rowsToInsert)
+      .select();
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ stockItem: row }, { status: 201 });
+    const list = (inserted as unknown[]) || [];
+
+    await (supabaseAdmin as any)
+      .from('menu_items')
+      .update({ is_active: true, updated_at: new Date().toISOString() })
+      .eq('id', menuItemId);
+
+    if (list.length === 1) {
+      return NextResponse.json({ stockItem: list[0], added: 1 }, { status: 201 });
+    }
+
+    return NextResponse.json({ stockItems: list, added: list.length }, { status: 201 });
   } catch (e) {
     console.error('POST /api/stock-items', e);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
