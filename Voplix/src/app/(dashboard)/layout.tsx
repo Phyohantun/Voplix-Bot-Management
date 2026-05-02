@@ -6,6 +6,7 @@ import { CurrencyProvider } from '@/components/dashboard/currency-context';
 import { LanguageProvider } from '@/lib/i18n/LanguageContext';
 import { getOwnerProfileForLayout } from '@/lib/owner-profile';
 import { shopCurrencyFromUser } from '@/lib/currency';
+import { getPlatformAccountForUser } from '@/lib/platform-account';
 
 export default async function DashboardLayout({
   children,
@@ -19,6 +20,12 @@ export default async function DashboardLayout({
 
   if (!user) {
     redirect('/login');
+  }
+
+  const platformAccount = await getPlatformAccountForUser(user.id);
+  const status = platformAccount?.account_status;
+  if (status === 'suspended') {
+    redirect('/account-suspended');
   }
 
   const [profile, announcementsResult, botsResult] = await Promise.all([

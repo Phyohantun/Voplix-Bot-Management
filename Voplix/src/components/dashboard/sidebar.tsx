@@ -12,6 +12,7 @@ import {
   List,
   Warehouse,
   Megaphone,
+  CreditCard,
   Gear,
   SignOut,
 } from '@phosphor-icons/react';
@@ -33,6 +34,7 @@ const navigation = [
   { name: 'Stock', href: '/stock', icon: Warehouse },
   { name: 'Orders', href: '/orders', icon: ShoppingCart },
   { name: 'Broadcast', href: '/broadcast', icon: Megaphone },
+  { name: 'Subscription', href: '/subscription', icon: CreditCard },
   { name: 'Account', href: '/settings', icon: Gear },
 ];
 
@@ -46,7 +48,9 @@ export function DashboardSidebar({ user, mobile = false }: DashboardSidebarProps
 
   useEffect(() => {
     navigation.forEach((item) => {
-      const shouldScopeByBot = ['/dashboard', '/menu', '/stock', '/orders', '/broadcast'].includes(item.href);
+      const shouldScopeByBot = ['/dashboard', '/menu', '/stock', '/orders', '/broadcast'].includes(
+        item.href
+      );
       const href = shouldScopeByBot && activeBotId ? `${item.href}?bot=${activeBotId}` : item.href;
       router.prefetch(href);
     });

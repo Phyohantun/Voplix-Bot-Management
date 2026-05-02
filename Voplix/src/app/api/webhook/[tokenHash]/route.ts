@@ -87,26 +87,29 @@ async function sendMessageWithFallback(
 
 const TELEGRAM_MAX_MESSAGE_LEN = 4096;
 
-/** Owner-defined bank / wallet info — plain text only (no HTML) so special characters stay safe. */
-async function sendCustomerPaymentInstructions(token: string, chatId: number, payText: string) {
-  const headerFirst = '💳 Payment details\n\n';
-  const headerMore = '\n\n💳 Payment details (continued)\n\n';
-
-  const firstChunkRoom = TELEGRAM_MAX_MESSAGE_LEN - headerFirst.length;
-  if (payText.length <= firstChunkRoom) {
-    await sendMessage(token, chatId, headerFirst + payText);
-    return;
+/**
+ * Owner-defined intro (HTML) then bank / QR text from Menu → Payment details (plain, chunked).
+ */
+async function sendCustomerPaymentInstructions(
+  token: string,
+  chatId: number,
+  payText: string,
+  copy: BotTelegramCopy
+) {
+  const intro = copy.payment_instruction_intro_html?.trim();
+  if (intro) {
+    const introPlain = telegramHtmlToPlain(intro);
+    await sendMessageWithFallback(token, chatId, intro, introPlain);
   }
 
+  const trimmed = payText.trim();
+  if (!trimmed) return;
+
   let offset = 0;
-  let isFirst = true;
-  while (offset < payText.length) {
-    const header = isFirst ? headerFirst : headerMore;
-    const room = TELEGRAM_MAX_MESSAGE_LEN - header.length;
-    const slice = payText.slice(offset, offset + Math.max(room, 1));
-    await sendMessage(token, chatId, header + slice);
+  while (offset < trimmed.length) {
+    const slice = trimmed.slice(offset, offset + TELEGRAM_MAX_MESSAGE_LEN);
+    await sendMessage(token, chatId, slice);
     offset += slice.length;
-    isFirst = false;
   }
 }
 
@@ -490,7 +493,7 @@ async function handleConfirmOrder(
 
   const paymentText = customerPaymentText.trim();
   if (paymentText) {
-    await sendCustomerPaymentInstructions(token, chatId, paymentText);
+    await sendCustomerPaymentInstructions(token, chatId, paymentText, copy);
   }
 
   await sendMessage(token, chatId, copy.slip_request_html, { parse_mode: 'HTML' });

@@ -6,6 +6,7 @@ export const translations: Record<string, string> = {
   "Stock": "ကုန်လက်ကျန်",
   "Orders": "အော်ဒါများ",
   "Broadcast": "ကြေညာချက်",
+  "Subscription": "စာရင်းသွင်းမှု",
   "Account": "အကောင့်",
   "Sign out": "ထွက်မည်",
   "Logout": "ထွက်မည်",

@@ -20,6 +20,14 @@ export default function HomePage() {
             <VoplixWordmark className="text-lg" />
           </div>
           <div className="flex items-center gap-2">
+            <Link href="/pricing" prefetch>
+              <Button
+                variant="ghost"
+                className="text-zinc-800 hover:bg-zinc-200 dark:text-zinc-200 dark:hover:bg-zinc-800"
+              >
+                Pricing
+              </Button>
+            </Link>
             <Link href="/login" prefetch>
               <Button
                 variant="ghost"

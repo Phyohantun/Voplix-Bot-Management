@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import type { NextRequest } from 'next/server';
+import { jwtVerify } from 'jose';
+import { PLATFORM_ADMIN_COOKIE } from '@/lib/admin-constants';
 
 function copyCookies(from: NextResponse, to: NextResponse) {
   from.cookies.getAll().forEach((c) => {
@@ -12,6 +14,59 @@ export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (pathname.startsWith('/api/webhook')) {
+    return NextResponse.next({
+      request: { headers: request.headers },
+    });
+  }
+
+  const isAdminUi = pathname.startsWith('/admin');
+  const isAdminApi = pathname.startsWith('/api/admin');
+  if (isAdminUi || isAdminApi) {
+    if (pathname === '/admin/login' || pathname.startsWith('/admin/login/')) {
+      return NextResponse.next({
+        request: { headers: request.headers },
+      });
+    }
+    if (pathname === '/api/admin/login' || pathname.startsWith('/api/admin/login')) {
+      return NextResponse.next({
+        request: { headers: request.headers },
+      });
+    }
+
+    const secret = process.env.PLATFORM_ADMIN_JWT_SECRET;
+    if (!secret || secret.length < 32) {
+      if (isAdminApi) {
+        return NextResponse.json({ error: 'Platform admin is not configured' }, { status: 503 });
+      }
+      return new NextResponse('Platform admin is not configured (set PLATFORM_ADMIN_JWT_SECRET)', {
+        status: 503,
+      });
+    }
+
+    const token = request.cookies.get(PLATFORM_ADMIN_COOKIE)?.value;
+    if (!token) {
+      if (isAdminApi) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+      return NextResponse.redirect(new URL('/admin/login', request.url));
+    }
+
+    try {
+      const { payload } = await jwtVerify(token, new TextEncoder().encode(secret));
+      if (payload.role !== 'platform_admin') {
+        throw new Error('invalid role');
+      }
+    } catch {
+      if (isAdminApi) {
+        const res = NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        res.cookies.delete(PLATFORM_ADMIN_COOKIE);
+        return res;
+      }
+      const res = NextResponse.redirect(new URL('/admin/login', request.url));
+      res.cookies.delete(PLATFORM_ADMIN_COOKIE);
+      return res;
+    }
+
     return NextResponse.next({
       request: { headers: request.headers },
     });
@@ -69,7 +124,9 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
+    '/admin/:path*',
     '/dashboard/:path*',
+    '/subscription',
     '/onboarding/:path*',
     '/login',
     '/signup',

@@ -1,6 +1,8 @@
 export const DEFAULT_BOT_TELEGRAM_COPY = {
   empty_menu_html: '<b>Nothing here yet!</b>\n\nCheck back later for new products.',
-  menu_intro_html: '<b>Welcome!</b>\n\nHere is our current menu:',
+  /** Shown on /start when menu has items and bot has no custom “start welcome” (Menu → Bot start). */
+  menu_intro_html:
+    'မင်္ဂလာပါ! ကျွန်တော်တို့ဆိုင်မှ ကြိုဆိုပါတယ်။ အောက်မှ ပစ္စည်းများကို ရွေးချယ်နိုင်ပါသည်။',
   menu_footer_html: '\n\n<i>Click a product below to continue.</i>',
   help_text_html:
     '<i>Tip: Use the {{browse_menu_button}} keyboard button or type /menu to see this list again anytime.</i>',
@@ -9,8 +11,11 @@ export const DEFAULT_BOT_TELEGRAM_COPY = {
   purchase_question: 'Would you like to purchase this item?',
   button_confirm_pay: '✅ Confirm & Pay',
   button_cancel: '❌ Cancel',
+  /** Sent right before owner “Payment details” (QR / numbers) after customer taps Confirm & Pay. */
+  payment_instruction_intro_html:
+    'ကျေးဇူးပြု၍ အောက်ပါ ဖုန်းနံပါတ်သို့ ငွေလွှဲပြီး slip ပို့ပေးပါ။',
   slip_request_html:
-    '<b>Order Created!</b>\n\nAfter you have paid, please send your payment slip as a photo. We will verify it and process your order.',
+    'ငွေလွှဲပြီးပါက slip ပုံကို ဤချတ်တွင် ပို့ပေးပါ။ ကျွန်ုပ်တို့ စစ်ဆေးပြီး အတည်ပြုပေးပါမည်။',
   order_cancelled: 'Order cancelled. Use /start to browse the menu again.',
   help_command_html:
     '<b>Available Commands</b>\n\n/start - Show the menu\n/menu - Show the menu\n/help - Show this help message',
@@ -24,15 +29,15 @@ export const DEFAULT_BOT_TELEGRAM_COPY = {
   slip_wrong_state: 'We cannot accept another slip for this order in its current state. Use /start if you need help.',
   slip_save_failed: 'There was an error saving your slip. Please try again in a moment or ask for help.',
   slip_submitted_thanks_html:
-    '<b>Thank you!</b>\n\nYour payment slip has been submitted. We will verify it and deliver your order shortly.',
+    'သင့် slip လက်ခံရရှိပါပြီ။ မကြာမီ အတည်ပြုပေးပါမည်။ ခဏစောင့်ပါ။',
   callback_item_not_found: 'Item not found or no longer available.',
   callback_out_of_stock: 'Sorry, this item is currently out of stock.',
   callback_order_expired: 'Order session expired.',
   callback_unknown_action: 'Unknown action.',
   order_confirmed_template_html:
-    '<b>Order Confirmed!</b>\n\n{{product_name}}\n\n<b>Delivery for you:</b>\n{{delivery}}',
+    'သင့်အော်ဒါ အတည်ပြုပြီးပါပြီ။ သင့် account အချက်အလက်များမှာ အောက်ပါအတိုင်းဖြစ်ပါသည်။\n\n<b>{{product_name}}</b>\n\n{{delivery}}',
   order_rejected_template_html:
-    '<b>Order Status</b>\n\nYour order for {{product_name}} was rejected.{{reason_block}}\n\nIf you think this is a mistake, please ask for help.',
+    'ဝမ်းနည်းပါသည်။ သင့်အော်ဒါကို အတည်မပြုနိုင်ပါ။ ထပ်မံဆက်သွယ်ပါ။{{reason_block}}',
 };
 
 export type BotTelegramCopy = Record<keyof typeof DEFAULT_BOT_TELEGRAM_COPY, string>;
@@ -43,7 +48,8 @@ export const BOT_TELEGRAM_COPY_LABELS: Record<keyof typeof DEFAULT_BOT_TELEGRAM_
     hint: 'When no products exist yet. HTML allowed.',
   },
   menu_intro_html: {
-    title: 'Menu — Intro (if no custom welcome)',
+    title: '1. Welcome (first time / menu)',
+    hint: 'Shown with product list on /start unless you set a custom welcome under Menu → Bot start. Plain text is OK; use <b>…</b> for bold.',
   },
   menu_footer_html: {
     title: 'Menu — Footer',
@@ -67,9 +73,13 @@ export const BOT_TELEGRAM_COPY_LABELS: Record<keyof typeof DEFAULT_BOT_TELEGRAM_
   },
   button_confirm_pay: { title: 'Button — Confirm & Pay', hint: 'Keep short.' },
   button_cancel: { title: 'Button — Cancel', hint: 'Keep short.' },
+  payment_instruction_intro_html: {
+    title: '2. Payment instruction (before QR / bank text)',
+    hint: 'Sent immediately before the payment-details block from Menu → Payment details. HTML.',
+  },
   slip_request_html: {
-    title: 'After Confirm & Pay — Slip Request',
-    hint: 'Sent after your payment-details message (from Menu → Payment details). HTML.',
+    title: 'After payment details — ask for slip',
+    hint: 'Sent after payment details + this intro. HTML.',
   },
   order_cancelled: { title: 'Order Cancelled', hint: 'After user clicks Cancel.' },
   help_command_html: { title: '/help Command Response', hint: 'HTML.' },
@@ -87,26 +97,35 @@ export const BOT_TELEGRAM_COPY_LABELS: Record<keyof typeof DEFAULT_BOT_TELEGRAM_
   slip_order_rejected: { title: 'Slip — Order Rejected', hint: 'HTML.' },
   slip_wrong_state: { title: 'Slip — Wrong Order State', hint: 'HTML.' },
   slip_save_failed: { title: 'Slip — Save Error', hint: 'HTML.' },
-  slip_submitted_thanks_html: { title: 'Slip — Success Thanks', hint: 'HTML.' },
+  slip_submitted_thanks_html: { title: '3. Slip received (right after customer sends photo)', hint: 'HTML.' },
   callback_item_not_found: { title: 'Popup — Item Not Found', hint: 'Max ~190 chars.' },
   callback_order_expired: { title: 'Popup — Session Expired', hint: 'Max ~190 chars.' },
   callback_unknown_action: { title: 'Popup — Unknown Button', hint: 'Max ~190 chars.' },
   order_confirmed_template_html: {
-    title: 'Order Confirmed (After you approve)',
-    hint: 'Use {{product_name}} and {{delivery}}. HTML.',
+    title: '4. Order confirmed + delivery (after you approve)',
+    hint: 'Use {{product_name}} and {{delivery}} (account / digital content). HTML.',
   },
   order_rejected_template_html: {
-    title: 'Order Rejected',
-    hint: 'Use {{product_name}} and {{reason_block}}. HTML.',
+    title: '5. Order rejected (after you reject)',
+    hint: 'Use {{product_name}} and {{reason_block}} (owner reason, may be empty). HTML.',
   },
 };
 
 export const BOT_TELEGRAM_COPY_SECTIONS = [
   {
+    title: 'Owner — 5 key customer messages',
+    keys: [
+      'menu_intro_html',
+      'payment_instruction_intro_html',
+      'slip_submitted_thanks_html',
+      'order_confirmed_template_html',
+      'order_rejected_template_html',
+    ],
+  },
+  {
     title: 'Browsing & Menu',
     keys: [
       'empty_menu_html',
-      'menu_intro_html',
       'menu_footer_html',
       'help_text_html',
       'browse_menu_button',
@@ -127,7 +146,6 @@ export const BOT_TELEGRAM_COPY_SECTIONS = [
   {
     title: 'Payment Slips',
     keys: [
-      'slip_submitted_thanks_html',
       'slip_out_of_band_html',
       'slip_already_received',
       'slip_order_not_found',
