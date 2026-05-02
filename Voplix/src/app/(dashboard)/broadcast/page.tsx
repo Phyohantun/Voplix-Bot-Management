@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { BroadcastClient } from '@/components/broadcast/broadcast-client';
 import { AutoRefresh } from '@/components/dashboard/auto-refresh';
+import { getPlanEnforcementSnapshot } from '@/lib/plan-limits';
 
 async function getBots(userId: string) {
   const supabase = await createClient();
@@ -31,11 +32,12 @@ export default async function BroadcastPage({
   const bots = await getBots(user.id);
   const params = await searchParams;
   const selectedBotId = params.bot && bots.some((b) => b.id === params.bot) ? params.bot : null;
+  const planSnapshot = await getPlanEnforcementSnapshot(user.id);
 
   return (
     <div className="space-y-6">
       <AutoRefresh intervalMs={30000} />
-      <BroadcastClient bots={bots} initialBotId={selectedBotId} />
+      <BroadcastClient bots={bots} initialBotId={selectedBotId} canUseBroadcast={planSnapshot.canUseBroadcast} />
     </div>
   );
 }

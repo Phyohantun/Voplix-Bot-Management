@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import Link from 'next/link';
 import { Megaphone, Users, PaperPlaneTilt, SpinnerGap } from '@phosphor-icons/react';
 import { toast } from 'sonner';
 
@@ -19,9 +20,10 @@ interface BotRow {
 interface BroadcastClientProps {
   bots: BotRow[];
   initialBotId: string | null;
+  canUseBroadcast: boolean;
 }
 
-export function BroadcastClient({ bots, initialBotId }: BroadcastClientProps) {
+export function BroadcastClient({ bots, initialBotId, canUseBroadcast }: BroadcastClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
@@ -109,6 +111,14 @@ export function BroadcastClient({ bots, initialBotId }: BroadcastClientProps) {
       <div className="space-y-1">
         <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Broadcast</h1>
         <p className="text-zinc-600 dark:text-zinc-400">Send one message to your selected audience.</p>
+        {!canUseBroadcast ? (
+          <p className="text-xs text-zinc-500 dark:text-zinc-500">
+            Broadcast is included on the Plus plan only.{' '}
+            <Link href="/subscription" className="text-indigo-600 underline-offset-2 hover:underline dark:text-indigo-400">
+              Subscription
+            </Link>
+          </p>
+        ) : null}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -129,6 +139,7 @@ export function BroadcastClient({ bots, initialBotId }: BroadcastClientProps) {
               <Label className="text-zinc-700 dark:text-zinc-300">Target Audience</Label>
               <Select
                 value={formData.target_type}
+                disabled={!canUseBroadcast}
                 onValueChange={(value) => setFormData({ ...formData, target_type: value as 'ALL' | 'PAID_ONLY' })}
               >
                 <SelectTrigger className="bg-zinc-200 dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-white">
@@ -152,6 +163,7 @@ export function BroadcastClient({ bots, initialBotId }: BroadcastClientProps) {
                 onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                 placeholder="Enter your message here..."
                 rows={6}
+                disabled={!canUseBroadcast}
                 className="bg-zinc-200 dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-white resize-none"
               />
             </div>
@@ -162,11 +174,16 @@ export function BroadcastClient({ bots, initialBotId }: BroadcastClientProps) {
                 value={formData.image_url}
                 onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
                 placeholder="https://example.com/image.jpg"
+                disabled={!canUseBroadcast}
                 className="bg-zinc-200 dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-white"
               />
             </div>
 
-            <Button onClick={handleSend} disabled={loading || !formData.bot_id} className="w-full bg-indigo-600 hover:bg-indigo-700">
+            <Button
+              onClick={handleSend}
+              disabled={loading || !formData.bot_id || !canUseBroadcast}
+              className="w-full bg-indigo-600 hover:bg-indigo-700"
+            >
               {loading ? (
                 <>
                   <SpinnerGap className="mr-2 h-4 w-4 animate-spin" />

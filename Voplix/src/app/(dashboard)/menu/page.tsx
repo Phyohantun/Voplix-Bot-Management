@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { MenuBuilder } from '@/components/menu/menu-builder';
 import { paymentInstructionsFromBotRow } from '@/lib/bot-telegram-copy';
+import { getPlanEnforcementSnapshot } from '@/lib/plan-limits';
 
 interface BotRecord {
   id: string;
@@ -102,7 +103,8 @@ export default async function MenuPage({
   const selectedBot = bots.find((bot) => bot.id === selectedBotId) ?? bots[0];
   
   const menuItems = await getMenuItems(selectedBot.id);
-  
+  const planSnapshot = await getPlanEnforcementSnapshot(user.id);
+
   return (
     <div className="space-y-6">
       <div>
@@ -111,13 +113,18 @@ export default async function MenuPage({
           Products here are sent to Telegram when someone sends <code className="text-zinc-700 dark:text-zinc-300">/start</code> or taps
           &quot;Browse menu&quot;.
         </p>
+        {planSnapshot.maxMenuItems != null ? (
+          <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-500">
+            Active products across all your bots: {planSnapshot.activeMenuItems} / {planSnapshot.maxMenuItems} (Free).
+            <a href="/subscription" className="ml-1 text-indigo-600 underline-offset-2 hover:underline dark:text-indigo-400">
+              Upgrade
+            </a>{' '}
+            for unlimited.
+          </p>
+        ) : null}
       </div>
-      
-      <MenuBuilder 
-        bots={bots} 
-        selectedBot={selectedBot} 
-        menuItems={menuItems} 
-      />
+
+      <MenuBuilder bots={bots} selectedBot={selectedBot} menuItems={menuItems} planSnapshot={planSnapshot} />
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { loadPlatformAccountFlagsAdmin, planAllowsAutomatedDelivery } from '@/lib/plan-limits';
 
 const MENU_TYPES = ['DIGITAL_DELIVERY', 'MANUAL_DELIVERY'] as const;
 type MenuType = (typeof MENU_TYPES)[number];
@@ -65,6 +66,15 @@ export async function PATCH(
     if (type !== undefined) {
       if (!isMenuType(type)) {
         return NextResponse.json({ error: 'Invalid type' }, { status: 400 });
+      }
+      if (type === 'DIGITAL_DELIVERY') {
+        const flags = await loadPlatformAccountFlagsAdmin(user.id);
+        if (!planAllowsAutomatedDelivery(flags.plan_tier)) {
+          return NextResponse.json(
+            { error: 'Auto delivery (digital) requires Pro or Plus. Upgrade on Subscription.' },
+            { status: 403 }
+          );
+        }
       }
       updates.type = type;
     }

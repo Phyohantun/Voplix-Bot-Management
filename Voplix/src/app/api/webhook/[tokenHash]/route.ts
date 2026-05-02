@@ -18,6 +18,7 @@ import {
   paymentInstructionsFromBotRow,
   type BotTelegramCopy,
 } from '@/lib/bot-telegram-copy';
+import { checkOrderCreationAllowed } from '@/lib/plan-limits';
 
 interface TelegramUpdate {
   message?: {
@@ -226,6 +227,7 @@ export async function POST(
           token,
           chatId,
           botId,
+          (bot as any).user_id as string,
           telegramUserId,
           telegramUsername,
           menuItemId,
@@ -386,6 +388,7 @@ async function handleMenuSelection(
   token: string,
   chatId: number,
   botId: string,
+  ownerUserId: string,
   telegramUserId: string,
   telegramUsername: string,
   menuItemId: string,
@@ -407,6 +410,19 @@ async function handleMenuSelection(
   }
 
   const typedMenuItem = menuItem as MenuItemRecord;
+
+  const orderGate = await checkOrderCreationAllowed(ownerUserId, typedMenuItem.type);
+  if (!orderGate.ok) {
+    const msg =
+      orderGate.code === 'monthly_cap'
+        ? copy.callback_monthly_order_limit
+        : orderGate.code === 'digital_blocked'
+          ? copy.callback_digital_not_available
+          : copy.callback_shop_unavailable;
+    await answerCallbackQuery(token, callbackId, msg);
+    return;
+  }
+
   const shopCurrency = await getShopCurrencyForBot(botId);
 
   // Check stock for digital delivery

@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { StockManager, type DigitalMenuWithStock } from '@/components/stock/stock-manager';
+import { getPlanEnforcementSnapshot } from '@/lib/plan-limits';
 
 interface BotRecord {
   id: string;
@@ -80,6 +81,7 @@ export default async function StockPage({
   const selectedBot = bots.find((b) => b.id === selectedBotId) ?? bots[0];
 
   const digitalItems = await getDigitalWithStock(selectedBot.id);
+  const planSnapshot = await getPlanEnforcementSnapshot(user.id);
 
   return (
     <div className="space-y-6">
@@ -90,9 +92,21 @@ export default async function StockPage({
           delivery text. Oldest unsold line is used first when you approve an order.
         </p>
         <p className="text-xs text-zinc-500">@{selectedBot.bot_username}</p>
+        {!planSnapshot.canUseStockManagement ? (
+          <p className="max-w-xl text-xs text-zinc-500 dark:text-zinc-500">
+            Stock management is available on Pro and Plus.{' '}
+            <a href="/subscription" className="text-indigo-600 underline-offset-2 hover:underline dark:text-indigo-400">
+              Subscription
+            </a>
+          </p>
+        ) : null}
       </div>
 
-      <StockManager botId={selectedBot.id} initialItems={digitalItems} />
+      <StockManager
+        botId={selectedBot.id}
+        initialItems={digitalItems}
+        canManageStock={planSnapshot.canUseStockManagement}
+      />
     </div>
   );
 }

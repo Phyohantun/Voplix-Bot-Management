@@ -35,9 +35,12 @@ function normalizeStockItems(raw: DigitalMenuWithStock['stock_items']): StockLin
 export function StockManager({
   botId,
   initialItems,
+  canManageStock = true,
 }: {
   botId: string;
   initialItems: DigitalMenuWithStock[];
+  /** Pro/Plus + feature flag; Free owners can view but not mutate. */
+  canManageStock?: boolean;
 }) {
   const currency = useShopCurrency();
   const [items, setItems] = useState<DigitalMenuWithStock[]>(() =>
@@ -74,6 +77,10 @@ export function StockManager({
   };
 
   const addLine = async (menuItemId: string) => {
+    if (!canManageStock) {
+      toast.error('Stock management requires Pro or Plus.');
+      return;
+    }
     const text = (drafts[menuItemId] ?? '').trim();
     if (!text) {
       toast.error('Enter the text for this stock line');
@@ -110,6 +117,10 @@ export function StockManager({
   };
 
   const removeLine = async (menuItemId: string, stockId: string) => {
+    if (!canManageStock) {
+      toast.error('Stock management requires Pro or Plus.');
+      return;
+    }
     if (!confirm('Remove this unsold stock line?')) return;
 
     setLoadingId(stockId);
@@ -254,13 +265,13 @@ export function StockManager({
                 placeholder="Paste one code, key, or delivery text per line added…"
                 rows={3}
                 className="min-h-0 resize-y bg-zinc-100 dark:bg-zinc-950 border-zinc-300 dark:border-zinc-700 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-600"
-                disabled={loadingId === activeRow.id}
+                disabled={!canManageStock || loadingId === activeRow.id}
               />
               <Button
                 type="button"
                 size="sm"
                 className="border border-zinc-600 bg-zinc-100 text-zinc-900 hover:bg-white"
-                disabled={loadingId === activeRow.id}
+                disabled={!canManageStock || loadingId === activeRow.id}
                 onClick={() => addLine(activeRow.id)}
               >
                 Add line
@@ -289,7 +300,7 @@ export function StockManager({
                           variant="outline"
                           size="icon-sm"
                           className="h-7 w-7 shrink-0 border-zinc-300 dark:border-zinc-700 text-zinc-500 hover:border-red-900/50 hover:bg-red-950/20 hover:text-red-300"
-                          disabled={loadingId === line.id}
+                          disabled={!canManageStock || loadingId === line.id}
                           onClick={() => removeLine(activeRow.id, line.id)}
                           aria-label="Remove line"
                         >

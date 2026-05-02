@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { checkCanCreateMenuItem } from '@/lib/plan-limits';
 
 const MENU_TYPES = ['DIGITAL_DELIVERY', 'MANUAL_DELIVERY'] as const;
 type MenuType = (typeof MENU_TYPES)[number];
@@ -56,6 +57,11 @@ export async function POST(request: Request) {
 
     if (!bot) {
       return NextResponse.json({ error: 'Bot not found' }, { status: 404 });
+    }
+
+    const planGate = await checkCanCreateMenuItem(user.id, itemType);
+    if (!planGate.ok) {
+      return NextResponse.json({ error: planGate.message }, { status: 403 });
     }
 
     const { data: orderRows } = await (supabaseAdmin as any)

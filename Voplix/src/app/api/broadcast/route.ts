@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { decrypt } from '@/lib/encryption';
 import { sendMessage, sendPhoto } from '@/lib/telegram';
+import { checkBroadcastAllowed } from '@/lib/plan-limits';
 
 export async function POST(request: Request) {
   try {
@@ -13,16 +14,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { data: pa } = await (supabaseAdmin.from('platform_accounts') as any)
-      .select('account_status, can_use_broadcast')
-      .eq('user_id', user.id)
-      .maybeSingle();
-
-    if (pa?.account_status === 'suspended') {
-      return NextResponse.json({ error: 'Your account cannot use this feature.' }, { status: 403 });
-    }
-    if (pa && pa.can_use_broadcast === false) {
-      return NextResponse.json({ error: 'Broadcast is disabled for your account.' }, { status: 403 });
+    const bc = await checkBroadcastAllowed(user.id);
+    if (!bc.ok) {
+      return NextResponse.json({ error: bc.message }, { status: 403 });
     }
 
     const body = await request.json();

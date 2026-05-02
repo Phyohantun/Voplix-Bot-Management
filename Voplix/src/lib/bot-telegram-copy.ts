@@ -31,6 +31,10 @@ export const DEFAULT_BOT_TELEGRAM_COPY = {
   slip_submitted_thanks_html:
     'သင့် slip လက်ခံရရှိပါပြီ။ မကြာမီ အတည်ပြုပေးပါမည်။ ခဏစောင့်ပါ။',
   callback_item_not_found: 'Item not found or no longer available.',
+  callback_monthly_order_limit:
+    'This shop has reached its order limit for this month. Please try again later or contact the seller.',
+  callback_digital_not_available: 'This product type is not available right now. Please choose another item or contact the seller.',
+  callback_shop_unavailable: 'This shop cannot take orders right now. Please try again later.',
   callback_out_of_stock: 'Sorry, this item is currently out of stock.',
   callback_order_expired: 'Order session expired.',
   callback_unknown_action: 'Unknown action.',
@@ -99,6 +103,9 @@ export const BOT_TELEGRAM_COPY_LABELS: Record<keyof typeof DEFAULT_BOT_TELEGRAM_
   slip_save_failed: { title: 'Slip — Save Error', hint: 'HTML.' },
   slip_submitted_thanks_html: { title: '3. Slip received (right after customer sends photo)', hint: 'HTML.' },
   callback_item_not_found: { title: 'Popup — Item Not Found', hint: 'Max ~190 chars.' },
+  callback_monthly_order_limit: { title: 'Popup — Monthly order limit', hint: 'Max ~190 chars.' },
+  callback_digital_not_available: { title: 'Popup — Digital unavailable', hint: 'Max ~190 chars.' },
+  callback_shop_unavailable: { title: 'Popup — Shop unavailable', hint: 'Max ~190 chars.' },
   callback_order_expired: { title: 'Popup — Session Expired', hint: 'Max ~190 chars.' },
   callback_unknown_action: { title: 'Popup — Unknown Button', hint: 'Max ~190 chars.' },
   order_confirmed_template_html: {
@@ -160,6 +167,9 @@ export const BOT_TELEGRAM_COPY_SECTIONS = [
     keys: [
       'callback_out_of_stock',
       'callback_item_not_found',
+      'callback_monthly_order_limit',
+      'callback_digital_not_available',
+      'callback_shop_unavailable',
       'callback_order_expired',
       'callback_unknown_action',
     ],

@@ -23,6 +23,7 @@ import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { formatCurrencyAmount } from '@/lib/currency';
 import { useShopCurrency } from '@/components/dashboard/currency-context';
+import type { PlanEnforcementSnapshot } from '@/lib/plan-limits';
 
 type MenuItemType = 'DIGITAL_DELIVERY' | 'MANUAL_DELIVERY';
 
@@ -57,6 +58,7 @@ interface MenuBuilderProps {
   bots: BotOption[];
   selectedBot: BotOption;
   menuItems: MenuItem[];
+  planSnapshot: PlanEnforcementSnapshot;
 }
 
 type FormState = {
@@ -66,14 +68,14 @@ type FormState = {
   delivery_content: string;
 };
 
-const emptyForm = (): FormState => ({
+const emptyForm = (canDigital: boolean): FormState => ({
   name: '',
   price: '0',
-  type: 'DIGITAL_DELIVERY',
+  type: canDigital ? 'DIGITAL_DELIVERY' : 'MANUAL_DELIVERY',
   delivery_content: '',
 });
 
-export function MenuBuilder({ bots, selectedBot, menuItems: initialItems }: MenuBuilderProps) {
+export function MenuBuilder({ bots, selectedBot, menuItems: initialItems, planSnapshot }: MenuBuilderProps) {
   const router = useRouter();
   const currency = useShopCurrency();
   const [menuItems, setMenuItems] = useState(initialItems);
@@ -105,7 +107,13 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems }: Menu
     selectedBot.start_show_tip,
     selectedBot.payment_instructions,
   ]);
-  const [formData, setFormData] = useState<FormState>(emptyForm());
+  const [formData, setFormData] = useState<FormState>(() => emptyForm(planSnapshot.canCreateDigitalProduct));
+
+  useEffect(() => {
+    if (!planSnapshot.canCreateDigitalProduct && formData.type === 'DIGITAL_DELIVERY' && !editingItem) {
+      setFormData((prev) => ({ ...prev, type: 'MANUAL_DELIVERY' }));
+    }
+  }, [planSnapshot.canCreateDigitalProduct, formData.type, editingItem]);
 
   const parsePrice = (): number => {
     const n = Number.parseInt(formData.price.replace(/[^\d]/g, ''), 10);
@@ -141,7 +149,7 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems }: Menu
       const { menuItem } = (await response.json()) as { menuItem: MenuItem };
       setMenuItems([...menuItems, menuItem]);
       setIsCreateOpen(false);
-      setFormData(emptyForm());
+      setFormData(emptyForm(planSnapshot.canCreateDigitalProduct));
       toast.success('Product added — it will show on /start in Telegram');
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to create product');
@@ -180,7 +188,7 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems }: Menu
       const { menuItem } = (await response.json()) as { menuItem: MenuItem };
       setMenuItems(menuItems.map((item) => (item.id === editingItem.id ? menuItem : item)));
       setEditingItem(null);
-      setFormData(emptyForm());
+      setFormData(emptyForm(planSnapshot.canCreateDigitalProduct));
       toast.success('Product updated');
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to update');
@@ -312,7 +320,11 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems }: Menu
             <SelectValue />
           </SelectTrigger>
           <SelectContent className="bg-zinc-200 dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700">
-            <SelectItem value="DIGITAL_DELIVERY" className="text-zinc-900 dark:text-white">
+            <SelectItem
+              value="DIGITAL_DELIVERY"
+              disabled={!planSnapshot.canCreateDigitalProduct}
+              className="text-zinc-900 dark:text-white"
+            >
               {TYPE_LABEL.DIGITAL_DELIVERY}
             </SelectItem>
             <SelectItem value="MANUAL_DELIVERY" className="text-zinc-900 dark:text-white">
@@ -478,12 +490,21 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems }: Menu
             open={isCreateOpen}
             onOpenChange={(open) => {
               setIsCreateOpen(open);
-              if (open) setFormData(emptyForm());
+              if (open) setFormData(emptyForm(planSnapshot.canCreateDigitalProduct));
             }}
           >
             <DialogTrigger
               render={
-                <Button type="button" className="bg-indigo-600 hover:bg-indigo-700 w-full sm:w-auto">
+                <Button
+                  type="button"
+                  disabled={!planSnapshot.canAddMenuItem}
+                  title={
+                    !planSnapshot.canAddMenuItem
+                      ? 'Product limit reached for your plan — upgrade on Subscription.'
+                      : undefined
+                  }
+                  className="bg-indigo-600 hover:bg-indigo-700 w-full sm:w-auto disabled:opacity-50"
+                >
                   <Plus className="mr-2 h-4 w-4" />
                   Add product
                 </Button>
@@ -601,7 +622,7 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems }: Menu
         onOpenChange={(open) => {
           if (!open) {
             setEditingItem(null);
-            setFormData(emptyForm());
+            setFormData(emptyForm(planSnapshot.canCreateDigitalProduct));
           }
         }}
       >

@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { validateBotToken, setWebhook } from '@/lib/telegram';
 import { encrypt, hashToken } from '@/lib/encryption';
+import { checkCanInsertNewBot } from '@/lib/plan-limits';
 
 export async function POST(request: Request) {
   try {
@@ -76,6 +77,11 @@ export async function POST(request: Request) {
       }
 
       return NextResponse.json({ bot: updatedBot }, { status: 200 });
+    }
+
+    const gate = await checkCanInsertNewBot(user.id);
+    if (!gate.ok) {
+      return NextResponse.json({ error: gate.message }, { status: 403 });
     }
 
     // Save bot to database

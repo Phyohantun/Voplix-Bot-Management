@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { DeleteBotButton } from '@/components/bots/delete-bot-button';
 import { ReconnectWebhookButton } from '@/components/bots/reconnect-webhook-button';
 import { cn } from '@/lib/utils';
+import { getPlanEnforcementSnapshot } from '@/lib/plan-limits';
 
 interface BotRecord {
   id: string;
@@ -54,9 +55,24 @@ export default async function BotsPage() {
   }
 
   const bots = await getBots(user.id);
+  const planSnapshot = await getPlanEnforcementSnapshot(user.id);
 
   const addButtonClass =
     'w-full bg-zinc-100 font-medium text-zinc-900 hover:bg-white sm:w-auto';
+
+  const addBotButton = planSnapshot.canAddBot ? (
+    <Link href="/onboarding">
+      <Button className={addButtonClass}>
+        <Plus className="mr-2 h-4 w-4" weight="bold" />
+        Add bot
+      </Button>
+    </Link>
+  ) : (
+    <Button className={addButtonClass} disabled title="Bot limit reached for your plan">
+      <Plus className="mr-2 h-4 w-4" weight="bold" />
+      Add bot
+    </Button>
+  );
 
   return (
     <div className="space-y-8">
@@ -64,13 +80,17 @@ export default async function BotsPage() {
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-white">Bots</h1>
           <p className="text-sm text-zinc-500">Telegram shops linked to your account.</p>
+          {!planSnapshot.canAddBot ? (
+            <p className="text-xs text-zinc-500">
+              {planSnapshot.activeBots} / {planSnapshot.maxBots} bots on your {planSnapshot.plan} plan.{' '}
+              <Link href="/subscription" className="text-indigo-600 underline-offset-2 hover:underline dark:text-indigo-400">
+                Subscription
+              </Link>{' '}
+              to add more.
+            </p>
+          ) : null}
         </div>
-        <Link href="/onboarding">
-          <Button className={addButtonClass}>
-            <Plus className="mr-2 h-4 w-4" weight="bold" />
-            Add bot
-          </Button>
-        </Link>
+        {addBotButton}
       </div>
 
       {bots.length === 0 ? (
@@ -83,12 +103,19 @@ export default async function BotsPage() {
             <p className="mb-6 max-w-sm text-center text-sm text-zinc-500">
               Connect a Telegram bot to sell through chat and manage orders here.
             </p>
-            <Link href="/onboarding">
-              <Button className={addButtonClass}>
+            {planSnapshot.canAddBot ? (
+              <Link href="/onboarding">
+                <Button className={addButtonClass}>
+                  <Plus className="mr-2 h-4 w-4" weight="bold" />
+                  Connect a bot
+                </Button>
+              </Link>
+            ) : (
+              <Button className={addButtonClass} disabled>
                 <Plus className="mr-2 h-4 w-4" weight="bold" />
-                Connect a bot
+                Bot limit reached
               </Button>
-            </Link>
+            )}
           </CardContent>
         </Card>
       ) : (
