@@ -21,6 +21,9 @@ import { formatCurrencyAmount } from '@/lib/currency';
 import { useShopCurrency } from '@/components/dashboard/currency-context';
 import type { OrderStatusFilter } from '@/lib/owner-orders-filter';
 import { cn } from '@/lib/utils';
+import { OrderHistoryCleanup } from '@/components/settings/order-history-cleanup';
+
+type CleanupBotOption = { id: string; bot_username: string };
 
 interface OrdersDashboardProps {
   orders: any[];
@@ -30,6 +33,7 @@ interface OrdersDashboardProps {
   selectedBotId: string | null;
   reviewCountTotal: number;
   statusFilter: OrderStatusFilter;
+  cleanupBots?: CleanupBotOption[];
 }
 
 const DEFAULT_PAGE_SIZE = 20;
@@ -88,6 +92,7 @@ export function OrdersDashboard({
   selectedBotId,
   reviewCountTotal,
   statusFilter,
+  cleanupBots = [],
 }: OrdersDashboardProps) {
   const router = useRouter();
   const currency = useShopCurrency();
@@ -847,6 +852,18 @@ export function OrdersDashboard({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {cleanupBots.length > 0 ? (
+        <section className="space-y-3 pt-2">
+          <div>
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">Order archive</h2>
+            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+              Remove old completed and rejected rows from your database. Customers are not notified.
+            </p>
+          </div>
+          <OrderHistoryCleanup bots={cleanupBots} />
+        </section>
+      ) : null}
     </div>
   );
 }

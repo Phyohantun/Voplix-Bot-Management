@@ -22,6 +22,17 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { bot_id, message, image_url, target_type } = body;
 
+    if (!bot_id || typeof bot_id !== 'string') {
+      return NextResponse.json({ error: 'bot_id is required' }, { status: 400 });
+    }
+
+    if (typeof message !== 'string' || !message.trim()) {
+      return NextResponse.json({ error: 'Message is required' }, { status: 400 });
+    }
+    if (message.length > 4096) {
+      return NextResponse.json({ error: 'Message exceeds Telegram limit of 4096 characters' }, { status: 400 });
+    }
+
     // Verify bot ownership
     const { data: bot } = await (supabaseAdmin
       .from('bots') as any)

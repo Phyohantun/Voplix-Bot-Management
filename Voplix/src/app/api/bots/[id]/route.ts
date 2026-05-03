@@ -4,9 +4,11 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 import { decrypt } from '@/lib/encryption';
 import { deleteWebhook } from '@/lib/telegram';
 import {
+  CUSTOMER_MESSAGE_TEMPLATE_KEYS,
   mergeTelegramCustomerCopyJson,
   PAYMENT_INSTRUCTIONS_JSON_KEY,
 } from '@/lib/bot-telegram-copy';
+import { loadPlatformAccountFlagsAdmin } from '@/lib/plan-limits';
 
 function isPlainObject(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -101,9 +103,17 @@ export async function PATCH(
       } else if (typeof body.telegram_customer_copy !== 'object') {
         return NextResponse.json({ error: 'telegram_customer_copy must be object or null' }, { status: 400 });
       } else {
+        let incoming = body.telegram_customer_copy as Record<string, unknown>;
+        const flags = await loadPlatformAccountFlagsAdmin(user.id);
+        if (flags.plan_tier === 'free') {
+          incoming = { ...incoming };
+          for (const k of CUSTOMER_MESSAGE_TEMPLATE_KEYS) {
+            delete incoming[k as string];
+          }
+        }
         updates.telegram_customer_copy = mergeTelegramCustomerCopyJson(
           existingCopy,
-          body.telegram_customer_copy,
+          incoming,
           'replace_templates'
         );
       }

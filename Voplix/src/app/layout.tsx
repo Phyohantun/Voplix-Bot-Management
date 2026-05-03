@@ -58,7 +58,7 @@ export default function RootLayout({
       <body className={`${geistSans.className} min-h-full flex flex-col`}>
         <ThemeProvider>
           {children}
-          <Toaster position="top-right" />
+          <Toaster />
         </ThemeProvider>
       </body>
     </html>

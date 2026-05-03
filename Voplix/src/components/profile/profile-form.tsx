@@ -78,6 +78,10 @@ export function ProfileForm({
     }
   };
 
+  const initial = (firstName.trim() || 'U').slice(0, 1).toUpperCase();
+  const hue =
+    [...(firstName + lastName)].reduce((acc, ch) => acc + ch.charCodeAt(0), 0) % 360;
+
   return (
     <Card className="border-zinc-200 dark:border-zinc-800/80 bg-zinc-50 dark:bg-zinc-900/50 shadow-none">
       <CardHeader className="pb-4">
@@ -89,12 +93,18 @@ export function ProfileForm({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="rounded-lg border border-zinc-200 dark:border-zinc-800/80 bg-zinc-100 dark:bg-zinc-950/30 p-3 text-sm text-zinc-500">
+        <div className="rounded-lg border border-zinc-200 dark:border-zinc-800/80 bg-zinc-100 dark:bg-zinc-950/30 p-3 text-sm text-zinc-600 dark:text-zinc-400">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-zinc-300 bg-zinc-200 text-sm font-medium text-zinc-800 dark:border-zinc-700/80 dark:bg-zinc-800/80 dark:text-zinc-200">
-              {(firstName.trim() || 'U').slice(0, 1).toUpperCase()}
+            <div
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-base font-semibold text-white shadow-sm ring-2 ring-white/30 dark:ring-zinc-900/40"
+              style={{
+                background: `linear-gradient(145deg, hsl(${hue} 65% 48%), hsl(${(hue + 40) % 360} 70% 38%))`,
+              }}
+              aria-hidden
+            >
+              {initial}
             </div>
-            <p>Avatars use your first initial. Photo upload is not available.</p>
+            <p>Your profile uses a colored initial. Photo upload is not available yet.</p>
           </div>
         </div>
 

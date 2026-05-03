@@ -58,3 +58,12 @@ export function formatCurrencyVerbose(amount: number, currency: ShopCurrency): s
   const n = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(Math.round(amount));
   return `${n} ${currency}`;
 }
+
+/** Relatable examples for account settings (symbol + Western digits). */
+export function formatCurrencyRelatable(amount: number, currency: ShopCurrency): string {
+  const n = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(Math.round(amount));
+  if (currency === 'THB') return `฿${n}`;
+  if (currency === 'MMK') return `K ${n}`;
+  if (currency === 'USD') return `$${n}`;
+  return `${n} ${currency}`;
+}

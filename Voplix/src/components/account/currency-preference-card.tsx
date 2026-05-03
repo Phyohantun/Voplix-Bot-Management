@@ -5,11 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import {
-  CURRENCY_OPTIONS,
-  formatCurrencyAmount,
-  type ShopCurrency,
-} from '@/lib/currency';
+import { CURRENCY_OPTIONS, formatCurrencyRelatable, type ShopCurrency } from '@/lib/currency';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 
@@ -57,15 +53,18 @@ export function CurrencyPreferenceCard({ initialCurrency }: CurrencyPreferenceCa
           Shop currency
         </CardTitle>
         <CardDescription className="text-zinc-500">
-          How prices are shown in your dashboard, menu, orders, and your Telegram shop. Enter product
-          prices in this same unit — we do not convert between currencies.
+          How prices are shown in your dashboard, menu, orders, and your Telegram shop. Enter product prices in this
+          same unit.
         </CardDescription>
+        <p className="text-xs text-zinc-500 dark:text-zinc-500">
+          Changing currency only relabels amounts in the UI — it does not convert stored product prices.
+        </p>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid gap-3 sm:grid-cols-1">
           {CURRENCY_OPTIONS.map((opt) => {
             const selected = value === opt.value;
-            const example = formatCurrencyAmount(1250, opt.value);
+            const example = formatCurrencyRelatable(1250, opt.value);
             return (
               <button
                 key={opt.value}
@@ -92,6 +91,12 @@ export function CurrencyPreferenceCard({ initialCurrency }: CurrencyPreferenceCa
             );
           })}
         </div>
+        {dirty ? (
+          <div className="rounded-lg border border-amber-200 bg-amber-50/90 px-3 py-2 text-xs text-amber-950 dark:border-amber-900/50 dark:bg-amber-950/25 dark:text-amber-100/90">
+            <span className="font-semibold">Changing currency does not convert existing product prices.</span> After you
+            save, review and update product prices so they match the new unit.
+          </div>
+        ) : null}
         <Button
           type="button"
           onClick={onSave}

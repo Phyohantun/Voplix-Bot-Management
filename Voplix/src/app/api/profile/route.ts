@@ -72,6 +72,26 @@ export async function PATCH(request: Request) {
     profileUpdates.notification_last_seen_at = new Date().toISOString();
   }
 
+  let timezoneToSet: string | undefined;
+
+  if ('preferred_timezone' in body) {
+    const tz = body.preferred_timezone;
+    if (typeof tz !== 'string') {
+      return NextResponse.json({ error: 'preferred_timezone must be a string' }, { status: 400 });
+    }
+    const allowed = new Set([
+      'Asia/Bangkok',
+      'Asia/Yangon',
+      'Asia/Singapore',
+      'UTC',
+      'America/New_York',
+    ]);
+    if (!allowed.has(tz)) {
+      return NextResponse.json({ error: 'Invalid preferred_timezone' }, { status: 400 });
+    }
+    timezoneToSet = tz;
+  }
+
   if ('preferred_currency' in body) {
     const c = body.preferred_currency;
     if (typeof c !== 'string' || !ALLOWED_CURRENCY.has(c as ShopCurrency)) {
@@ -83,15 +103,18 @@ export async function PATCH(request: Request) {
     currencyToSet = c as ShopCurrency;
   }
 
-  if (currencyToSet !== undefined) {
+  if (currencyToSet !== undefined || timezoneToSet !== undefined) {
     const { data: authUserRes, error: getErr } = await supabaseAdmin.auth.admin.getUserById(user.id);
     if (getErr) {
       return NextResponse.json({ error: getErr.message }, { status: 500 });
     }
     const prevMeta =
       (authUserRes.user?.user_metadata as Record<string, unknown> | undefined) ?? {};
+    const nextMeta = { ...prevMeta };
+    if (currencyToSet !== undefined) nextMeta.preferred_currency = currencyToSet;
+    if (timezoneToSet !== undefined) nextMeta.preferred_timezone = timezoneToSet;
     const { error: authErr } = await supabaseAdmin.auth.admin.updateUserById(user.id, {
-      user_metadata: { ...prevMeta, preferred_currency: currencyToSet },
+      user_metadata: nextMeta,
     });
     if (authErr) {
       return NextResponse.json({ error: authErr.message }, { status: 500 });
@@ -109,7 +132,7 @@ export async function PATCH(request: Request) {
     }
   }
 
-  if (currencyToSet === undefined && Object.keys(profileUpdates).length === 0) {
+  if (currencyToSet === undefined && timezoneToSet === undefined && Object.keys(profileUpdates).length === 0) {
     return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 });
   }
 

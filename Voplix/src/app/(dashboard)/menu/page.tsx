@@ -12,6 +12,7 @@ interface BotRecord {
   start_show_menu_only: boolean;
   start_show_tip: boolean;
   payment_instructions: string | null;
+  telegram_customer_copy: unknown;
 }
 
 interface SupabaseQueryError {
@@ -66,6 +67,7 @@ async function getBots(userId: string) {
       start_show_menu_only: Boolean(r.start_show_menu_only),
       start_show_tip: Boolean(r.start_show_tip),
       payment_instructions: pi || null,
+      telegram_customer_copy: r.telegram_customer_copy,
     };
   });
 }

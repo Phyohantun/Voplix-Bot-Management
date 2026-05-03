@@ -25,6 +25,8 @@ import { formatCurrencyAmount } from '@/lib/currency';
 import { useShopCurrency } from '@/components/dashboard/currency-context';
 import type { PlanEnforcementSnapshot } from '@/lib/plan-limits';
 import { cn } from '@/lib/utils';
+import { mergeBotTelegramCopy } from '@/lib/bot-telegram-copy';
+import { CustomerChatFlowSettings, type CustomerMsgTemplatesState } from '@/components/menu/customer-chat-flow-settings';
 
 type MenuItemType = 'DIGITAL_DELIVERY' | 'MANUAL_DELIVERY';
 
@@ -35,6 +37,7 @@ interface BotOption {
   start_show_menu_only: boolean;
   start_show_tip: boolean;
   payment_instructions: string | null;
+  telegram_customer_copy?: unknown;
 }
 
 interface MenuItem {
@@ -94,6 +97,19 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems, planSn
   const [startShowTip, setStartShowTip] = useState(selectedBot.start_show_tip);
   const [paymentInstructions, setPaymentInstructions] = useState(selectedBot.payment_instructions ?? '');
   const [paymentInstructionsSaving, setPaymentInstructionsSaving] = useState(false);
+  const [msgTemplates, setMsgTemplates] = useState<CustomerMsgTemplatesState>(() => {
+    const m = mergeBotTelegramCopy(selectedBot.telegram_customer_copy ?? null);
+    return {
+      product_selected_message_html: m.product_selected_message_html,
+      payment_instruction_intro_html: m.payment_instruction_intro_html,
+      slip_request_html: m.slip_request_html,
+      slip_submitted_thanks_html: m.slip_submitted_thanks_html,
+      bot_paused_message_html: m.bot_paused_message_html,
+    };
+  });
+  const [msgTemplatesSaving, setMsgTemplatesSaving] = useState(false);
+
+  const canEditCustomerMessages = planSnapshot.plan !== 'free';
 
   useEffect(() => {
     setMenuItems(initialItems);
@@ -108,12 +124,21 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems, planSn
     setStartShowMenuOnly(selectedBot.start_show_menu_only);
     setStartShowTip(selectedBot.start_show_tip);
     setPaymentInstructions(selectedBot.payment_instructions ?? '');
+    const m = mergeBotTelegramCopy(selectedBot.telegram_customer_copy ?? null);
+    setMsgTemplates({
+      product_selected_message_html: m.product_selected_message_html,
+      payment_instruction_intro_html: m.payment_instruction_intro_html,
+      slip_request_html: m.slip_request_html,
+      slip_submitted_thanks_html: m.slip_submitted_thanks_html,
+      bot_paused_message_html: m.bot_paused_message_html,
+    });
   }, [
     selectedBot.id,
     selectedBot.start_welcome_message,
     selectedBot.start_show_menu_only,
     selectedBot.start_show_tip,
     selectedBot.payment_instructions,
+    selectedBot.telegram_customer_copy,
   ]);
   const [formData, setFormData] = useState<FormState>(() => emptyForm(planSnapshot.canCreateDigitalProduct));
 
@@ -321,17 +346,54 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems, planSn
 
       if (!response.ok) {
         const j = (await response.json().catch(() => ({}))) as { error?: string };
-        throw new Error(j.error || 'Failed to save payment details');
+        throw new Error(j.error || 'Could not save payment info');
       }
 
-      toast.success('Payment details saved — customers will see them after Confirm & Pay');
+      toast.success('Saved — buyers will see this after they tap Confirm & pay');
       router.refresh();
       return true;
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to save payment details');
+      toast.error(e instanceof Error ? e.message : 'Could not save payment info');
       return false;
     } finally {
       setPaymentInstructionsSaving(false);
+    }
+  };
+
+  const handleSaveCustomerMessages = async (): Promise<boolean> => {
+    if (!canEditCustomerMessages) {
+      toast.error('Upgrade to Pro or Plus to save your own chat texts.');
+      return false;
+    }
+    setMsgTemplatesSaving(true);
+    try {
+      const response = await fetch(`/api/bots/${selectedBot.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          telegram_customer_copy: {
+            product_selected_message_html: msgTemplates.product_selected_message_html,
+            payment_instruction_intro_html: msgTemplates.payment_instruction_intro_html,
+            slip_request_html: msgTemplates.slip_request_html,
+            slip_submitted_thanks_html: msgTemplates.slip_submitted_thanks_html,
+            bot_paused_message_html: msgTemplates.bot_paused_message_html,
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        const j = (await response.json().catch(() => ({}))) as { error?: string };
+        throw new Error(j.error || 'Could not save chat texts');
+      }
+
+      toast.success('Saved your chat texts');
+      router.refresh();
+      return true;
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Could not save chat texts');
+      return false;
+    } finally {
+      setMsgTemplatesSaving(false);
     }
   };
 
@@ -474,11 +536,12 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems, planSn
           </Button>
 
           <Dialog open={isBotSettingsOpen} onOpenChange={setIsBotSettingsOpen}>
-            <DialogContent className="border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 sm:max-w-lg">
+            <DialogContent className="border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 sm:max-w-2xl">
               <DialogHeader>
                 <DialogTitle className="text-zinc-900 dark:text-white">Bot settings</DialogTitle>
                 <DialogDescription className="text-zinc-600 dark:text-zinc-400">
-                  /start message and payment instructions for this shop.
+                  Greeting when people open your shop, the short lines the app sends during an order, and how they pay
+                  you.
                 </DialogDescription>
               </DialogHeader>
               <div className="flex gap-1 border-b border-zinc-200 pb-2 dark:border-zinc-800">
@@ -504,7 +567,7 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems, planSn
                       : 'text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800'
                   )}
                 >
-                  Payment details
+                  Texts &amp; how to pay
                 </button>
               </div>
 
@@ -542,24 +605,19 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems, planSn
                   </label>
                 </div>
               ) : (
-                <div className="space-y-3 py-2 max-h-[60vh] overflow-y-auto pr-1">
-                  <p className="text-xs text-zinc-500">
-                    Shown after the customer taps Confirm &amp; Pay, before they upload a slip. Plain text — you can
-                    list several methods.
-                  </p>
-                  <Textarea
-                    value={paymentInstructions}
-                    onChange={(e) => setPaymentInstructions(e.target.value)}
-                    placeholder={`Example:\nKBZ Pay — 09xxxxxxxxx (Your Shop Name)\nAYA Bank — 1234567890\nWave — 09xxxxxxxxx`}
-                    maxLength={12000}
-                    rows={10}
-                    className="min-h-[180px] border-zinc-300 bg-zinc-100 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
-                  />
-                  <p className="text-xs text-zinc-500">{paymentInstructions.length} / 12000 characters</p>
-                </div>
+                <CustomerChatFlowSettings
+                  botUsername={selectedBot.bot_username}
+                  telegramCustomerCopy={selectedBot.telegram_customer_copy}
+                  msgTemplates={msgTemplates}
+                  setMsgTemplates={setMsgTemplates}
+                  paymentInstructions={paymentInstructions}
+                  setPaymentInstructions={setPaymentInstructions}
+                  canEdit={canEditCustomerMessages}
+                  currency={currency}
+                />
               )}
 
-              <DialogFooter className="gap-2 sm:gap-0">
+              <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
                 <Button
                   type="button"
                   variant="outline"
@@ -573,19 +631,29 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems, planSn
                     type="button"
                     onClick={handleSaveStartSettings}
                     disabled={startSettingsLoading}
-                    className="bg-indigo-600 hover:bg-indigo-700"
+                    className="bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
                   >
                     {startSettingsLoading ? 'Saving…' : 'Save start message'}
                   </Button>
                 ) : (
-                  <Button
-                    type="button"
-                    onClick={() => void handleSavePaymentInstructions()}
-                    disabled={paymentInstructionsSaving}
-                    className="bg-indigo-600 hover:bg-indigo-700"
-                  >
-                    {paymentInstructionsSaving ? 'Saving…' : 'Save payment details'}
-                  </Button>
+                  <>
+                    <Button
+                      type="button"
+                      onClick={() => void handleSaveCustomerMessages()}
+                      disabled={msgTemplatesSaving || !canEditCustomerMessages}
+                      className="border border-zinc-300 bg-white text-zinc-900 hover:bg-zinc-100 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-700"
+                    >
+                      {msgTemplatesSaving ? 'Saving…' : 'Save chat texts'}
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={() => void handleSavePaymentInstructions()}
+                      disabled={paymentInstructionsSaving}
+                      className="bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+                    >
+                      {paymentInstructionsSaving ? 'Saving…' : 'Save how to pay'}
+                    </Button>
+                  </>
                 )}
               </DialogFooter>
             </DialogContent>

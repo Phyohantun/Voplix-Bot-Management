@@ -12,13 +12,15 @@ import { getUserSession, setUserSession, clearUserSession, UserSession } from '@
 import { getShopCurrencyForBot } from '@/lib/owner-currency';
 import { formatCurrencyAmount } from '@/lib/currency';
 import {
-  mergeBotTelegramCopy,
+  mergeBotTelegramCopyRespectingPlan,
   telegramHtmlToPlain,
   escapeHtml,
   paymentInstructionsFromBotRow,
+  applyBracketPlaceholders,
   type BotTelegramCopy,
 } from '@/lib/bot-telegram-copy';
-import { checkOrderCreationAllowed } from '@/lib/plan-limits';
+import { getShopDisplayName } from '@/lib/shop-display-name';
+import { checkOrderCreationAllowed, loadPlatformAccountFlagsAdmin } from '@/lib/plan-limits';
 
 interface TelegramUpdate {
   message?: {
@@ -95,9 +97,9 @@ async function sendCustomerPaymentInstructions(
   token: string,
   chatId: number,
   payText: string,
-  copy: BotTelegramCopy
+  introHtml: string
 ) {
-  const intro = copy.payment_instruction_intro_html?.trim();
+  const intro = introHtml?.trim();
   if (intro) {
     const introPlain = telegramHtmlToPlain(intro);
     await sendMessageWithFallback(token, chatId, intro, introPlain);
@@ -129,13 +131,11 @@ export async function POST(
       hasCallback: !!update.callback_query,
     });
 
-    // Find bot by token hash
     const { data: bot, error: botError } = await (supabaseAdmin
       .from('bots') as any)
       .select('*')
       .eq('token_hash', tokenHash)
-      .eq('is_active', true)
-      .single();
+      .maybeSingle();
 
     if (botError || !bot) {
       return NextResponse.json({ error: 'Bot not found' }, { status: 404 });
@@ -143,8 +143,40 @@ export async function POST(
 
     const token = decrypt((bot as any).token_encrypted);
     const botId = (bot as any).id;
-    const copy = mergeBotTelegramCopy((bot as any).telegram_customer_copy);
+    const ownerUserId = (bot as any).user_id as string;
+    const botUsername = (bot as any).bot_username as string;
+    const ownerFlags = await loadPlatformAccountFlagsAdmin(ownerUserId);
+    const copy = mergeBotTelegramCopyRespectingPlan(
+      (bot as any).telegram_customer_copy,
+      ownerFlags.plan_tier
+    );
     const customerPaymentText = paymentInstructionsFromBotRow(bot as any);
+
+    if (!(bot as any).is_active) {
+      const shopName = await getShopDisplayName(ownerUserId, botUsername);
+      const pausedHtml = applyBracketPlaceholders(copy.bot_paused_message_html, {
+        ShopName: escapeHtml(shopName),
+      });
+      const pausedPlain = telegramHtmlToPlain(pausedHtml);
+
+      if (update.message) {
+        const chatId = update.message.chat.id;
+        await sendMessageWithFallback(token, chatId, pausedHtml, pausedPlain);
+        return NextResponse.json({ ok: true });
+      }
+
+      if (update.callback_query) {
+        const cq = update.callback_query;
+        const chatId = cq.message?.chat.id;
+        if (chatId) {
+          await answerCallbackQuery(token, cq.id, pausedPlain.slice(0, 190));
+          await sendMessageWithFallback(token, chatId, pausedHtml, pausedPlain);
+        }
+        return NextResponse.json({ ok: true });
+      }
+
+      return NextResponse.json({ ok: true });
+    }
 
     // Handle message
     if (update.message) {
@@ -235,7 +267,16 @@ export async function POST(
           copy
         );
       } else if (data === 'confirm_order') {
-        await handleConfirmOrder(token, chatId, botId, telegramUserId, callbackId, copy, customerPaymentText);
+        await handleConfirmOrder(
+          token,
+          chatId,
+          botId,
+          ownerUserId,
+          telegramUserId,
+          callbackId,
+          copy,
+          customerPaymentText
+        );
       } else if (data === 'cancel_order') {
         await handleCancelOrder(token, chatId, botId, telegramUserId, callbackId, copy);
       } else {
@@ -463,23 +504,29 @@ async function handleMenuSelection(
 
   const keyboard = createConfirmOrderKeyboard(copy.button_confirm_pay, copy.button_cancel);
 
-  const pricePart =
-    typedMenuItem.price > 0
-      ? `\n${escapeHtml(copy.purchase_price_label)}: ${escapeHtml(formatCurrencyAmount(typedMenuItem.price, shopCurrency))}`
-      : '';
+  const priceStr = formatCurrencyAmount(typedMenuItem.price, shopCurrency);
+  const tmpl = copy.product_selected_message_html?.trim();
+  const bodyHtml = tmpl
+    ? applyBracketPlaceholders(tmpl, {
+        ProductName: escapeHtml(typedMenuItem.name),
+        Price: escapeHtml(priceStr),
+      })
+    : (() => {
+        const pricePart =
+          typedMenuItem.price > 0
+            ? `\n${escapeHtml(copy.purchase_price_label)}: ${escapeHtml(priceStr)}`
+            : '';
+        return `<b>${escapeHtml(typedMenuItem.name)}</b>${pricePart}\n\n${copy.purchase_question}`;
+      })();
 
-  await sendMessage(
-    token,
-    chatId,
-    `<b>${escapeHtml(typedMenuItem.name)}</b>${pricePart}\n\n${copy.purchase_question}`,
-    { parse_mode: 'HTML', reply_markup: keyboard }
-  );
+  await sendMessage(token, chatId, bodyHtml, { parse_mode: 'HTML', reply_markup: keyboard });
 }
 
 async function handleConfirmOrder(
   token: string,
   chatId: number,
   botId: string,
+  ownerUserId: string,
   telegramUserId: string,
   callbackId: string,
   copy: BotTelegramCopy,
@@ -491,6 +538,30 @@ async function handleConfirmOrder(
     await answerCallbackQuery(token, callbackId, copy.callback_order_expired);
     return;
   }
+
+  const { data: menuRow } = await (supabaseAdmin
+    .from('menu_items') as any)
+    .select('name, price')
+    .eq('id', session.menu_item_id)
+    .eq('bot_id', botId)
+    .maybeSingle();
+
+  const itemName = (menuRow as { name?: string } | null)?.name ?? 'Product';
+  const itemPrice = Number((menuRow as { price?: number } | null)?.price ?? 0);
+  const shopCurrency = await getShopCurrencyForBot(botId);
+  const priceStr = formatCurrencyAmount(itemPrice, shopCurrency);
+  const { data: botMeta } = await (supabaseAdmin.from('bots') as any)
+    .select('bot_username')
+    .eq('id', botId)
+    .maybeSingle();
+  const botUname = ((botMeta as { bot_username?: string } | null)?.bot_username ?? '') as string;
+  const shopName = await getShopDisplayName(ownerUserId, botUname);
+
+  const paymentIntroHtml = applyBracketPlaceholders(copy.payment_instruction_intro_html, {
+    ProductName: escapeHtml(itemName),
+    Price: escapeHtml(priceStr),
+    ShopName: escapeHtml(shopName),
+  });
 
   // Update order status
   await (supabaseAdmin
@@ -509,7 +580,7 @@ async function handleConfirmOrder(
 
   const paymentText = customerPaymentText.trim();
   if (paymentText) {
-    await sendCustomerPaymentInstructions(token, chatId, paymentText, copy);
+    await sendCustomerPaymentInstructions(token, chatId, paymentText, paymentIntroHtml);
   }
 
   await sendMessage(token, chatId, copy.slip_request_html, { parse_mode: 'HTML' });
@@ -611,5 +682,26 @@ async function handleSlipUpload(
 
   await clearUserSession(telegramUserId, botId);
 
-  await sendMessage(token, chatId, copy.slip_submitted_thanks_html, { parse_mode: 'HTML' });
+  const [{ data: miRow }, { data: botRow }] = await Promise.all([
+    (supabaseAdmin.from('menu_items') as any)
+      .select('name')
+      .eq('id', session.menu_item_id)
+      .eq('bot_id', botId)
+      .maybeSingle(),
+    (supabaseAdmin.from('bots') as any).select('user_id, bot_username').eq('id', botId).maybeSingle(),
+  ]);
+
+  const productName = (miRow as { name?: string } | null)?.name ?? 'Product';
+  const customerLabel = telegramUsername ? `@${telegramUsername}` : 'Customer';
+  const br = botRow as { user_id?: string; bot_username?: string } | null;
+  const shopName =
+    br?.user_id && br?.bot_username ? await getShopDisplayName(br.user_id, br.bot_username) : 'Shop';
+
+  const thanksHtml = applyBracketPlaceholders(copy.slip_submitted_thanks_html, {
+    ProductName: escapeHtml(productName),
+    CustomerName: escapeHtml(customerLabel),
+    ShopName: escapeHtml(shopName),
+  });
+
+  await sendMessage(token, chatId, thanksHtml, { parse_mode: 'HTML' });
 }

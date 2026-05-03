@@ -8,12 +8,19 @@ export const DEFAULT_BOT_TELEGRAM_COPY = {
     '<i>Tip: Use the {{browse_menu_button}} keyboard button or type /menu to see this list again anytime.</i>',
   browse_menu_button: 'Browse Menu',
   purchase_price_label: 'Price',
+  /** Legacy fallback if product_selected_message_html were cleared (normally unused). */
   purchase_question: 'Would you like to purchase this item?',
-  button_confirm_pay: '✅ Confirm & Pay',
-  button_cancel: '❌ Cancel',
+  /**
+   * Product selected — full message when customer taps a product.
+   * Placeholders: [ProductName] [Price]
+   */
+  product_selected_message_html:
+    '[ProductName] — [Price] မှာယူလိုပါသလား?\nအတည်ပြုရန် အောက်ပါ ခလုတ်ကို နှိပ်ပါ။',
+  button_confirm_pay: 'Confirm & Pay',
+  button_cancel: 'Cancel',
   /** Sent right before owner “Payment details” (QR / numbers) after customer taps Confirm & Pay. */
   payment_instruction_intro_html:
-    'ကျေးဇူးပြု၍ အောက်ပါ ဖုန်းနံပါတ်သို့ ငွေလွှဲပြီး slip ပို့ပေးပါ။',
+    'အောက်ပါ အကောင့်သို့ ငွေလွှဲပြီး slip ပို့ပေးပါ။',
   slip_request_html:
     'ငွေလွှဲပြီးပါက slip ပုံကို ဤချတ်တွင် ပို့ပေးပါ။ ကျွန်ုပ်တို့ စစ်ဆေးပြီး အတည်ပြုပေးပါမည်။',
   order_cancelled: 'Order cancelled. Use /start to browse the menu again.',
@@ -28,8 +35,11 @@ export const DEFAULT_BOT_TELEGRAM_COPY = {
   slip_order_rejected: 'This order was rejected. Use /start to place a new order if you still need the item.',
   slip_wrong_state: 'We cannot accept another slip for this order in its current state. Use /start if you need help.',
   slip_save_failed: 'There was an error saving your slip. Please try again in a moment or ask for help.',
+  /** After customer sends slip. Placeholders: [ProductName] [CustomerName] [ShopName] */
   slip_submitted_thanks_html:
-    'သင့် slip လက်ခံရရှိပါပြီ။ မကြာမီ အတည်ပြုပေးပါမည်။ ခဏစောင့်ပါ။',
+    'သင့် slip လက်ခံရရှိပါပြီ\nစစ်ဆေးနေပါသည်။ ခဏစောင့်ပါ။',
+  /** When bot is paused (inactive). Placeholders: [ShopName] */
+  bot_paused_message_html: 'ယခုအချိန်တွင် ဆိုင်ပိတ်ထားပါသည်။\nနောက်မှ ပြန်လာပါ',
   callback_item_not_found: 'Item not found or no longer available.',
   callback_monthly_order_limit:
     'This shop has reached its order limit for this month. Please try again later or contact the seller.',
@@ -72,14 +82,18 @@ export const BOT_TELEGRAM_COPY_LABELS: Record<keyof typeof DEFAULT_BOT_TELEGRAM_
     hint: 'Shown as "Label: Amount". Plain text.',
   },
   purchase_question: {
-    title: 'Purchase Screen — Question below price',
-    hint: 'Plain text (shown after product name and price).',
+    title: 'Legacy — purchase question',
+    hint: 'Superseded by Product selected message unless that field is cleared in storage.',
+  },
+  product_selected_message_html: {
+    title: 'Product selected message',
+    hint: 'When customer taps a product. Placeholders: [ProductName] [Price]. HTML allowed.',
   },
   button_confirm_pay: { title: 'Button — Confirm & Pay', hint: 'Keep short.' },
   button_cancel: { title: 'Button — Cancel', hint: 'Keep short.' },
   payment_instruction_intro_html: {
-    title: '2. Payment instruction (before QR / bank text)',
-    hint: 'Sent immediately before the payment-details block from Menu → Payment details. HTML.',
+    title: 'Payment instructions message',
+    hint: 'When customer taps Confirm & Pay, before bank / QR text. [ProductName] [Price] [ShopName]. HTML.',
   },
   slip_request_html: {
     title: 'After payment details — ask for slip',
@@ -101,7 +115,14 @@ export const BOT_TELEGRAM_COPY_LABELS: Record<keyof typeof DEFAULT_BOT_TELEGRAM_
   slip_order_rejected: { title: 'Slip — Order Rejected', hint: 'HTML.' },
   slip_wrong_state: { title: 'Slip — Wrong Order State', hint: 'HTML.' },
   slip_save_failed: { title: 'Slip — Save Error', hint: 'HTML.' },
-  slip_submitted_thanks_html: { title: '3. Slip received (right after customer sends photo)', hint: 'HTML.' },
+  slip_submitted_thanks_html: {
+    title: 'Slip received message',
+    hint: 'Right after customer sends slip. [ProductName] [CustomerName] [ShopName]. HTML.',
+  },
+  bot_paused_message_html: {
+    title: 'Bot paused message',
+    hint: 'When the shop is paused. [ShopName]. HTML.',
+  },
   callback_item_not_found: { title: 'Popup — Item Not Found', hint: 'Max ~190 chars.' },
   callback_monthly_order_limit: { title: 'Popup — Monthly order limit', hint: 'Max ~190 chars.' },
   callback_digital_not_available: { title: 'Popup — Digital unavailable', hint: 'Max ~190 chars.' },
@@ -118,13 +139,24 @@ export const BOT_TELEGRAM_COPY_LABELS: Record<keyof typeof DEFAULT_BOT_TELEGRAM_
   },
 };
 
+/** Keys only Pro/Plus may persist via API (Free always gets built-in defaults for these). */
+export const CUSTOMER_MESSAGE_TEMPLATE_KEYS = [
+  'product_selected_message_html',
+  'payment_instruction_intro_html',
+  'slip_request_html',
+  'slip_submitted_thanks_html',
+  'bot_paused_message_html',
+] as const satisfies ReadonlyArray<keyof BotTelegramCopy>;
+
 export const BOT_TELEGRAM_COPY_SECTIONS = [
   {
     title: 'Owner — 5 key customer messages',
     keys: [
       'menu_intro_html',
+      'product_selected_message_html',
       'payment_instruction_intro_html',
       'slip_submitted_thanks_html',
+      'bot_paused_message_html',
       'order_confirmed_template_html',
       'order_rejected_template_html',
     ],
@@ -245,6 +277,20 @@ export function mergeBotTelegramCopy(customCopy: any): BotTelegramCopy {
   return result;
 }
 
+/** Free plan always uses built-in text for the four Menu → customer message templates (even if old JSON exists). */
+export function mergeBotTelegramCopyRespectingPlan(
+  customCopy: any,
+  planTier: 'free' | 'pro' | 'plus'
+): BotTelegramCopy {
+  const merged = mergeBotTelegramCopy(customCopy);
+  if (planTier !== 'free') return merged;
+  const next = { ...merged };
+  for (const k of CUSTOMER_MESSAGE_TEMPLATE_KEYS) {
+    next[k] = DEFAULT_BOT_TELEGRAM_COPY[k];
+  }
+  return next;
+}
+
 export function parseTelegramCustomerCopyFromClient(data: any): Record<string, string> {
   const result: Record<string, string> = {};
   if (!data || typeof data !== 'object') return result;
@@ -276,6 +322,17 @@ export function applyTemplate(template: string, vars: Record<string, string>): s
   let result = template;
   for (const [key, value] of Object.entries(vars)) {
     result = result.replace(new RegExp(`{{${key}}}`, 'g'), value);
+  }
+  return result;
+}
+
+/** Replace [ProductName]-style placeholders (owner HTML; substitute pre-escaped values). Longest keys first. */
+export function applyBracketPlaceholders(template: string, vars: Record<string, string>): string {
+  let result = template;
+  const keys = Object.keys(vars).sort((a, b) => b.length - a.length);
+  for (const key of keys) {
+    const val = vars[key] ?? '';
+    result = result.split(`[${key}]`).join(val);
   }
   return result;
 }

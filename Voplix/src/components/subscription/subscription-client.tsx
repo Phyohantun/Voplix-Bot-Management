@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,9 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { formatDateTimeUtc } from '@/lib/format-date-utc';
+import { PLAN_COMPARISON_ROWS } from '@/lib/plan-comparison-data';
+import type { PlanEnforcementSnapshot } from '@/lib/plan-limits';
+import { cn } from '@/lib/utils';
 
 type Pending = { id: string; plan_tier: string; created_at: string } | null;
 
@@ -16,11 +19,17 @@ export function SubscriptionClient({
   currentPlan,
   bankHtml,
   pending,
+  pendingSlipUrl,
+  planSnapshot,
+  supportWhatsappUrl,
 }: {
   userEmail: string;
   currentPlan: string;
   bankHtml: string;
   pending: Pending;
+  pendingSlipUrl: string | null;
+  planSnapshot: PlanEnforcementSnapshot;
+  supportWhatsappUrl: string;
 }) {
   const router = useRouter();
   const [plan, setPlan] = useState<'pro' | 'plus'>(currentPlan === 'free' ? 'pro' : 'plus');
@@ -31,6 +40,11 @@ export function SubscriptionClient({
   const showPro = tier === 'free';
   const showPlus = tier === 'free' || tier === 'pro';
   const atTop = tier === 'plus';
+
+  const ordersCap = planSnapshot.maxOrdersPerMonth;
+  const ordersUsed = planSnapshot.ordersThisMonth;
+  const ordersPct = ordersCap == null ? 0 : Math.min(100, Math.round((ordersUsed / ordersCap) * 100));
+  const barWarm = ordersCap != null && ordersPct >= 80;
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,25 +78,100 @@ export function SubscriptionClient({
     }
   };
 
+  const planLabel = useMemo(() => currentPlan.toUpperCase(), [currentPlan]);
+
   return (
-    <div className="mx-auto max-w-2xl space-y-8">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-white">Subscription</h1>
-        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-          Signed in as <span className="font-medium text-zinc-800 dark:text-zinc-200">{userEmail}</span>. Plans: Free ·
-          Pro (45,000 MMK) · Plus (65,000 MMK).{' '}
-          <Link href="/pricing" className="text-indigo-600 underline-offset-2 hover:underline dark:text-indigo-400">
-            Compare features
-          </Link>
-        </p>
-      </div>
+    <div className="mx-auto max-w-3xl space-y-8">
+      <header className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-white">Subscription</h1>
+          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+            Signed in as <span className="font-medium text-zinc-800 dark:text-zinc-200">{userEmail}</span>. Plans: Free ·
+            Pro (45,000 MMK) · Plus (65,000 MMK).{' '}
+            <Link href="/pricing" className="text-indigo-600 underline-offset-2 hover:underline dark:text-indigo-400">
+              Full marketing page
+            </Link>
+          </p>
+        </div>
+      </header>
 
       <Card className="border-zinc-200 dark:border-zinc-800">
         <CardHeader className="pb-3">
           <CardTitle className="text-base font-medium text-zinc-900 dark:text-white">Current plan</CardTitle>
-          <CardDescription className="capitalize text-zinc-600 dark:text-zinc-400">{currentPlan}</CardDescription>
+          <CardDescription className="text-zinc-600 dark:text-zinc-400">
+            <span className="text-lg font-semibold tracking-wide text-zinc-900 dark:text-white">{planLabel}</span>
+          </CardDescription>
         </CardHeader>
+        <CardContent className="space-y-4">
+          {ordersCap != null ? (
+            <div>
+              <div className="mb-1 flex justify-between text-xs text-zinc-600 dark:text-zinc-400">
+                <span>Orders this month</span>
+                <span className="tabular-nums font-medium text-zinc-800 dark:text-zinc-200">
+                  {ordersUsed} / {ordersCap}
+                </span>
+              </div>
+              <div className="h-2 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
+                <div
+                  className={cn('h-full rounded-full transition-all', barWarm ? 'bg-amber-500' : 'bg-indigo-600')}
+                  style={{ width: `${ordersPct}%` }}
+                />
+              </div>
+              {barWarm ? (
+                <p className="mt-1 text-xs text-amber-700 dark:text-amber-300/90">
+                  {`You are close to this month's order cap on the Free plan.`}
+                </p>
+              ) : null}
+            </div>
+          ) : (
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">Orders: unlimited on your current plan.</p>
+          )}
+          <div className="flex flex-wrap items-center gap-3">
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+              <span className="font-medium text-zinc-800 dark:text-zinc-200">Next renewal:</span> N/A (manual bank billing)
+            </p>
+            {!atTop ? (
+              <Link
+                href="#upgrade"
+                className="inline-flex h-9 items-center justify-center rounded-md bg-indigo-600 px-4 text-sm font-medium text-white hover:bg-indigo-700"
+              >
+                Upgrade below
+              </Link>
+            ) : null}
+          </div>
+        </CardContent>
       </Card>
+
+      <section className="space-y-2" id="compare">
+        <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">Plan comparison</h2>
+        <p className="text-sm text-zinc-600 dark:text-zinc-400">Same limits as our public pricing — no need to leave this page.</p>
+        <Card className="overflow-hidden border-zinc-200 dark:border-zinc-800">
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[520px] border-collapse text-sm">
+                <thead>
+                  <tr className="border-b border-zinc-200 bg-zinc-50 text-left dark:border-zinc-800 dark:bg-zinc-950/50">
+                    <th className="px-3 py-2 font-medium text-zinc-700 dark:text-zinc-300">Feature</th>
+                    <th className="px-3 py-2 font-medium text-zinc-700 dark:text-zinc-300">Free</th>
+                    <th className="px-3 py-2 font-medium text-zinc-700 dark:text-zinc-300">Pro</th>
+                    <th className="px-3 py-2 font-medium text-zinc-700 dark:text-zinc-300">Plus</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
+                  {PLAN_COMPARISON_ROWS.map((row) => (
+                    <tr key={row.feature} className="text-zinc-800 dark:text-zinc-200">
+                      <td className="px-3 py-2 text-zinc-600 dark:text-zinc-400">{row.feature}</td>
+                      <td className="px-3 py-2 tabular-nums">{row.free}</td>
+                      <td className="px-3 py-2 tabular-nums">{row.pro}</td>
+                      <td className="px-3 py-2 tabular-nums">{row.plus}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      </section>
 
       {bankHtml.trim() ? (
         <Card className="border-zinc-200 dark:border-zinc-800">
@@ -117,18 +206,66 @@ export function SubscriptionClient({
               current plan until it is approved.
             </CardDescription>
           </CardHeader>
-          <CardContent className="text-xs text-zinc-500 dark:text-zinc-500">
-            Submitted {formatDateTimeUtc(pending.created_at)}
+          <CardContent className="space-y-3 text-sm">
+            <p className="text-xs text-zinc-500 dark:text-zinc-500">Submitted {formatDateTimeUtc(pending.created_at)}</p>
+            <p className="text-zinc-600 dark:text-zinc-400">
+              <span className="font-medium text-zinc-800 dark:text-zinc-200">Typical review time:</span> usually within 24
+              hours on business days.
+            </p>
+            {supportWhatsappUrl ? (
+              <a
+                href={supportWhatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex h-9 items-center justify-center rounded-md border border-emerald-600 bg-transparent px-3 text-sm font-medium text-emerald-800 hover:bg-emerald-50 dark:border-emerald-700 dark:text-emerald-200 dark:hover:bg-emerald-950/30"
+              >
+                Contact support (WhatsApp)
+              </a>
+            ) : null}
+            {pendingSlipUrl ? (
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-zinc-600 dark:text-zinc-400">Your submitted slip</p>
+                <a
+                  href={pendingSlipUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex text-sm font-medium text-indigo-600 underline-offset-2 hover:underline dark:text-indigo-400"
+                >
+                  Open slip in new tab
+                </a>
+                {pendingSlipUrl.match(/\.(jpg|jpeg|png|webp)(\?|$)/i) ? (
+                  <div className="overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-700">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={pendingSlipUrl} alt="Submitted slip" className="max-h-64 w-full object-contain bg-zinc-100 dark:bg-zinc-900" />
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
           </CardContent>
         </Card>
       ) : null}
 
       {atTop ? (
-        <p className="text-center text-sm text-zinc-600 dark:text-zinc-400">
-          You are on the highest plan. Thank you for using Voplix.
-        </p>
+        <Card className="border-indigo-200 bg-indigo-50/50 dark:border-indigo-900/40 dark:bg-indigo-950/25">
+          <CardHeader>
+            <CardTitle className="text-base font-medium text-zinc-900 dark:text-white">You are on Plus</CardTitle>
+            <CardDescription className="text-zinc-700 dark:text-zinc-300">
+              Thank you for using Voplix. Your subscription renews manually after each bank transfer cycle — there is no
+              automatic card charge in this release.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm text-zinc-700 dark:text-zinc-300">
+            <p className="font-medium text-zinc-900 dark:text-white">Included with Plus</p>
+            <ul className="list-inside list-disc space-y-1">
+              <li>Up to 5 bots and unlimited products / orders</li>
+              <li>Broadcast to past customers</li>
+              <li>Advanced analytics &amp; sales vs last month</li>
+              <li>VIP support tier</li>
+            </ul>
+          </CardContent>
+        </Card>
       ) : !pending ? (
-        <Card className="border-zinc-200 dark:border-zinc-800">
+        <Card className="border-zinc-200 dark:border-zinc-800" id="upgrade">
           <CardHeader>
             <CardTitle className="text-base font-medium text-zinc-900 dark:text-white">Upgrade with bank transfer</CardTitle>
             <CardDescription className="text-zinc-600 dark:text-zinc-400">
@@ -140,31 +277,55 @@ export function SubscriptionClient({
             <form onSubmit={onSubmit} className="space-y-5">
               <div className="space-y-2">
                 <Label className="text-zinc-700 dark:text-zinc-300">Plan</Label>
-                <div className="flex flex-col gap-2 sm:flex-row">
+                <div className="flex flex-col gap-3">
                   {showPro ? (
-                    <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-zinc-200 px-3 py-2 dark:border-zinc-700">
-                      <input
-                        type="radio"
-                        name="plan"
-                        value="pro"
-                        checked={plan === 'pro'}
-                        onChange={() => setPlan('pro')}
-                        className="border-zinc-400"
-                      />
-                      <span className="text-sm text-zinc-800 dark:text-zinc-200">Pro — 45,000 MMK / mo</span>
+                    <label
+                      className={cn(
+                        'flex cursor-pointer flex-col gap-1 rounded-lg border px-3 py-3 dark:border-zinc-700',
+                        plan === 'pro' ? 'border-indigo-500 bg-indigo-50/80 dark:bg-indigo-950/30' : 'border-zinc-200 dark:border-zinc-700'
+                      )}
+                    >
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="radio"
+                          name="plan"
+                          value="pro"
+                          checked={plan === 'pro'}
+                          onChange={() => setPlan('pro')}
+                          className="border-zinc-400"
+                        />
+                        <span className="text-sm font-semibold text-zinc-900 dark:text-white">Pro — 45,000 MMK / month</span>
+                      </div>
+                      <ul className="ml-6 list-inside list-disc text-xs text-zinc-600 dark:text-zinc-400">
+                        <li>2 bots, unlimited orders</li>
+                        <li>Auto delivery &amp; stock management</li>
+                        <li>Full reports &amp; exports</li>
+                      </ul>
                     </label>
                   ) : null}
                   {showPlus ? (
-                    <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-zinc-200 px-3 py-2 dark:border-zinc-700">
-                      <input
-                        type="radio"
-                        name="plan"
-                        value="plus"
-                        checked={plan === 'plus'}
-                        onChange={() => setPlan('plus')}
-                        className="border-zinc-400"
-                      />
-                      <span className="text-sm text-zinc-800 dark:text-zinc-200">Plus — 65,000 MMK / mo</span>
+                    <label
+                      className={cn(
+                        'flex cursor-pointer flex-col gap-1 rounded-lg border px-3 py-3 dark:border-zinc-700',
+                        plan === 'plus' ? 'border-indigo-500 bg-indigo-50/80 dark:bg-indigo-950/30' : 'border-zinc-200 dark:border-zinc-700'
+                      )}
+                    >
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="radio"
+                          name="plan"
+                          value="plus"
+                          checked={plan === 'plus'}
+                          onChange={() => setPlan('plus')}
+                          className="border-zinc-400"
+                        />
+                        <span className="text-sm font-semibold text-zinc-900 dark:text-white">Plus — 65,000 MMK / month</span>
+                      </div>
+                      <ul className="ml-6 list-inside list-disc text-xs text-zinc-600 dark:text-zinc-400">
+                        <li>Everything in Pro</li>
+                        <li>5 bots</li>
+                        <li>Broadcast &amp; advanced analytics</li>
+                      </ul>
                     </label>
                   ) : null}
                 </div>

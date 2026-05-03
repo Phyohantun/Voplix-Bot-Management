@@ -60,6 +60,18 @@ async function getOrdersPage(
   return { orders: (data as any[]) || [], total: count ?? 0 };
 }
 
+async function getBotsForCleanup(userId: string) {
+  const supabase = await createClient();
+  const { data, error } = await (supabase as any)
+    .from('bots')
+    .select('id, bot_username')
+    .eq('user_id', userId)
+    .eq('is_active', true)
+    .order('created_at', { ascending: false });
+  if (error) return [];
+  return (data as { id: string; bot_username: string }[]) || [];
+}
+
 async function countSlipSubmittedForOwner(userId: string, botId: string | null) {
   const supabase = await createClient();
   const { data: botRows, error: bErr } = await (supabase as any)
@@ -115,21 +127,24 @@ export default async function OrdersPage({
 
   const statusFilter = parseOrderStatusFilter(params.filter);
 
-  const [{ orders, total }, reviewCountTotal, planSnapshot] = await Promise.all([
+  const [{ orders, total }, reviewCountTotal, planSnapshot, cleanupBots] = await Promise.all([
     getOrdersPage(selectedBotId, user.id, page, pageSize, statusFilter),
     countSlipSubmittedForOwner(user.id, selectedBotId),
     getPlanEnforcementSnapshot(user.id),
+    getBotsForCleanup(user.id),
   ]);
 
   return (
     <div className="space-y-6">
       <AutoRefresh intervalMs={30000} />
-      <div>
-        <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Orders</h1>
-        <p className="text-zinc-600 dark:text-zinc-400">
-          Review slips first, then approve or reject. Tabs help you focus on what needs attention.
-        </p>
-      </div>
+      <header className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-white">Orders</h1>
+          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+            Review slips first, then approve or reject. Tabs help you focus on what needs attention.
+          </p>
+        </div>
+      </header>
 
       {planSnapshot.plan === 'free' ? <FreePlanUpgradeBanner /> : null}
 
@@ -141,6 +156,7 @@ export default async function OrdersPage({
         selectedBotId={selectedBotId}
         reviewCountTotal={reviewCountTotal}
         statusFilter={statusFilter}
+        cleanupBots={cleanupBots}
       />
     </div>
   );
