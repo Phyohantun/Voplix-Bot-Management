@@ -40,12 +40,15 @@ export async function GET(request: Request) {
 
     let countQuery = (supabase as any)
       .from('orders')
-      .select('*, menu_items!inner(name, price), bots!inner(bot_username, user_id)', { count: 'exact', head: true })
+      .select('*, menu_items!inner(name, price, type, delivery_content), bots!inner(bot_username, user_id)', {
+        count: 'exact',
+        head: true,
+      })
       .eq('bots.user_id', user.id);
 
     let dataQuery = (supabase as any)
       .from('orders')
-      .select('*, menu_items!inner(name, price), bots!inner(bot_username, user_id)')
+      .select('*, menu_items!inner(name, price, type, delivery_content), bots!inner(bot_username, user_id)')
       .eq('bots.user_id', user.id)
       .order('created_at', { ascending: false })
       .range(from, to);

@@ -34,6 +34,8 @@ interface MenuItemRecord {
   stock_items?: StockRow[] | StockRow | null;
 }
 
+import { PageHeader } from '@/components/dashboard/page-header';
+
 async function getBots(userId: string) {
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -135,13 +137,15 @@ export default async function MenuPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Bot menu</h1>
-        <p className="text-zinc-600 dark:text-zinc-400">
-          Products here are sent to Telegram when someone sends <code className="text-zinc-700 dark:text-zinc-300">/start</code> or taps
-          &quot;Browse menu&quot;.
-        </p>
-      </div>
+      <PageHeader 
+        title="Bot menu" 
+        description={
+          <>
+            Products here are sent to Telegram when someone sends <code className="text-zinc-700 dark:text-zinc-300">/start</code> or taps
+            &quot;Browse menu&quot;.
+          </>
+        } 
+      />
 
       {planSnapshot.plan === 'free' ? <FreePlanUpgradeBanner /> : null}
 

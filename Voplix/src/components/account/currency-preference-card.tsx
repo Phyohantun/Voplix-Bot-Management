@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { CURRENCY_OPTIONS, formatCurrencyRelatable, type ShopCurrency } from '@/lib/currency';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
+import { useLanguage } from '@/lib/i18n/LanguageContext';
 
 interface CurrencyPreferenceCardProps {
   initialCurrency: ShopCurrency;
@@ -15,6 +16,7 @@ interface CurrencyPreferenceCardProps {
 
 export function CurrencyPreferenceCard({ initialCurrency }: CurrencyPreferenceCardProps) {
   const router = useRouter();
+  const { t } = useLanguage();
   const [value, setValue] = useState<ShopCurrency>(initialCurrency);
   const [loading, setLoading] = useState(false);
   const dirty = value !== initialCurrency;
@@ -33,14 +35,14 @@ export function CurrencyPreferenceCard({ initialCurrency }: CurrencyPreferenceCa
       });
       if (!response.ok) {
         const j = (await response.json().catch(() => ({}))) as { error?: string };
-        throw new Error(j.error || 'Could not save currency');
+        throw new Error(j.error || t('Could not save currency'));
       }
-      toast.success('Currency updated');
+      toast.success(t('Currency updated'));
       const supabase = createClient();
       await supabase.auth.refreshSession();
       router.refresh();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Could not save currency');
+      toast.error(e instanceof Error ? e.message : t('Could not save currency'));
     } finally {
       setLoading(false);
     }
@@ -50,14 +52,13 @@ export function CurrencyPreferenceCard({ initialCurrency }: CurrencyPreferenceCa
     <Card className="border-zinc-200 dark:border-zinc-800/80 bg-zinc-50 dark:bg-zinc-900/50 shadow-none">
       <CardHeader className="pb-4">
         <CardTitle className="text-base font-medium text-zinc-900 dark:text-white">
-          Shop currency
+          {t('Shop currency')}
         </CardTitle>
         <CardDescription className="text-zinc-500">
-          How prices are shown in your dashboard, menu, orders, and your Telegram shop. Enter product prices in this
-          same unit.
+          {t('How prices are shown in your dashboard, menu, orders, and your Telegram shop. Enter product prices in this same unit.')}
         </CardDescription>
         <p className="text-xs text-zinc-500 dark:text-zinc-500">
-          Changing currency only relabels amounts in the UI — it does not convert stored product prices.
+          {t('Changing currency only relabels amounts in the UI — it does not convert stored product prices.')}
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -78,14 +79,14 @@ export function CurrencyPreferenceCard({ initialCurrency }: CurrencyPreferenceCa
                 )}
               >
                 <div className="flex items-baseline justify-between gap-2">
-                  <span className="font-medium text-zinc-900 dark:text-white">{opt.label}</span>
+                  <span className="font-medium text-zinc-900 dark:text-white">{t(opt.label)}</span>
                   <span className="shrink-0 rounded-md border border-zinc-200 bg-zinc-50 px-2 py-0.5 font-mono text-xs text-zinc-600 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
                     {opt.value}
                   </span>
                 </div>
-                <p className="mt-1.5 text-sm text-zinc-600 dark:text-zinc-400">{opt.description}</p>
+                <p className="mt-1.5 text-sm text-zinc-600 dark:text-zinc-400">{t(opt.description)}</p>
                 <p className="mt-2 text-xs text-zinc-500">
-                  Example: <span className="font-medium text-zinc-700 dark:text-zinc-300">{example}</span>
+                  {t('Example:')} <span className="font-medium text-zinc-700 dark:text-zinc-300">{example}</span>
                 </p>
               </button>
             );
@@ -93,8 +94,7 @@ export function CurrencyPreferenceCard({ initialCurrency }: CurrencyPreferenceCa
         </div>
         {dirty ? (
           <div className="rounded-lg border border-amber-200 bg-amber-50/90 px-3 py-2 text-xs text-amber-950 dark:border-amber-900/50 dark:bg-amber-950/25 dark:text-amber-100/90">
-            <span className="font-semibold">Changing currency does not convert existing product prices.</span> After you
-            save, review and update product prices so they match the new unit.
+            <span className="font-semibold">{t('Changing currency does not convert existing product prices.')}</span> {t('After you save, review and update product prices so they match the new unit.')}
           </div>
         ) : null}
         <Button
@@ -103,7 +103,7 @@ export function CurrencyPreferenceCard({ initialCurrency }: CurrencyPreferenceCa
           disabled={loading || !dirty}
           className="w-full bg-zinc-900 font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
         >
-          {loading ? 'Saving…' : 'Save currency'}
+          {loading ? t('Saving…') : t('Save currency')}
         </Button>
       </CardContent>
     </Card>

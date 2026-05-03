@@ -22,16 +22,20 @@ export async function POST(request: Request) {
 
     const { data: rows, error } = await (supabaseAdmin as any)
       .from('orders')
-      .select('id, status, bots!inner(user_id)')
+      .select('id, status, menu_items!inner(type), bots!inner(user_id)')
       .in('id', ids);
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    const owned = ((rows as { id: string; status: string; bots: { user_id: string } }[]) || []).filter(
-      (r) => r.bots?.user_id === user.id
-    );
+    type Row = {
+      id: string;
+      status: string;
+      menu_items: { type: string };
+      bots: { user_id: string };
+    };
+    const owned = ((rows as Row[]) || []).filter((r) => r.bots?.user_id === user.id);
 
     let approved = 0;
     const failures: string[] = [];
@@ -39,6 +43,12 @@ export async function POST(request: Request) {
     for (const row of owned) {
       if (row.status !== 'SLIP_SUBMITTED') {
         failures.push(`${row.id.slice(0, 8)}: not awaiting slip approval`);
+        continue;
+      }
+      if (row.menu_items?.type === 'MANUAL_DELIVERY') {
+        failures.push(
+          `${row.id.slice(0, 8)}: manual product — open the order and approve one by one so you can type what to send the buyer`
+        );
         continue;
       }
       const r = await approveSlipOrderForOwner(row.id, user.id, { manual_delivery_data: null });

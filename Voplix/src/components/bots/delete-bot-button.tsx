@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -24,6 +25,7 @@ export function DeleteBotButton({ botId, botUsername }: DeleteBotButtonProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const { t } = useLanguage();
 
   const handleDelete = async () => {
     setLoading(true);
@@ -34,14 +36,14 @@ export function DeleteBotButton({ botId, botUsername }: DeleteBotButtonProps) {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to delete bot');
+        throw new Error(t('Failed to delete bot'));
       }
 
-      toast.success('Bot disconnected successfully');
+      toast.success(t('Bot disconnected successfully'));
       setOpen(false);
       router.refresh();
     } catch {
-      toast.error('Failed to delete bot');
+      toast.error(t('Failed to delete bot'));
     }
 
     setLoading(false);
@@ -56,9 +58,9 @@ export function DeleteBotButton({ botId, botUsername }: DeleteBotButtonProps) {
       </DialogTrigger>
       <DialogContent className="border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
         <DialogHeader>
-          <DialogTitle className="text-zinc-900 dark:text-white">Disconnect Bot</DialogTitle>
+          <DialogTitle className="text-zinc-900 dark:text-white">{t('Disconnect Bot')}</DialogTitle>
           <DialogDescription className="text-zinc-600 dark:text-zinc-400">
-            Are you sure you want to disconnect @{botUsername}? This will remove the webhook and deactivate the bot.
+            {t('Are you sure you want to disconnect @{botUsername}? This will remove the webhook and deactivate the bot.').replace('{botUsername}', botUsername)}
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
@@ -68,7 +70,7 @@ export function DeleteBotButton({ botId, botUsername }: DeleteBotButtonProps) {
             className="border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300"
             disabled={loading}
           >
-            Cancel
+            {t('Cancel')}
           </Button>
           <Button 
             onClick={handleDelete}
@@ -78,12 +80,12 @@ export function DeleteBotButton({ botId, botUsername }: DeleteBotButtonProps) {
             {loading ? (
               <>
                 <SpinnerGap className="mr-2 h-4 w-4 animate-spin" />
-                Deleting...
+                {t('Deleting...')}
               </>
             ) : (
               <>
                 <Trash className="mr-2 h-4 w-4" />
-                Disconnect
+                {t('Disconnect')}
               </>
             )}
           </Button>

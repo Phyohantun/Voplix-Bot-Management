@@ -29,6 +29,7 @@ import { AnimatedMetric } from '@/components/dashboard/animated-metric';
 import { RevenueSparkline } from '@/components/dashboard/revenue-sparkline';
 import { AutoRefresh } from '@/components/dashboard/auto-refresh';
 import { cn } from '@/lib/utils';
+import { useLanguage } from '@/lib/i18n/LanguageContext';
 
 export type DashboardViewModel = {
   totalBots: number;
@@ -47,33 +48,33 @@ export type DashboardViewModel = {
   allComplete: boolean;
 };
 
-function TrendLine({ t }: { t: DashboardTrend }) {
-  const arrow = t.direction === 'up' ? '↑' : t.direction === 'down' ? '↓' : '';
+function TrendLine({ trend, t }: { trend: DashboardTrend, t: (key: string) => string }) {
+  const arrow = trend.direction === 'up' ? '↑' : trend.direction === 'down' ? '↓' : '';
   const color =
-    t.direction === 'up'
+    trend.direction === 'up'
       ? 'text-emerald-600 dark:text-emerald-400'
-      : t.direction === 'down'
+      : trend.direction === 'down'
         ? 'text-red-600 dark:text-red-400'
         : 'text-zinc-500';
-  if (t.label === '—') {
-    return <p className="text-xs text-zinc-500">{t.hint || '—'}</p>;
+  if (trend.label === '—') {
+    return <p className="text-xs text-zinc-500">{trend.hint || '—'}</p>;
   }
   return (
     <p className={cn('text-xs font-medium tabular-nums', color)}>
-      {arrow} {t.label} <span className="font-normal text-zinc-500">{t.hint}</span>
+      {arrow} {trend.label} <span className="font-normal text-zinc-500">{trend.hint ? t(trend.hint) : ''}</span>
     </p>
   );
 }
 
-function relTime(iso: string) {
+function relTime(iso: string, t: (key: string) => string) {
   const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
-  if (s < 10) return 'just now';
-  if (s < 60) return `${s}s ago`;
+  if (s < 10) return t('just now');
+  if (s < 60) return `${s}${t('s ago')}`;
   const m = Math.floor(s / 60);
-  if (m < 60) return `${m} min${m === 1 ? '' : 's'} ago`;
+  if (m < 60) return `${m} ${m === 1 ? t('min ago') : t('mins ago')}`;
   const h = Math.floor(m / 60);
-  if (h < 24) return `${h} hour${h === 1 ? '' : 's'} ago`;
-  return `${Math.floor(h / 24)} day${Math.floor(h / 24) === 1 ? '' : 's'} ago`;
+  if (h < 24) return `${h} ${h === 1 ? t('hour ago') : t('hours ago')}`;
+  return `${Math.floor(h / 24)} ${Math.floor(h / 24) === 1 ? t('day ago') : t('days ago')}`;
 }
 
 export function DashboardView({
@@ -87,6 +88,7 @@ export function DashboardView({
   loadedAtIso: string;
   initial: DashboardViewModel;
 }) {
+  const { t } = useLanguage();
   const router = useRouter();
   const [model, setModel] = useState(initial);
   const [slipOrderId, setSlipOrderId] = useState<string | null>(null);
@@ -99,7 +101,7 @@ export function DashboardView({
     return () => clearInterval(id);
   }, []);
 
-  const lastUpdatedLabel = useMemo(() => relTime(loadedAtIso), [loadedAtIso, tick]);
+  const lastUpdatedLabel = useMemo(() => relTime(loadedAtIso, t), [loadedAtIso, tick, t]);
 
   const refresh = useCallback(() => {
     router.refresh();
@@ -115,9 +117,9 @@ export function DashboardView({
       });
       if (!res.ok) {
         const j = (await res.json().catch(() => ({}))) as { error?: string };
-        throw new Error(j.error || 'Approve failed');
+        throw new Error(j.error || t('Approve failed'));
       }
-      toast.success('Order approved');
+      toast.success(t('Order approved'));
       setModel((m) => ({
         ...m,
         pendingOrders: m.pendingOrders.filter((o) => o.id !== orderId),
@@ -127,7 +129,7 @@ export function DashboardView({
       }));
       refresh();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Approve failed');
+      toast.error(e instanceof Error ? e.message : t('Approve failed'));
     } finally {
       setApproveId(null);
     }
@@ -142,12 +144,12 @@ export function DashboardView({
         body: JSON.stringify({ bot_id: selectedBotId }),
       });
       const j = (await res.json()) as { approved?: number; attempted?: number; failures?: string[] };
-      if (!res.ok) throw new Error((j as { error?: string }).error || 'Bulk approve failed');
-      toast.success(`Approved ${j.approved ?? 0} of ${j.attempted ?? 0}`);
-      if (j.failures?.length) toast.message('Some orders failed', { description: j.failures.slice(0, 3).join('\n') });
+      if (!res.ok) throw new Error((j as { error?: string }).error || t('Bulk approve failed'));
+      toast.success(`${t('Approved')} ${j.approved ?? 0} of ${j.attempted ?? 0}`);
+      if (j.failures?.length) toast.message(t('Some orders failed'), { description: j.failures.slice(0, 3).join('\n') });
       refresh();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Bulk approve failed');
+      toast.error(e instanceof Error ? e.message : t('Bulk approve failed'));
     } finally {
       setBulkLoading(false);
     }
@@ -161,15 +163,15 @@ export function DashboardView({
       <div className="space-y-8">
         <AutoRefresh intervalMs={30000} />
         <div className="rounded-xl border border-zinc-200 bg-white p-8 text-center dark:border-zinc-800 dark:bg-zinc-900">
-          <p className="text-lg font-medium text-zinc-900 dark:text-white">Connect your first bot</p>
+          <p className="text-lg font-medium text-zinc-900 dark:text-white">{t('Connect your first bot')}</p>
           <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-            Add a Telegram shop to see sales, slips, and quick actions here.
+            {t('Add a Telegram shop to see sales, slips, and quick actions here.')}
           </p>
           <Link
             href="/onboarding"
             className="mt-6 inline-flex items-center justify-center rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-indigo-500"
           >
-            Connect your first bot
+            {t('Connect your first bot')}
           </Link>
         </div>
       </div>
@@ -184,10 +186,10 @@ export function DashboardView({
 
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white">Dashboard</h1>
-          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">A quick view of your bot activity and sales performance.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white">{t('Dashboard')}</h1>
+          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{t('A quick view of your bot activity and sales performance.')}</p>
         </div>
-        <p className="text-xs text-zinc-500 tabular-nums">Last updated {lastUpdatedLabel}</p>
+        <p className="text-xs text-zinc-500 tabular-nums">{t('Last updated')} {lastUpdatedLabel}</p>
       </div>
 
       <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
@@ -197,30 +199,30 @@ export function DashboardView({
           )}
         >
           <div className="flex flex-row items-center justify-between pb-2">
-            <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Total Bots</span>
+            <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">{t('Total Bots')}</span>
             <ChatCircle className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
           </div>
           <div className="text-3xl font-bold tabular-nums text-zinc-900 dark:text-white">
             <AnimatedMetric value={model.totalBots} formatter={(n) => String(n)} />
           </div>
-          <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">Active bots</p>
+          <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">{t('Active bots')}</p>
           <div className="mt-2">
-            <TrendLine t={model.trends.bots} />
+            <TrendLine trend={model.trends.bots} t={t} />
           </div>
         </Card>
 
         <Link href={ordersHref} className="block">
           <Card className="h-full rounded-xl border border-zinc-200 bg-white p-6 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900">
             <div className="flex flex-row items-center justify-between pb-2">
-              <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Pending Approvals</span>
+              <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">{t('Pending Approvals')}</span>
               <Clock className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
             </div>
             <div className="text-3xl font-bold tabular-nums text-zinc-900 dark:text-white">
               <AnimatedMetric value={model.pendingCount} formatter={(n) => String(n)} />
             </div>
-            <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">Awaiting slip verification</p>
+            <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">{t('Awaiting slip verification')}</p>
             <div className="mt-2">
-              <TrendLine t={model.trends.pending} />
+              <TrendLine trend={model.trends.pending} t={t} />
             </div>
           </Card>
         </Link>
@@ -229,15 +231,15 @@ export function DashboardView({
           className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
         >
           <div className="flex flex-row items-center justify-between pb-2">
-            <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Total Orders</span>
+            <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">{t('Total Orders')}</span>
             <ShoppingCart className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
           </div>
           <div className="text-3xl font-bold tabular-nums text-zinc-900 dark:text-white">
             <AnimatedMetric value={model.totalOrders} formatter={(n) => n.toLocaleString('en-US')} />
           </div>
-          <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">All time orders</p>
+          <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">{t('All time orders')}</p>
           <div className="mt-2">
-            <TrendLine t={model.trends.orders} />
+            <TrendLine trend={model.trends.orders} t={t} />
           </div>
         </Card>
 
@@ -245,7 +247,7 @@ export function DashboardView({
           className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
         >
           <div className="flex flex-row items-center justify-between pb-2">
-            <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Revenue</span>
+            <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">{t('Revenue')}</span>
             <CurrencyDollar className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
           </div>
           <div className="text-2xl font-bold tabular-nums text-zinc-900 dark:text-white">
@@ -254,9 +256,9 @@ export function DashboardView({
               formatter={(n) => formatCurrencyVerbose(n, currency)}
             />
           </div>
-          <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">Completed paid orders ({currency})</p>
+          <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">{t('Completed paid orders')} ({currency})</p>
           <div className="mt-2">
-            <TrendLine t={model.trends.revenue} />
+            <TrendLine trend={model.trends.revenue} t={t} />
           </div>
           <div className="mt-3 flex items-end justify-between gap-2">
             <RevenueSparkline values={model.revenueSparkline} className="h-9 w-[120px] text-zinc-500 dark:text-zinc-400" />
@@ -269,8 +271,8 @@ export function DashboardView({
         {!model.allComplete ? (
           <Card className="rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
             <CardHeader className="p-0 pb-4">
-              <CardTitle className="text-zinc-900 dark:text-white">Getting Started</CardTitle>
-              <CardDescription className="text-zinc-600 dark:text-zinc-400">Steps to set up your bot</CardDescription>
+              <CardTitle className="text-zinc-900 dark:text-white">{t('Getting Started')}</CardTitle>
+              <CardDescription className="text-zinc-600 dark:text-zinc-400">{t('Steps to set up your bot')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3 p-0">
               {[
@@ -296,7 +298,7 @@ export function DashboardView({
                       row.ok ? 'text-emerald-800 line-through dark:text-emerald-200/90' : 'text-zinc-700 dark:text-zinc-300'
                     )}
                   >
-                    {row.label}
+                    {t(row.label)}
                   </span>
                 </div>
               ))}
@@ -311,8 +313,8 @@ export function DashboardView({
           )}
         >
           <CardHeader className="p-0 pb-4">
-            <CardTitle className="text-zinc-900 dark:text-white">Quick Actions</CardTitle>
-            <CardDescription className="text-zinc-600 dark:text-zinc-400">Most-used actions</CardDescription>
+            <CardTitle className="text-zinc-900 dark:text-white">{t('Quick Actions')}</CardTitle>
+            <CardDescription className="text-zinc-600 dark:text-zinc-400">{t('Most-used actions')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2 p-0">
             <Link
@@ -321,7 +323,7 @@ export function DashboardView({
             >
               <span className="flex items-center gap-3">
                 <ChatCircle className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
-                Connect bot
+                {t('Connect bot')}
               </span>
               <ArrowRight className="h-4 w-4 text-zinc-400 transition-transform group-hover:translate-x-0.5 group-hover:text-indigo-500" />
             </Link>
@@ -331,7 +333,7 @@ export function DashboardView({
             >
               <span className="flex items-center gap-3">
                 <ShoppingCart className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
-                Manage menu
+                {t('Manage menu')}
               </span>
               <ArrowRight className="h-4 w-4 text-zinc-400 transition-transform group-hover:translate-x-0.5 group-hover:text-indigo-500" />
             </Link>
@@ -342,7 +344,7 @@ export function DashboardView({
               <span className="flex items-center gap-3">
                 <Clock className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
                 <span className="inline-flex items-center gap-2">
-                  Review pending orders
+                  {t('Review pending orders')}
                   {model.pendingCount > 0 ? (
                     <span className="rounded-full bg-amber-500 px-2 py-0.5 text-xs font-semibold text-zinc-900">
                       {model.pendingCount}
@@ -359,9 +361,9 @@ export function DashboardView({
       <Card className="rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
         <CardHeader className="flex flex-col gap-3 border-b border-zinc-100 pb-4 dark:border-zinc-800 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <CardTitle className="text-zinc-900 dark:text-white">Pending Orders</CardTitle>
+            <CardTitle className="text-zinc-900 dark:text-white">{t('Pending Orders')}</CardTitle>
             <CardDescription className="text-zinc-600 dark:text-zinc-400">
-              Latest orders waiting for payment verification.
+              {t('Latest orders waiting for payment verification.')}
             </CardDescription>
           </div>
           {model.pendingOrders.length > 0 ? (
@@ -374,14 +376,14 @@ export function DashboardView({
                 className="bg-amber-500 font-semibold text-zinc-900 hover:bg-amber-400"
               >
                 {bulkLoading ? <SpinnerGap className="h-4 w-4 animate-spin" /> : null}
-                Approve all
+                {t('Approve all')}
               </Button>
             </div>
           ) : null}
         </CardHeader>
         <CardContent>
           {model.pendingOrders.length === 0 ? (
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">No pending orders.</p>
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">{t('No pending orders.')}</p>
           ) : (
             <>
               <div className="space-y-2 md:hidden">
@@ -402,7 +404,7 @@ export function DashboardView({
                     <div className="mt-3 flex flex-wrap gap-2">
                       {order.slip_image_url ? (
                         <Button type="button" variant="outline" size="sm" onClick={() => setSlipOrderId(order.id)}>
-                          Slip
+                          {t('Slip')}
                         </Button>
                       ) : null}
                       <Button
@@ -412,7 +414,7 @@ export function DashboardView({
                         disabled={approveId === order.id}
                         onClick={() => approveOne(order.id)}
                       >
-                        {approveId === order.id ? <SpinnerGap className="h-4 w-4 animate-spin" /> : 'Approve'}
+                        {approveId === order.id ? <SpinnerGap className="h-4 w-4 animate-spin" /> : t('Approve')}
                       </Button>
                     </div>
                   </div>
@@ -422,12 +424,12 @@ export function DashboardView({
                 <table className="w-full text-sm">
                   <thead className="text-zinc-600 dark:text-zinc-400">
                     <tr className="border-b border-zinc-200 dark:border-zinc-800">
-                      <th className="py-2 text-left font-medium">Order</th>
-                      <th className="py-2 text-left font-medium">Customer</th>
-                      <th className="py-2 text-left font-medium">Product</th>
-                      <th className="py-2 text-left font-medium">Price</th>
-                      <th className="py-2 text-left font-medium">Time</th>
-                      <th className="py-2 text-right font-medium">Actions</th>
+                      <th className="py-2 text-left font-medium">{t('Order')}</th>
+                      <th className="py-2 text-left font-medium">{t('Customer')}</th>
+                      <th className="py-2 text-left font-medium">{t('Product')}</th>
+                      <th className="py-2 text-left font-medium">{t('Price')}</th>
+                      <th className="py-2 text-left font-medium">{t('Time')}</th>
+                      <th className="py-2 text-right font-medium">{t('Actions')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -446,7 +448,7 @@ export function DashboardView({
                           <div className="flex justify-end gap-2">
                             {order.slip_image_url ? (
                               <Button type="button" variant="outline" size="sm" onClick={() => setSlipOrderId(order.id)}>
-                                Slip
+                                {t('Slip')}
                               </Button>
                             ) : null}
                             <Button
@@ -456,7 +458,7 @@ export function DashboardView({
                               disabled={approveId === order.id}
                               onClick={() => approveOne(order.id)}
                             >
-                              {approveId === order.id ? <SpinnerGap className="h-4 w-4 animate-spin" /> : 'Approve'}
+                              {approveId === order.id ? <SpinnerGap className="h-4 w-4 animate-spin" /> : t('Approve')}
                             </Button>
                           </div>
                         </td>
@@ -473,7 +475,7 @@ export function DashboardView({
       <Dialog open={!!slipOrderId} onOpenChange={(o) => !o && setSlipOrderId(null)}>
         <DialogContent className="max-w-lg border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
           <DialogHeader>
-            <DialogTitle>Payment slip</DialogTitle>
+            <DialogTitle>{t('Payment slip')}</DialogTitle>
           </DialogHeader>
           {slipOrderId ? (
             <div className="relative max-h-[70vh] overflow-auto rounded-lg border border-zinc-200 bg-zinc-50 p-2 dark:border-zinc-800 dark:bg-zinc-950">

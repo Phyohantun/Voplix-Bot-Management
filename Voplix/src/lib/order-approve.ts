@@ -1,7 +1,13 @@
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { decrypt } from '@/lib/encryption';
 import { sendMessage } from '@/lib/telegram';
-import { mergeBotTelegramCopy, applyTemplate, escapeHtml } from '@/lib/bot-telegram-copy';
+import {
+  mergeBotTelegramCopyRespectingPlan,
+  applyTemplate,
+  escapeHtml,
+  plainLinesToTelegramDeliveryHtml,
+} from '@/lib/bot-telegram-copy';
+import { loadPlatformAccountFlagsAdmin } from '@/lib/plan-limits';
 
 type ApproveBody = {
   manual_delivery_data?: Record<string, unknown> | null;
@@ -103,14 +109,24 @@ export async function approveSlipOrderForOwner(
     return { ok: false, error: updateError.message, status: 500 };
   }
 
-  const copy = mergeBotTelegramCopy(order.bots.telegram_customer_copy);
+  const ownerFlags = await loadPlatformAccountFlagsAdmin(ownerUserId);
+  const copy = mergeBotTelegramCopyRespectingPlan(order.bots.telegram_customer_copy, ownerFlags.plan_tier);
+  const productNameEsc = escapeHtml(String(order.menu_items.name));
+  const deliveryHtml = plainLinesToTelegramDeliveryHtml(deliveryContent);
+
   const confirmHtml = applyTemplate(copy.order_confirmed_template_html, {
-    product_name: escapeHtml(String(order.menu_items.name)),
-    delivery: escapeHtml(deliveryContent),
+    product_name: productNameEsc,
+    delivery: '',
   });
 
   const token = decrypt(order.bots.token_encrypted);
   await sendMessage(token, order.telegram_user_id, confirmHtml, { parse_mode: 'HTML' });
+
+  let followHtml = applyTemplate(copy.order_delivery_followup_template_html, {
+    delivery: deliveryHtml,
+  }).trim();
+  if (!followHtml) followHtml = deliveryHtml;
+  await sendMessage(token, order.telegram_user_id, followHtml, { parse_mode: 'HTML' });
 
   return { ok: true };
 }

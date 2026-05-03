@@ -25,6 +25,7 @@ import { formatCurrencyAmount } from '@/lib/currency';
 import { useShopCurrency } from '@/components/dashboard/currency-context';
 import type { PlanEnforcementSnapshot } from '@/lib/plan-limits';
 import { cn } from '@/lib/utils';
+import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { mergeBotTelegramCopy } from '@/lib/bot-telegram-copy';
 import { CustomerChatFlowSettings, type CustomerMsgTemplatesState } from '@/components/menu/customer-chat-flow-settings';
 
@@ -50,15 +51,15 @@ interface MenuItem {
   unsold_stock_count?: number;
 }
 
-const TYPE_LABEL: Record<MenuItemType, string> = {
-  DIGITAL_DELIVERY: 'Digital (stock on Stock page)',
-  MANUAL_DELIVERY: 'Manual (you fulfill)',
-};
+const TYPE_LABEL = (t: (key: string) => string): Record<MenuItemType, string> => ({
+  DIGITAL_DELIVERY: t('Digital (stock on Stock page)'),
+  MANUAL_DELIVERY: t('Manual (you fulfill)'),
+});
 
-const TYPE_HELP: Record<MenuItemType, string> = {
-  DIGITAL_DELIVERY: 'Customer pays; after approval, delivery is sent from your stock lines.',
-  MANUAL_DELIVERY: 'Customer pays; you enter delivery details when approving the order.',
-};
+const TYPE_HELP = (t: (key: string) => string): Record<MenuItemType, string> => ({
+  DIGITAL_DELIVERY: t('Customer pays; after approval, delivery is sent from your stock lines.'),
+  MANUAL_DELIVERY: t('Customer pays; you enter delivery details when approving the order.'),
+});
 
 interface MenuBuilderProps {
   bots: BotOption[];
@@ -84,6 +85,7 @@ const emptyForm = (canDigital: boolean): FormState => ({
 export function MenuBuilder({ bots, selectedBot, menuItems: initialItems, planSnapshot }: MenuBuilderProps) {
   const router = useRouter();
   const currency = useShopCurrency();
+  const { t } = useLanguage();
   const [menuItems, setMenuItems] = useState(initialItems);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isBotSettingsOpen, setIsBotSettingsOpen] = useState(false);
@@ -105,6 +107,7 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems, planSn
       slip_request_html: m.slip_request_html,
       slip_submitted_thanks_html: m.slip_submitted_thanks_html,
       bot_paused_message_html: m.bot_paused_message_html,
+      order_delivery_followup_template_html: m.order_delivery_followup_template_html,
     };
   });
   const [msgTemplatesSaving, setMsgTemplatesSaving] = useState(false);
@@ -131,6 +134,7 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems, planSn
       slip_request_html: m.slip_request_html,
       slip_submitted_thanks_html: m.slip_submitted_thanks_html,
       bot_paused_message_html: m.bot_paused_message_html,
+      order_delivery_followup_template_html: m.order_delivery_followup_template_html,
     });
   }, [
     selectedBot.id,
@@ -155,7 +159,7 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems, planSn
 
   const handleCreate = async () => {
     if (!formData.name.trim()) {
-      toast.error('Enter a product name');
+      toast.error(t('Enter a product name'));
       return;
     }
 
@@ -176,7 +180,7 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems, planSn
 
       if (!response.ok) {
         const j = (await response.json().catch(() => ({}))) as { error?: string };
-        throw new Error(j.error || 'Failed to create');
+        throw new Error(j.error || t('Failed to create'));
       }
 
       const { menuItem } = (await response.json()) as { menuItem: MenuItem };
@@ -188,12 +192,12 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems, planSn
       setMenuItems([...menuItems, merged]);
       setIsCreateOpen(false);
       setFormData(emptyForm(planSnapshot.canCreateDigitalProduct));
-      toast.success('Product added — it will show on /start in Telegram');
+      toast.success(t('Product added — it will show on /start in Telegram'));
       if (merged.type === 'DIGITAL_DELIVERY' && planSnapshot.canUseStockManagement) {
         setShowStockNudge(true);
       }
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to create product');
+      toast.error(e instanceof Error ? e.message : t('Failed to create product'));
     }
 
     setLoading(false);
@@ -203,7 +207,7 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems, planSn
     if (!editingItem) return;
 
     if (!formData.name.trim()) {
-      toast.error('Enter a product name');
+      toast.error(t('Enter a product name'));
       return;
     }
 
@@ -223,7 +227,7 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems, planSn
 
       if (!response.ok) {
         const j = (await response.json().catch(() => ({}))) as { error?: string };
-        throw new Error(j.error || 'Failed to update');
+        throw new Error(j.error || t('Failed to update'));
       }
 
       const { menuItem } = (await response.json()) as { menuItem: MenuItem };
@@ -236,16 +240,16 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems, planSn
       setMenuItems(menuItems.map((item) => (item.id === editingItem.id ? merged : item)));
       setEditingItem(null);
       setFormData(emptyForm(planSnapshot.canCreateDigitalProduct));
-      toast.success('Product updated');
+      toast.success(t('Product updated'));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to update');
+      toast.error(e instanceof Error ? e.message : t('Failed to update'));
     }
 
     setLoading(false);
   };
 
   const handleDelete = async (itemId: string) => {
-    if (!confirm('Remove this product from the bot menu?')) return;
+    if (!confirm(t('Remove this product from the bot menu?'))) return;
 
     try {
       const response = await fetch(`/api/menu-items/${itemId}`, {
@@ -253,13 +257,13 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems, planSn
       });
 
       if (!response.ok) {
-        throw new Error('Failed to remove');
+        throw new Error(t('Failed to remove'));
       }
 
       setMenuItems(menuItems.filter((item) => item.id !== itemId));
-      toast.success('Product removed from menu');
+      toast.success(t('Product removed from menu'));
     } catch {
-      toast.error('Could not remove product');
+      toast.error(t('Could not remove product'));
     }
   };
 
@@ -273,7 +277,7 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems, planSn
       });
       if (!res.ok) {
         const j = (await res.json().catch(() => ({}))) as { error?: string };
-        throw new Error(j.error || 'Could not update');
+        throw new Error(j.error || t('Could not update'));
       }
       const { menuItem } = (await res.json()) as { menuItem: MenuItem };
       setMenuItems((prev) =>
@@ -287,10 +291,10 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems, planSn
             : row
         )
       );
-      toast.success(next ? 'Product is listed in Telegram again' : 'Product hidden from Telegram menu');
+      toast.success(next ? t('Product is listed in Telegram again') : t('Product hidden from Telegram menu'));
       router.refresh();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Could not update listing');
+      toast.error(e instanceof Error ? e.message : t('Could not update listing'));
     }
   };
 
@@ -321,13 +325,13 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems, planSn
 
       if (!response.ok) {
         const j = (await response.json().catch(() => ({}))) as { error?: string };
-        throw new Error(j.error || 'Failed to save start settings');
+        throw new Error(j.error || t('Failed to save start settings'));
       }
 
-      toast.success('Start message settings saved');
+      toast.success(t('Start message settings saved'));
       router.refresh();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to save settings');
+      toast.error(e instanceof Error ? e.message : t('Failed to save settings'));
     } finally {
       setStartSettingsLoading(false);
     }
@@ -346,14 +350,14 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems, planSn
 
       if (!response.ok) {
         const j = (await response.json().catch(() => ({}))) as { error?: string };
-        throw new Error(j.error || 'Could not save payment info');
+        throw new Error(j.error || t('Could not save payment info'));
       }
 
-      toast.success('Saved — buyers will see this after they tap Confirm & pay');
+      toast.success(t('Saved — buyers will see this after they tap Confirm & pay'));
       router.refresh();
       return true;
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Could not save payment info');
+      toast.error(e instanceof Error ? e.message : t('Could not save payment info'));
       return false;
     } finally {
       setPaymentInstructionsSaving(false);
@@ -362,7 +366,7 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems, planSn
 
   const handleSaveCustomerMessages = async (): Promise<boolean> => {
     if (!canEditCustomerMessages) {
-      toast.error('Upgrade to Pro or Plus to save your own chat texts.');
+      toast.error(t('Upgrade to Pro or Plus to save your own chat texts.'));
       return false;
     }
     setMsgTemplatesSaving(true);
@@ -377,20 +381,21 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems, planSn
             slip_request_html: msgTemplates.slip_request_html,
             slip_submitted_thanks_html: msgTemplates.slip_submitted_thanks_html,
             bot_paused_message_html: msgTemplates.bot_paused_message_html,
+            order_delivery_followup_template_html: msgTemplates.order_delivery_followup_template_html,
           },
         }),
       });
 
       if (!response.ok) {
         const j = (await response.json().catch(() => ({}))) as { error?: string };
-        throw new Error(j.error || 'Could not save chat texts');
+        throw new Error(j.error || t('Could not save chat texts'));
       }
 
-      toast.success('Saved your chat texts');
+      toast.success(t('Saved your chat texts'));
       router.refresh();
       return true;
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Could not save chat texts');
+      toast.error(e instanceof Error ? e.message : t('Could not save chat texts'));
       return false;
     } finally {
       setMsgTemplatesSaving(false);
@@ -400,18 +405,18 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems, planSn
   const formFields = (
     <>
       <div className="space-y-2">
-        <Label className="text-zinc-700 dark:text-zinc-300">Product name</Label>
+        <Label className="text-zinc-700 dark:text-zinc-300">{t('Product name')}</Label>
         <Input
           value={formData.name}
           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-          placeholder="e.g. Premium account — 30 days"
+          placeholder={t('e.g. Premium account — 30 days')}
           className="bg-zinc-200 dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-white"
         />
-        <p className="text-xs text-zinc-500">Shown in Telegram as a tap button under /start</p>
+        <p className="text-xs text-zinc-500">{t('Shown in Telegram as a tap button under /start')}</p>
       </div>
 
       <div className="space-y-2">
-        <Label className="text-zinc-700 dark:text-zinc-300">Price ({currency})</Label>
+        <Label className="text-zinc-700 dark:text-zinc-300">{t('Price ({currency})').replace('{currency}', currency)}</Label>
         <Input
           type="text"
           inputMode="numeric"
@@ -421,12 +426,12 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems, planSn
           className="bg-zinc-200 dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-white"
         />
         <p className="text-xs text-zinc-500">
-          Amount in your Account currency ({currency}). Use 0 for free items.
+          {t('Amount in your Account currency ({currency}). Use 0 for free items.').replace('{currency}', currency)}
         </p>
       </div>
 
       <div className="space-y-2">
-        <Label className="text-zinc-700 dark:text-zinc-300">Product type</Label>
+        <Label className="text-zinc-700 dark:text-zinc-300">{t('Product type')}</Label>
         {editingItem ? (
           <>
             <Select
@@ -442,14 +447,14 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems, planSn
                   disabled={!planSnapshot.canCreateDigitalProduct}
                   className="text-zinc-900 dark:text-white"
                 >
-                  {TYPE_LABEL.DIGITAL_DELIVERY}
+                  {TYPE_LABEL(t).DIGITAL_DELIVERY}
                 </SelectItem>
                 <SelectItem value="MANUAL_DELIVERY" className="text-zinc-900 dark:text-white">
-                  {TYPE_LABEL.MANUAL_DELIVERY}
+                  {TYPE_LABEL(t).MANUAL_DELIVERY}
                 </SelectItem>
               </SelectContent>
             </Select>
-            <p className="text-xs text-zinc-500">{TYPE_HELP[formData.type]}</p>
+            <p className="text-xs text-zinc-500">{TYPE_HELP(t)[formData.type]}</p>
           </>
         ) : (
           <>
@@ -459,7 +464,7 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems, planSn
                 disabled={!planSnapshot.canCreateDigitalProduct}
                 title={
                   !planSnapshot.canCreateDigitalProduct
-                    ? 'Upgrade to Pro or Plus for digital products with automatic delivery from stock.'
+                    ? t('Upgrade to Pro or Plus for digital products with automatic delivery from stock.')
                     : undefined
                 }
                 onClick={() => planSnapshot.canCreateDigitalProduct && setFormData({ ...formData, type: 'DIGITAL_DELIVERY' })}
@@ -471,9 +476,9 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems, planSn
                   !planSnapshot.canCreateDigitalProduct && 'cursor-not-allowed opacity-50'
                 )}
               >
-                <p className="text-lg font-semibold text-zinc-900 dark:text-white">Digital 🤖</p>
+                <p className="text-lg font-semibold text-zinc-900 dark:text-white">{t('Digital 🤖')}</p>
                 <p className="mt-2 text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">
-                  After you approve payment, the customer receives the next free line from your Stock page.
+                  {t('After you approve payment, the customer receives the next free line from your Stock page.')}
                 </p>
               </button>
               <button
@@ -486,28 +491,27 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems, planSn
                     : 'border-zinc-200 bg-zinc-50 hover:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-900/60'
                 )}
               >
-                <p className="text-lg font-semibold text-zinc-900 dark:text-white">Manual 👤</p>
+                <p className="text-lg font-semibold text-zinc-900 dark:text-white">{t('Manual 👤')}</p>
                 <p className="mt-2 text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">
-                  You paste delivery details when you approve the order — good for custom work or off-platform
-                  fulfillment.
+                  {t('You paste delivery details when you approve the order — good for custom work or off-platform fulfillment.')}
                 </p>
               </button>
             </div>
-            <p className="text-xs text-zinc-500">{TYPE_HELP[formData.type]}</p>
+            <p className="text-xs text-zinc-500">{TYPE_HELP(t)[formData.type]}</p>
           </>
         )}
       </div>
 
       <div className="space-y-2">
-        <Label className="text-zinc-700 dark:text-zinc-300">Note (optional)</Label>
+        <Label className="text-zinc-700 dark:text-zinc-300">{t('Note (optional)')}</Label>
         <Textarea
           value={formData.delivery_content}
           onChange={(e) => setFormData({ ...formData, delivery_content: e.target.value })}
-          placeholder="Reference text or short description where relevant."
+          placeholder={t('Reference text or short description where relevant.')}
           className="min-h-[88px] bg-zinc-200 dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-white"
         />
         <p className="text-xs text-zinc-500">
-          Digital delivery codes are managed on the Stock page, not here.
+          {t('Digital delivery codes are managed on the Stock page, not here.')}
         </p>
       </div>
     </>
@@ -517,7 +521,7 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems, planSn
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">Selected bot</p>
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">{t('Selected bot')}</p>
           <p className="text-sm font-medium text-zinc-900 dark:text-white">@{selectedBot.bot_username}</p>
         </div>
 
@@ -532,19 +536,18 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems, planSn
             }}
           >
             <GearSix className="mr-2 h-4 w-4" />
-            Bot settings
+            {t('Bot settings')}
           </Button>
 
           <Dialog open={isBotSettingsOpen} onOpenChange={setIsBotSettingsOpen}>
-            <DialogContent className="border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 sm:max-w-2xl">
-              <DialogHeader>
-                <DialogTitle className="text-zinc-900 dark:text-white">Bot settings</DialogTitle>
+            <DialogContent className="flex max-h-[min(92vh,720px)] flex-col gap-2 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 sm:max-w-lg">
+              <DialogHeader className="shrink-0 space-y-1 pb-2">
+                <DialogTitle className="text-zinc-900 dark:text-white">{t('Bot settings')}</DialogTitle>
                 <DialogDescription className="text-zinc-600 dark:text-zinc-400">
-                  Greeting when people open your shop, the short lines the app sends during an order, and how they pay
-                  you.
+                  {t('Greeting when people open your shop, the short lines the app sends during an order, and how they pay you.')}
                 </DialogDescription>
               </DialogHeader>
-              <div className="flex gap-1 border-b border-zinc-200 pb-2 dark:border-zinc-800">
+              <div className="shrink-0 flex gap-1 border-b border-zinc-200 pb-2 dark:border-zinc-800">
                 <button
                   type="button"
                   onClick={() => setSettingsTab('start')}
@@ -555,7 +558,7 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems, planSn
                       : 'text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800'
                   )}
                 >
-                  Start message
+                  {t('Start message')}
                 </button>
                 <button
                   type="button"
@@ -567,22 +570,22 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems, planSn
                       : 'text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800'
                   )}
                 >
-                  Texts &amp; how to pay
+                  {t('Texts & how to pay')}
                 </button>
               </div>
 
               {settingsTab === 'start' ? (
-                <div className="space-y-4 py-2 max-h-[60vh] overflow-y-auto pr-1">
+                <div className="max-h-[min(50vh,380px)] shrink-0 space-y-4 overflow-y-auto py-2 pr-1">
                   <div className="space-y-2">
-                    <Label className="text-zinc-700 dark:text-zinc-300">Custom welcome message (optional)</Label>
+                    <Label className="text-zinc-700 dark:text-zinc-300">{t('Custom welcome message (optional)')}</Label>
                     <Textarea
                       value={startWelcomeMessage}
                       onChange={(e) => setStartWelcomeMessage(e.target.value)}
                       className="min-h-[88px] border-zinc-300 bg-zinc-100 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
-                      placeholder="e.g. Welcome to Voplix! Choose your package below."
+                      placeholder={t('e.g. Welcome to Voplix! Choose your package below.')}
                     />
                     <p className="text-xs text-zinc-500">
-                      Leave empty to use default message. This appears above your menu list.
+                      {t('Leave empty to use default message. This appears above your menu list.')}
                     </p>
                   </div>
                   <label className="flex items-center gap-3 text-sm text-zinc-700 dark:text-zinc-300">
@@ -592,7 +595,7 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems, planSn
                       onChange={(e) => setStartShowMenuOnly(e.target.checked)}
                       className="h-4 w-4 rounded border-zinc-600"
                     />
-                    Show only menu list on /start (hide welcome/title text)
+                    {t('Show only menu list on /start (hide welcome/title text)')}
                   </label>
                   <label className="flex items-center gap-3 text-sm text-zinc-700 dark:text-zinc-300">
                     <input
@@ -601,30 +604,32 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems, planSn
                       onChange={(e) => setStartShowTip(e.target.checked)}
                       className="h-4 w-4 rounded border-zinc-600"
                     />
-                    Show &quot;Browse menu&quot; tip message after /start
+                    {t('Show "Browse menu" tip message after /start')}
                   </label>
                 </div>
               ) : (
-                <CustomerChatFlowSettings
-                  botUsername={selectedBot.bot_username}
-                  telegramCustomerCopy={selectedBot.telegram_customer_copy}
-                  msgTemplates={msgTemplates}
-                  setMsgTemplates={setMsgTemplates}
-                  paymentInstructions={paymentInstructions}
-                  setPaymentInstructions={setPaymentInstructions}
-                  canEdit={canEditCustomerMessages}
-                  currency={currency}
-                />
+                <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain py-1 pr-1">
+                  <CustomerChatFlowSettings
+                    botUsername={selectedBot.bot_username}
+                    telegramCustomerCopy={selectedBot.telegram_customer_copy}
+                    msgTemplates={msgTemplates}
+                    setMsgTemplates={setMsgTemplates}
+                    paymentInstructions={paymentInstructions}
+                    setPaymentInstructions={setPaymentInstructions}
+                    canEdit={canEditCustomerMessages}
+                    currency={currency}
+                  />
+                </div>
               )}
 
-              <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
+              <DialogFooter className="shrink-0 flex flex-col gap-2 border-t border-zinc-200 pt-3 dark:border-zinc-800 sm:flex-row sm:flex-wrap sm:justify-end">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => setIsBotSettingsOpen(false)}
                   className="border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300"
                 >
-                  Close
+                  {t('Close')}
                 </Button>
                 {settingsTab === 'start' ? (
                   <Button
@@ -633,7 +638,7 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems, planSn
                     disabled={startSettingsLoading}
                     className="bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
                   >
-                    {startSettingsLoading ? 'Saving…' : 'Save start message'}
+                    {startSettingsLoading ? t('Saving…') : t('Save start message')}
                   </Button>
                 ) : (
                   <>
@@ -643,7 +648,7 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems, planSn
                       disabled={msgTemplatesSaving || !canEditCustomerMessages}
                       className="border border-zinc-300 bg-white text-zinc-900 hover:bg-zinc-100 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-700"
                     >
-                      {msgTemplatesSaving ? 'Saving…' : 'Save chat texts'}
+                      {msgTemplatesSaving ? t('Saving…') : t('Save chat texts')}
                     </Button>
                     <Button
                       type="button"
@@ -651,7 +656,7 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems, planSn
                       disabled={paymentInstructionsSaving}
                       className="bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
                     >
-                      {paymentInstructionsSaving ? 'Saving…' : 'Save how to pay'}
+                      {paymentInstructionsSaving ? t('Saving…') : t('Save how to pay')}
                     </Button>
                   </>
                 )}
@@ -673,21 +678,21 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems, planSn
                   disabled={!planSnapshot.canAddMenuItem}
                   title={
                     !planSnapshot.canAddMenuItem
-                      ? 'Product limit reached for your plan — upgrade on Subscription.'
+                      ? t('Product limit reached for your plan — upgrade on Subscription.')
                       : undefined
                   }
                   className="bg-indigo-600 hover:bg-indigo-700 w-full sm:w-auto disabled:opacity-50"
                 >
                   <Plus className="mr-2 h-4 w-4" />
-                  Add product
+                  {t('Add product')}
                 </Button>
               }
             />
             <DialogContent className="border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 sm:max-w-md">
               <DialogHeader>
-                <DialogTitle className="text-zinc-900 dark:text-white">New product</DialogTitle>
+                <DialogTitle className="text-zinc-900 dark:text-white">{t('New product')}</DialogTitle>
                 <DialogDescription className="text-zinc-600 dark:text-zinc-400">
-                  Appears in Telegram when customers send /start or tap &quot;Browse menu&quot;.
+                  {t('Appears in Telegram when customers send /start or tap "Browse menu".')}
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-2 max-h-[70vh] overflow-y-auto pr-1">{formFields}</div>
@@ -698,7 +703,7 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems, planSn
                   onClick={() => setIsCreateOpen(false)}
                   className="border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300"
                 >
-                  Cancel
+                  {t('Cancel')}
                 </Button>
                 <Button
                   type="button"
@@ -706,7 +711,7 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems, planSn
                   disabled={loading}
                   className="bg-indigo-600 hover:bg-indigo-700"
                 >
-                  {loading ? 'Saving…' : 'Add to menu'}
+                  {loading ? t('Saving…') : t('Add to menu')}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -717,18 +722,17 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems, planSn
       {showStockNudge ? (
         <div className="flex flex-col gap-3 rounded-xl border border-amber-500/40 bg-amber-950/25 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-amber-100">
-            Don&apos;t forget to add stock for your new digital product — customers only receive a code after you approve
-            payment and stock is available.
+            {t("Don't forget to add stock for your new digital product — customers only receive a code after you approve payment and stock is available.")}
           </p>
           <div className="flex flex-wrap gap-2">
             <Link
               href={`/stock?bot=${selectedBot.id}`}
               className="inline-flex h-8 items-center justify-center rounded-md bg-amber-600 px-3 text-sm font-medium text-white hover:bg-amber-500"
             >
-              Open Stock
+              {t('Open Stock')}
             </Link>
             <Button type="button" size="sm" variant="ghost" className="text-amber-200" onClick={() => setShowStockNudge(false)}>
-              Dismiss
+              {t('Dismiss')}
             </Button>
           </div>
         </div>
@@ -741,10 +745,9 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems, planSn
               <Package className="h-8 w-8 text-zinc-600 dark:text-zinc-400" />
             </div>
             <div className="max-w-md space-y-2 text-center">
-              <h3 className="text-lg font-semibold text-zinc-900 dark:text-white">No products yet</h3>
+              <h3 className="text-lg font-semibold text-zinc-900 dark:text-white">{t('No products yet')}</h3>
               <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                Add your first product so /start in Telegram shows something customers can buy. You can start with a
-                manual product on any plan.
+                {t('Add your first product so /start in Telegram shows something customers can buy. You can start with a manual product on any plan.')}
               </p>
             </div>
             <Button
@@ -753,13 +756,13 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems, planSn
               disabled={!planSnapshot.canAddMenuItem}
               title={
                 !planSnapshot.canAddMenuItem
-                  ? 'Product limit reached for your plan — upgrade on Subscription.'
+                  ? t('Product limit reached for your plan — upgrade on Subscription.')
                   : undefined
               }
               onClick={() => setIsCreateOpen(true)}
             >
               <Plus className="mr-2 h-4 w-4" />
-              Add your first product
+              {t('Add your first product')}
             </Button>
           </CardContent>
         </Card>
@@ -790,34 +793,34 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems, planSn
                       <div className="flex flex-wrap items-center gap-2">
                         <CardTitle className="text-base leading-snug text-zinc-900 dark:text-white">{item.name}</CardTitle>
                         <Badge variant="outline" className="border-zinc-600 text-xs text-zinc-700 dark:text-zinc-300">
-                          {itemType === 'DIGITAL_DELIVERY' ? 'Digital' : 'Manual'}
+                          {itemType === 'DIGITAL_DELIVERY' ? t('Digital') : t('Manual')}
                         </Badge>
                       </div>
                       <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
-                        {item.price > 0 ? formatCurrencyAmount(item.price, currency) : 'Free'}
+                        {item.price > 0 ? formatCurrencyAmount(item.price, currency) : t('Free')}
                       </p>
                       <p className="text-sm text-zinc-600 dark:text-zinc-400">
                         {itemType === 'DIGITAL_DELIVERY' ? (
                           <>
                             <span className="font-medium text-zinc-800 dark:text-zinc-200">
-                              {unsold === 1 ? '1 unit ready' : `${unsold} units ready`}
+                              {unsold === 1 ? t('1 unit ready') : t('{unsold} units ready').replace('{unsold}', unsold.toString())}
                             </span>
                             {outStock ? (
-                              <span className="ml-2 text-red-600 dark:text-red-400">· Out of stock</span>
+                              <span className="ml-2 text-red-600 dark:text-red-400">· {t('Out of stock')}</span>
                             ) : null}
                             {lowStock ? (
-                              <span className="ml-2 text-red-600 dark:text-red-400">· Low stock</span>
+                              <span className="ml-2 text-red-600 dark:text-red-400">· {t('Low stock')}</span>
                             ) : null}
                             {' · '}
                             <Link
                               href={`/stock?bot=${selectedBot.id}`}
                               className="font-medium text-indigo-600 underline-offset-2 hover:underline dark:text-indigo-400"
                             >
-                              Stock page
+                              {t('Stock page')}
                             </Link>
                           </>
                         ) : (
-                          <span>Manual — you send details when you approve the order.</span>
+                          <span>{t('Manual — you send details when you approve the order.')}</span>
                         )}
                       </p>
                       <label className="flex cursor-pointer items-center gap-2 text-xs text-zinc-600 dark:text-zinc-400">
@@ -827,7 +830,7 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems, planSn
                           checked={listed}
                           onChange={() => void toggleListed(item)}
                         />
-                        Listed in Telegram menu
+                        {t('Listed in Telegram menu')}
                       </label>
                     </div>
                     <div className="flex shrink-0 flex-col gap-1 sm:flex-row">
@@ -837,8 +840,8 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems, planSn
                         size="icon"
                         className="h-9 w-9 border-zinc-300 dark:border-zinc-700"
                         onClick={() => openEdit(item)}
-                        aria-label="Edit product"
-                        title="Edit product"
+                        aria-label={t('Edit product')}
+                        title={t('Edit product')}
                       >
                         <PencilSimple className="h-4 w-4 text-zinc-800 dark:text-zinc-200" />
                       </Button>
@@ -848,7 +851,7 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems, planSn
                         size="icon"
                         className="h-9 w-9 border-zinc-300 text-red-500 hover:bg-red-950/30 dark:border-zinc-700"
                         onClick={() => handleDelete(item.id)}
-                        aria-label="Remove product"
+                        aria-label={t('Remove this product from the bot menu?')}
                       >
                         <Trash className="h-4 w-4" />
                       </Button>
@@ -877,8 +880,8 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems, planSn
       >
         <DialogContent className="border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-zinc-900 dark:text-white">Edit product</DialogTitle>
-            <DialogDescription className="text-zinc-600 dark:text-zinc-400">Changes apply on the next /start in Telegram.</DialogDescription>
+            <DialogTitle className="text-zinc-900 dark:text-white">{t('Edit product')}</DialogTitle>
+            <DialogDescription className="text-zinc-600 dark:text-zinc-400">{t('Changes apply on the next /start in Telegram.')}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2 max-h-[70vh] overflow-y-auto pr-1">{formFields}</div>
           <DialogFooter className="gap-2 sm:gap-0">
@@ -888,7 +891,7 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems, planSn
               onClick={() => setEditingItem(null)}
               className="border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300"
             >
-              Cancel
+              {t('Cancel')}
             </Button>
             <Button
               type="button"
@@ -896,7 +899,7 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems, planSn
               disabled={loading}
               className="bg-indigo-600 hover:bg-indigo-700"
             >
-              {loading ? 'Saving…' : 'Save changes'}
+              {loading ? t('Saving…') : t('Save changes')}
             </Button>
           </DialogFooter>
         </DialogContent>

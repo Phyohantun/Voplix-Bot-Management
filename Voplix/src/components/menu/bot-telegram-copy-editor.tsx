@@ -21,6 +21,8 @@ import {
 } from '@/lib/bot-telegram-copy';
 import { toast } from 'sonner';
 
+import { useLanguage } from '@/lib/i18n/LanguageContext';
+
 interface BotTelegramCopyEditorProps {
   botId: string;
   /** Raw JSON from `bots.telegram_customer_copy` */
@@ -36,6 +38,7 @@ export function BotTelegramCopyEditor({
   onOpenChange,
 }: BotTelegramCopyEditorProps) {
   const router = useRouter();
+  const { t } = useLanguage();
   const [copy, setCopy] = useState<BotTelegramCopy>(() => mergeBotTelegramCopy(storedCopy));
   const [loading, setLoading] = useState(false);
 
@@ -59,13 +62,13 @@ export function BotTelegramCopyEditor({
       });
       const j = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) {
-        throw new Error(j.error || 'သိမ်းဆည်းရန် မအောင်မြင်ပါ');
+        throw new Error(j.error || t('Failed to save'));
       }
-      toast.success('ဘော့တ် မက်ဆေ့ချ်များကို သိမ်းဆည်းပြီးပါပြီ');
+      toast.success(t('Bot messages saved'));
       onOpenChange(false);
       router.refresh();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'သိမ်းဆည်းရန် မအောင်မြင်ပါ');
+      toast.error(e instanceof Error ? e.message : t('Failed to save'));
     } finally {
       setLoading(false);
     }
@@ -73,8 +76,8 @@ export function BotTelegramCopyEditor({
 
   const loadDefaultsIntoForm = () => {
     setCopy(mergeBotTelegramCopy(null));
-    toast.message('မူလဆက်တင်များကို ထည့်သွင်းပြီးပါပြီ — အတည်ပြုရန် သိမ်းဆည်းမည် ကိုနှိပ်ပါ', {
-      description: 'သို့မဟုတ် ဘော့တ်ကို မူလဆက်တင်များသို့ တစ်ဆင့်တည်းဖြင့် ပြန်လည်သတ်မှတ်ရန် “သိမ်းဆည်းထားသည်များကို ရှင်းမည်” ကို အသုံးပြုပါ။',
+    toast.message(t('Default settings loaded — click Save to confirm'), {
+      description: t('Or use "Clear saved" to reset the bot to default settings in one step.'),
     });
   };
 
@@ -88,14 +91,14 @@ export function BotTelegramCopyEditor({
       });
       const j = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) {
-        throw new Error(j.error || 'ရှင်းလင်းရန် မအောင်မြင်ပါ');
+        throw new Error(j.error || t('Failed to clear'));
       }
       setCopy(mergeBotTelegramCopy(null));
-      toast.success('ဘော့တ် မက်ဆေ့ချ်များကို မူလဆက်တင်များသို့ ပြန်လည်သတ်မှတ်ပြီးပါပြီ');
+      toast.success(t('Bot messages reset to default'));
       onOpenChange(false);
       router.refresh();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'မအောင်မြင်ပါ');
+      toast.error(e instanceof Error ? e.message : t('Failed'));
     } finally {
       setLoading(false);
     }
@@ -105,15 +108,16 @@ export function BotTelegramCopyEditor({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex max-h-[90vh] flex-col border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900 sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle className="text-zinc-900 dark:text-white">Telegram ဘော့တ် မက်ဆေ့ချ်များ</DialogTitle>
+          <DialogTitle className="text-zinc-900 dark:text-white">{t('Telegram Bot Messages')}</DialogTitle>
           <DialogDescription className="text-zinc-600 dark:text-zinc-400">
-            ဤဘော့တ်အတွက် Telegram တွင် ဝယ်ယူသူများ မြင်ရမည့် စာသားများ။ အခြေခံ HTML (စာလုံးမည်း၊ စာလုံးစောင်း၊ စာကြောင်းဆင်းခြင်း) ကို ပံ့ပိုးပေးသည်။ 
-            <span className="font-medium text-zinc-700 dark:text-zinc-300">မီနူး အကြံပြုချက်</span> တွင်၊ အောက်ခြေ ကီးဘုတ် အမည်အတွက် 
-            <code className="text-xs text-zinc-800 dark:text-zinc-200">{'{{browse_menu_button}}'}</code> ကို အသုံးပြုပါ။ 
-            အော်ဒါ ပုံစံခွက်များ-{' '}
-            <code className="text-xs text-zinc-800 dark:text-zinc-200">{'{{product_name}}'}</code>,{' '}
-            <code className="text-xs text-zinc-800 dark:text-zinc-200">{'{{delivery}}'}</code>,{' '}
-            <code className="text-xs text-zinc-800 dark:text-zinc-200">{'{{reason_block}}'}</code>.
+            {t('Texts that customers will see in Telegram for this bot. Basic HTML is supported.')}
+            <span className="mt-2 block text-zinc-700 dark:text-zinc-300">
+              {t('Menu → ')}<span className="font-medium">{t('Text & Payment')}</span>{t(' allows you to insert item name, price, etc. using Myanmar buttons')}
+              {t('(The preview shows exactly what the customer will see).')}
+            </span>
+            <span className="mt-1.5 block text-xs text-zinc-500">
+              {t('In this full editor, you can use technical placeholders if special codes are needed.')}
+            </span>
           </DialogDescription>
         </DialogHeader>
 
@@ -150,7 +154,7 @@ export function BotTelegramCopyEditor({
               onClick={loadDefaultsIntoForm}
               className="border-zinc-300 dark:border-zinc-700"
             >
-              မူလဆက်တင်များကို ထည့်သွင်းမည်
+              {t('Load default settings')}
             </Button>
             <Button
               type="button"
@@ -159,7 +163,7 @@ export function BotTelegramCopyEditor({
               disabled={loading}
               className="border-zinc-300 text-zinc-600 dark:border-zinc-700 dark:text-zinc-400"
             >
-              သိမ်းဆည်းထားသည်များကို ရှင်းလင်းပြီး မူလဆက်တင်ကို သုံးမည်
+              {t('Clear saved and use default')}
             </Button>
           </div>
           <div className="flex gap-2">
@@ -169,7 +173,7 @@ export function BotTelegramCopyEditor({
               onClick={() => onOpenChange(false)}
               className="border-zinc-300 dark:border-zinc-700"
             >
-              ပိတ်မည်
+              {t('Close')}
             </Button>
             <Button
               type="button"
@@ -177,7 +181,7 @@ export function BotTelegramCopyEditor({
               disabled={loading}
               className="bg-indigo-600 hover:bg-indigo-700"
             >
-              {loading ? 'သိမ်းဆည်းနေသည်…' : 'မက်ဆေ့ချ်များကို သိမ်းဆည်းမည်'}
+              {loading ? t('Saving…') : t('Save messages')}
             </Button>
           </div>
         </DialogFooter>

@@ -6,17 +6,10 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { Trash, Package } from '@phosphor-icons/react';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { formatCurrencyAmount } from '@/lib/currency';
 import { useShopCurrency } from '@/components/dashboard/currency-context';
+import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { cn } from '@/lib/utils';
 
 export type StockLine = {
@@ -77,6 +70,7 @@ export function StockManager({
   canManageStock?: boolean;
 }) {
   const currency = useShopCurrency();
+  const { t } = useLanguage();
   const [items, setItems] = useState<DigitalMenuWithStock[]>(() =>
     initialItems.map((row) => ({
       ...row,
@@ -87,9 +81,6 @@ export function StockManager({
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [stockTab, setStockTab] = useState<'unsold' | 'sold'>('unsold');
-  const [bulkOpen, setBulkOpen] = useState(false);
-  const [bulkDraft, setBulkDraft] = useState('');
-  const [bulkSaving, setBulkSaving] = useState(false);
 
   useEffect(() => {
     const next = initialItems.map((row) => ({
@@ -113,21 +104,14 @@ export function StockManager({
     setDrafts((d) => ({ ...d, [menuItemId]: value }));
   };
 
-  const bulkLineCount = useMemo(() => {
-    return bulkDraft
-      .split(/\r?\n/)
-      .map((l) => l.trim())
-      .filter(Boolean).length;
-  }, [bulkDraft]);
-
   const addLine = async (menuItemId: string) => {
     if (!canManageStock) {
-      toast.error('Stock management requires Pro or Plus.');
+      toast.error(t('Stock management requires Pro or Plus.'));
       return;
     }
     const text = (drafts[menuItemId] ?? '').trim();
     if (!text) {
-      toast.error('Enter the text for this stock line');
+      toast.error(t('Enter the text for this stock line'));
       return;
     }
 
@@ -141,12 +125,12 @@ export function StockManager({
 
       if (!res.ok) {
         const j = (await res.json().catch(() => ({}))) as { error?: string };
-        throw new Error(j.error || 'Failed');
+        throw new Error(j.error || t('Failed'));
       }
 
       const json = (await res.json()) as { stockItem?: StockLine; stockItems?: StockLine[] };
       const added = json.stockItem ?? json.stockItems?.[0];
-      if (!added) throw new Error('Invalid response');
+      if (!added) throw new Error(t('Invalid response'));
 
       setItems((prev) =>
         prev.map((row) =>
@@ -157,68 +141,25 @@ export function StockManager({
       );
       setDrafts((d) => ({ ...d, [menuItemId]: '' }));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Could not add stock line');
+      toast.error(e instanceof Error ? e.message : t('Could not add stock line'));
     } finally {
-      setLoadingId(null);
-    }
-  };
-
-  const bulkAdd = async () => {
-    if (!canManageStock || !activeRow) return;
-    const lines = bulkDraft
-      .split(/\r?\n/)
-      .map((l) => l.trim())
-      .filter(Boolean);
-    if (lines.length === 0) {
-      toast.error('Paste at least one line');
-      return;
-    }
-
-    setBulkSaving(true);
-    setLoadingId(activeRow.id);
-    try {
-      const res = await fetch('/api/stock-items', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ menu_item_id: activeRow.id, lines }),
-      });
-      if (!res.ok) {
-        const j = (await res.json().catch(() => ({}))) as { error?: string };
-        throw new Error(j.error || 'Failed');
-      }
-      const json = (await res.json()) as { stockItems?: StockLine[]; added?: number };
-      const addedRows = json.stockItems || [];
-      setItems((prev) =>
-        prev.map((row) =>
-          row.id === activeRow.id
-            ? { ...row, stock_items: [...normalizeStockItems(row.stock_items), ...addedRows] }
-            : row
-        )
-      );
-      toast.success(`Added ${json.added ?? addedRows.length} line(s)`);
-      setBulkDraft('');
-      setBulkOpen(false);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Bulk add failed');
-    } finally {
-      setBulkSaving(false);
       setLoadingId(null);
     }
   };
 
   const removeLine = async (menuItemId: string, stockId: string) => {
     if (!canManageStock) {
-      toast.error('Stock management requires Pro or Plus.');
+      toast.error(t('Stock management requires Pro or Plus.'));
       return;
     }
-    if (!confirm('Remove this unsold stock line?')) return;
+    if (!confirm(t('Remove this unsold stock line?'))) return;
 
     setLoadingId(stockId);
     try {
       const res = await fetch(`/api/stock-items/${stockId}`, { method: 'DELETE' });
       if (!res.ok) {
         const j = (await res.json().catch(() => ({}))) as { error?: string };
-        throw new Error(j.error || 'Failed');
+        throw new Error(j.error || t('Failed'));
       }
 
       setItems((prev) =>
@@ -232,7 +173,7 @@ export function StockManager({
         )
       );
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Could not remove line');
+      toast.error(e instanceof Error ? e.message : t('Could not remove line'));
     } finally {
       setLoadingId(null);
     }
@@ -246,16 +187,16 @@ export function StockManager({
             <Package className="h-8 w-8 text-zinc-600 dark:text-zinc-400" />
           </div>
           <div className="max-w-md space-y-2">
-            <h3 className="text-lg font-semibold text-zinc-900 dark:text-white">No digital products yet</h3>
+            <h3 className="text-lg font-semibold text-zinc-900 dark:text-white">{t('No digital products yet')}</h3>
             <p className="text-sm text-zinc-600 dark:text-zinc-400">
-              Add a digital product under Menu, then come back here to paste codes or keys in bulk.
+              {t('Add a digital product under Menu, then come back here to add codes or keys one line at a time.')}
             </p>
           </div>
           <Link
             href={`/menu?bot=${botId}`}
             className="inline-flex h-9 items-center justify-center rounded-md bg-indigo-600 px-4 text-sm font-medium text-white hover:bg-indigo-700"
           >
-            Go to Menu
+            {t('Go to Menu')}
           </Link>
         </CardContent>
       </Card>
@@ -271,21 +212,20 @@ export function StockManager({
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-xs text-zinc-500">
-          {items.length} digital product{items.length === 1 ? '' : 's'} — tap a product on your phone or pick from the
-          list on desktop.
+          {items.length} {items.length === 1 ? t('digital product') : t('digital products')} — {t('tap a product on your phone or pick from the list on desktop.')}
         </p>
         <div className="flex flex-wrap items-center gap-3">
           <Link
             href={`/orders?bot=${botId}`}
             className="text-xs font-medium text-indigo-600 underline-offset-2 hover:underline dark:text-indigo-400"
           >
-            View orders
+            {t('View orders')}
           </Link>
           <Link
             href={`/menu?bot=${botId}`}
             className="text-xs font-medium text-zinc-600 underline decoration-zinc-600 underline-offset-2 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200"
           >
-            Back to menu
+            {t('Back to menu')}
           </Link>
         </div>
       </div>
@@ -311,13 +251,13 @@ export function StockManager({
               <p className="line-clamp-2 text-sm font-semibold text-zinc-900 dark:text-white">{row.name}</p>
               <div className="mt-2 flex items-center justify-between gap-2">
                 <span className="text-xs text-zinc-500">
-                  {row.price > 0 ? formatCurrencyAmount(row.price, currency) : 'Free'}
+                  {row.price > 0 ? formatCurrencyAmount(row.price, currency) : t('Free')}
                 </span>
                 <span className={cn('rounded-md border px-2 py-0.5 text-[11px] font-medium', h.className)}>
-                  {h.label}
+                  {t(h.label)}
                 </span>
               </div>
-              <p className="mt-1 text-xs tabular-nums text-zinc-600 dark:text-zinc-400">{n} unsold</p>
+              <p className="mt-1 text-xs tabular-nums text-zinc-600 dark:text-zinc-400">{n} {t('unsold')}</p>
             </button>
           );
         })}
@@ -326,7 +266,7 @@ export function StockManager({
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:gap-6">
         <aside className="hidden lg:flex lg:w-64 lg:shrink-0 lg:flex-col lg:rounded-xl lg:border lg:border-zinc-200 lg:bg-zinc-50 lg:dark:border-zinc-800 lg:dark:bg-zinc-950/40 lg:max-h-[min(72vh,560px)]">
           <p className="border-b border-zinc-200 px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:border-zinc-800">
-            Products
+            {t('Products')}
           </p>
           <div className="overflow-y-auto p-2">
             <ul className="flex flex-col gap-1.5">
@@ -348,11 +288,11 @@ export function StockManager({
                     >
                       <span className="line-clamp-2 text-sm font-medium text-zinc-900 dark:text-white">{row.name}</span>
                       <span className="mt-1 flex items-center justify-between gap-2 text-[11px] text-zinc-500">
-                        <span>{row.price > 0 ? formatCurrencyAmount(row.price, currency) : 'Free'}</span>
-                        <span className="tabular-nums text-zinc-700 dark:text-zinc-300">{n} unsold</span>
+                        <span>{row.price > 0 ? formatCurrencyAmount(row.price, currency) : t('Free')}</span>
+                        <span className="tabular-nums text-zinc-700 dark:text-zinc-300">{n} {t('unsold')}</span>
                       </span>
                       <span className={cn('mt-2 inline-block rounded border px-1.5 py-0.5 text-[10px] font-medium', h.className)}>
-                        {h.label}
+                        {t(h.label)}
                       </span>
                     </button>
                   </li>
@@ -368,12 +308,12 @@ export function StockManager({
               <div>
                 <h2 className="text-base font-semibold text-zinc-900 dark:text-white">{activeRow.name}</h2>
                 <p className="mt-1 text-xs text-zinc-500">
-                  {activeRow.price > 0 ? formatCurrencyAmount(activeRow.price, currency) : 'Free'}
+                  {activeRow.price > 0 ? formatCurrencyAmount(activeRow.price, currency) : t('Free')}
                 </p>
               </div>
               <div className="flex flex-wrap items-end gap-3">
                 <div className="rounded-xl border-2 border-zinc-300 bg-zinc-50 px-5 py-3 text-center tabular-nums dark:border-zinc-700 dark:bg-zinc-950/50">
-                  <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">Unsold units</p>
+                  <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">{t('Unsold units')}</p>
                   <p
                     className={cn(
                       'text-3xl font-bold leading-none',
@@ -390,7 +330,7 @@ export function StockManager({
                   </p>
                 </div>
                 <span className={cn('self-center rounded-lg border px-2.5 py-1 text-xs font-medium', health.className)}>
-                  {health.label}
+                  {t(health.label)}
                 </span>
               </div>
             </div>
@@ -406,7 +346,7 @@ export function StockManager({
                     : 'text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800'
                 )}
               >
-                Unsold ({available.length})
+                {t('Unsold')} ({available.length})
               </button>
               <button
                 type="button"
@@ -418,31 +358,18 @@ export function StockManager({
                     : 'text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800'
                 )}
               >
-                Sold ({sold.length})
+                {t('Sold')} ({sold.length})
               </button>
             </div>
 
             {stockTab === 'unsold' ? (
               <>
                 <div className="space-y-2">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <label className="text-xs font-medium text-zinc-500">Add one unit</label>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="text-xs"
-                      disabled={!canManageStock}
-                      title={!canManageStock ? 'Upgrade to Pro or Plus for stock management' : undefined}
-                      onClick={() => setBulkOpen(true)}
-                    >
-                      Bulk add…
-                    </Button>
-                  </div>
+                  <label className="block text-xs font-medium text-zinc-500">{t('Add one unit')}</label>
                   <Textarea
                     value={drafts[activeRow.id] ?? ''}
                     onChange={(e) => setDraft(activeRow.id, e.target.value)}
-                    placeholder="Paste one code, key, or delivery text per line added…"
+                    placeholder={t('Paste one code, key, or delivery text per line added…')}
                     rows={3}
                     className="min-h-0 resize-y border-zinc-300 bg-zinc-50 text-sm dark:border-zinc-700 dark:bg-zinc-950"
                     disabled={!canManageStock || loadingId === activeRow.id}
@@ -454,13 +381,13 @@ export function StockManager({
                     disabled={!canManageStock || loadingId === activeRow.id}
                     onClick={() => addLine(activeRow.id)}
                   >
-                    Add line
+                    {t('Add line')}
                   </Button>
                 </div>
 
                 <div className="mt-4">
                   {available.length === 0 ? (
-                    <p className="text-sm text-zinc-600 dark:text-zinc-400">No unsold lines. Add stock above or use Bulk add.</p>
+                    <p className="text-sm text-zinc-600 dark:text-zinc-400">{t('No unsold lines. Add stock using the box above.')}</p>
                   ) : (
                     <ul className="divide-y divide-zinc-200 rounded-lg border border-zinc-200 dark:divide-zinc-800 dark:border-zinc-800">
                       {available.map((line) => (
@@ -478,7 +405,7 @@ export function StockManager({
                             className="h-7 w-7 shrink-0 border-zinc-300 text-zinc-500 hover:border-red-900/50 hover:bg-red-950/20 hover:text-red-300 dark:border-zinc-700"
                             disabled={!canManageStock || loadingId === line.id}
                             onClick={() => removeLine(activeRow.id, line.id)}
-                            aria-label="Remove line"
+                            aria-label={t('Remove line')}
                           >
                             <Trash className="h-3.5 w-3.5" />
                           </Button>
@@ -491,10 +418,10 @@ export function StockManager({
             ) : (
               <div className="space-y-2">
                 <p className="text-xs text-zinc-500">
-                  Delivery text that was already assigned (newest first). Useful if a customer disputes delivery.
+                  {t('Delivery text that was already assigned (newest first). Useful if a customer disputes delivery.')}
                 </p>
                 {sold.length === 0 ? (
-                  <p className="text-sm text-zinc-600">Nothing sold yet.</p>
+                  <p className="text-sm text-zinc-600">{t('Nothing sold yet.')}</p>
                 ) : (
                   <ul className="max-h-[min(50vh,420px)] space-y-2 overflow-y-auto rounded-lg border border-zinc-200 p-2 dark:border-zinc-800">
                     {sold.map((line) => (
@@ -503,7 +430,7 @@ export function StockManager({
                         className="rounded-md border border-zinc-100 bg-zinc-50 px-2 py-2 text-xs text-zinc-800 dark:border-zinc-800 dark:bg-zinc-950/50 dark:text-zinc-200"
                       >
                         <p className="mb-1 text-[10px] uppercase tracking-wide text-zinc-500">
-                          {line.sold_at ? new Date(line.sold_at).toLocaleString() : 'Sold'}
+                          {line.sold_at ? new Date(line.sold_at).toLocaleString() : t('Sold')}
                         </p>
                         <p className="whitespace-pre-wrap break-words font-mono leading-relaxed">{line.content_text}</p>
                       </li>
@@ -516,42 +443,6 @@ export function StockManager({
         ) : null}
       </div>
 
-      <Dialog open={bulkOpen} onOpenChange={setBulkOpen}>
-        <DialogContent className="border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900 sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Bulk add stock</DialogTitle>
-            <DialogDescription>
-              Paste many lines at once — each non-empty line becomes one unit. Oldest line is still used first when you
-              approve orders.
-            </DialogDescription>
-          </DialogHeader>
-          <Textarea
-            value={bulkDraft}
-            onChange={(e) => setBulkDraft(e.target.value)}
-            rows={12}
-            placeholder={'line1@account\nline2@account\n…'}
-            className="font-mono text-sm"
-            disabled={bulkSaving || !canManageStock}
-          />
-          <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
-            You are adding <span className="tabular-nums text-indigo-600 dark:text-indigo-400">{bulkLineCount}</span>{' '}
-            line{bulkLineCount === 1 ? '' : 's'}.
-          </p>
-          <DialogFooter className="gap-2">
-            <Button type="button" variant="outline" onClick={() => setBulkOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              className="bg-indigo-600 hover:bg-indigo-700"
-              disabled={bulkSaving || !canManageStock || bulkLineCount === 0}
-              onClick={() => void bulkAdd()}
-            >
-              {bulkSaving ? 'Saving…' : 'Save all lines'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

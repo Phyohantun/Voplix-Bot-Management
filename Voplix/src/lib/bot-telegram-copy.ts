@@ -48,8 +48,13 @@ export const DEFAULT_BOT_TELEGRAM_COPY = {
   callback_out_of_stock: 'Sorry, this item is currently out of stock.',
   callback_order_expired: 'Order session expired.',
   callback_unknown_action: 'Unknown action.',
-  order_confirmed_template_html:
-    'သင့်အော်ဒါ အတည်ပြုပြီးပါပြီ။ သင့် account အချက်အလက်များမှာ အောက်ပါအတိုင်းဖြစ်ပါသည်။\n\n<b>{{product_name}}</b>\n\n{{delivery}}',
+  /** First Telegram message after you approve the slip — short plain thank-you (no account lines here). */
+  order_confirmed_template_html: 'သင့်အော်ဒါ အတည်ပြုပြီးပါပြီ။ ကျေးဇူးတင်ပါသည်။',
+  /**
+   * Second message after the first. Leave empty to send only the text you type when approving (no extra wrapper).
+   * Optional: add a short line plus a placeholder for that pasted text (advanced).
+   */
+  order_delivery_followup_template_html: '',
   order_rejected_template_html:
     'ဝမ်းနည်းပါသည်။ သင့်အော်ဒါကို အတည်မပြုနိုင်ပါ။ ထပ်မံဆက်သွယ်ပါ။{{reason_block}}',
 };
@@ -130,8 +135,12 @@ export const BOT_TELEGRAM_COPY_LABELS: Record<keyof typeof DEFAULT_BOT_TELEGRAM_
   callback_order_expired: { title: 'Popup — Session Expired', hint: 'Max ~190 chars.' },
   callback_unknown_action: { title: 'Popup — Unknown Button', hint: 'Max ~190 chars.' },
   order_confirmed_template_html: {
-    title: '4. Order confirmed + delivery (after you approve)',
-    hint: 'Use {{product_name}} and {{delivery}} (account / digital content). HTML.',
+    title: '4a. Order confirmed (first message after you approve)',
+    hint: 'Short plain thank-you. Account lines belong in the delivery follow-up (4b) or in what you paste when approving.',
+  },
+  order_delivery_followup_template_html: {
+    title: '4b. Delivery / account details (second message)',
+    hint: 'Leave empty to send only what you paste when approving. Otherwise wrap that text with your own short intro.',
   },
   order_rejected_template_html: {
     title: '5. Order rejected (after you reject)',
@@ -146,6 +155,8 @@ export const CUSTOMER_MESSAGE_TEMPLATE_KEYS = [
   'slip_request_html',
   'slip_submitted_thanks_html',
   'bot_paused_message_html',
+  'order_confirmed_template_html',
+  'order_delivery_followup_template_html',
 ] as const satisfies ReadonlyArray<keyof BotTelegramCopy>;
 
 export const BOT_TELEGRAM_COPY_SECTIONS = [
@@ -158,6 +169,7 @@ export const BOT_TELEGRAM_COPY_SECTIONS = [
       'slip_submitted_thanks_html',
       'bot_paused_message_html',
       'order_confirmed_template_html',
+      'order_delivery_followup_template_html',
       'order_rejected_template_html',
     ],
   },
@@ -208,7 +220,11 @@ export const BOT_TELEGRAM_COPY_SECTIONS = [
   },
   {
     title: 'After you Approve / Reject (Dashboard)',
-    keys: ['order_confirmed_template_html', 'order_rejected_template_html'],
+    keys: [
+      'order_confirmed_template_html',
+      'order_delivery_followup_template_html',
+      'order_rejected_template_html',
+    ],
   },
 ] as const;
 
@@ -277,7 +293,7 @@ export function mergeBotTelegramCopy(customCopy: any): BotTelegramCopy {
   return result;
 }
 
-/** Free plan always uses built-in text for the four Menu → customer message templates (even if old JSON exists). */
+/** Free plan always uses built-in text for Menu → customer message templates (even if old JSON exists). */
 export function mergeBotTelegramCopyRespectingPlan(
   customCopy: any,
   planTier: 'free' | 'pro' | 'plus'
@@ -310,6 +326,11 @@ export function escapeHtml(unsafe: string): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
+}
+
+/** Owner-typed lines (plain text) → safe Telegram HTML body with line breaks. */
+export function plainLinesToTelegramDeliveryHtml(text: string): string {
+  return escapeHtml(text.trim()).replace(/\n/g, '<br/>');
 }
 
 export function telegramHtmlToPlain(html: string): string {

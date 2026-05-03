@@ -183,10 +183,10 @@ export function DashboardHeader({ user, profile, announcements, unreadCount, bot
           </Button>
           {openNotifications ? (
             <div className="absolute right-0 mt-2 w-[min(20rem,calc(100vw-1rem))] rounded-lg border border-zinc-200 bg-white p-2 shadow-xl dark:border-zinc-800 dark:bg-zinc-900">
-              <p className="px-2 py-1 text-xs uppercase tracking-wide text-zinc-500">System announcements</p>
+              <p className="px-2 py-1 text-xs uppercase tracking-wide text-zinc-500">{t('System announcements')}</p>
               <div className="max-h-80 overflow-auto">
                 {announcements.length === 0 ? (
-                  <p className="px-2 py-4 text-sm text-zinc-600 dark:text-zinc-400">No announcements yet.</p>
+                  <p className="px-2 py-4 text-sm text-zinc-600 dark:text-zinc-400">{t('No announcements yet.')}</p>
                 ) : (
                   announcements.map((item) => (
                     <div
@@ -228,14 +228,14 @@ export function DashboardHeader({ user, profile, announcements, unreadCount, bot
                   router.push('/settings');
                 }}
               >
-                Account
+                {t('Account')}
               </button>
               <button
                 type="button"
                 className="w-full rounded-md px-3 py-2 text-left text-sm text-zinc-800 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800"
                 onClick={onLogout}
               >
-                Logout
+                {t('Logout')}
               </button>
             </div>
           ) : null}

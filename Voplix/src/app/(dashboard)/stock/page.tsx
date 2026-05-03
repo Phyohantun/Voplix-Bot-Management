@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
+import { PageHeader } from '@/components/dashboard/page-header';
 import { StockManager, type DigitalMenuWithStock } from '@/components/stock/stock-manager';
 import { getPlanEnforcementSnapshot } from '@/lib/plan-limits';
 import { FreePlanUpgradeBanner } from '@/components/dashboard/free-plan-banner';
@@ -85,14 +86,18 @@ export default async function StockPage({
 
   return (
     <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Stock</h1>
-        <p className="max-w-xl text-sm text-zinc-600 dark:text-zinc-400">
-          One text line = one unit. Choose a product on the left (or from the list on your phone), then add codes or
-          delivery text. Oldest unsold line is used first when you approve an order.
-        </p>
-        <p className="text-xs text-zinc-500">@{selectedBot.bot_username}</p>
-      </div>
+      <PageHeader 
+        title="Stock" 
+        description={
+          <>
+            <p>
+              One text line = one unit. Choose a product on the left (or from the list on your phone), then add codes or
+              delivery text. Oldest unsold line is used first when you approve an order.
+            </p>
+            <p className="mt-2 text-xs text-zinc-500">@{selectedBot.bot_username}</p>
+          </>
+        }
+      />
 
       {planSnapshot.plan === 'free' ? <FreePlanUpgradeBanner /> : null}
       {!planSnapshot.canUseStockManagement && planSnapshot.plan !== 'free' ? (

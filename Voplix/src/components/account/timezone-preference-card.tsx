@@ -8,9 +8,11 @@ import { cn } from '@/lib/utils';
 import { TIMEZONE_OPTIONS } from '@/lib/shop-timezone';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
+import { useLanguage } from '@/lib/i18n/LanguageContext';
 
 export function TimezonePreferenceCard({ initialTimezone }: { initialTimezone: string }) {
   const router = useRouter();
+  const { t } = useLanguage();
   const [value, setValue] = useState(initialTimezone);
   const [loading, setLoading] = useState(false);
   const dirty = value !== initialTimezone;
@@ -29,14 +31,14 @@ export function TimezonePreferenceCard({ initialTimezone }: { initialTimezone: s
       });
       if (!response.ok) {
         const j = (await response.json().catch(() => ({}))) as { error?: string };
-        throw new Error(j.error || 'Could not save timezone');
+        throw new Error(j.error || t('Could not save timezone'));
       }
-      toast.success('Timezone updated');
+      toast.success(t('Timezone updated'));
       const supabase = createClient();
       await supabase.auth.refreshSession();
       router.refresh();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Could not save timezone');
+      toast.error(e instanceof Error ? e.message : t('Could not save timezone'));
     } finally {
       setLoading(false);
     }
@@ -45,10 +47,9 @@ export function TimezonePreferenceCard({ initialTimezone }: { initialTimezone: s
   return (
     <Card className="border-zinc-200 dark:border-zinc-800/80 bg-zinc-50 dark:bg-zinc-900/50 shadow-none">
       <CardHeader className="pb-4">
-        <CardTitle className="text-base font-medium text-zinc-900 dark:text-white">Report timezone</CardTitle>
+        <CardTitle className="text-base font-medium text-zinc-900 dark:text-white">{t('Report timezone')}</CardTitle>
         <CardDescription className="text-zinc-500">
-          Used for date ranges in reports and timestamps where a single timezone is shown. Does not change Telegram
-          message times.
+          {t('Used for date ranges in reports and timestamps where a single timezone is shown. Does not change Telegram message times.')}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -67,7 +68,7 @@ export function TimezonePreferenceCard({ initialTimezone }: { initialTimezone: s
                     : 'border-zinc-200 bg-white hover:border-zinc-300 dark:border-zinc-700 dark:bg-zinc-900/40'
                 )}
               >
-                <span className="font-medium text-zinc-900 dark:text-white">{opt.label}</span>
+                <span className="font-medium text-zinc-900 dark:text-white">{t(opt.label)}</span>
                 <p className="mt-0.5 font-mono text-xs text-zinc-500">{opt.value}</p>
               </button>
             );
@@ -79,7 +80,7 @@ export function TimezonePreferenceCard({ initialTimezone }: { initialTimezone: s
           disabled={loading || !dirty}
           className="w-full bg-zinc-900 font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
         >
-          {loading ? 'Saving…' : 'Save timezone'}
+          {loading ? t('Saving…') : t('Save timezone')}
         </Button>
       </CardContent>
     </Card>

@@ -1,7 +1,11 @@
+'use client';
+
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import { useLanguage } from '@/lib/i18n/LanguageContext';
 
 export function FreePlanUpgradeBanner({ className }: { className?: string }) {
+  const { t } = useLanguage();
   return (
     <div
       className={cn(
@@ -10,14 +14,13 @@ export function FreePlanUpgradeBanner({ className }: { className?: string }) {
       )}
     >
       <p className="text-sm text-zinc-800 dark:text-zinc-200">
-        You are on the <span className="font-medium">Free</span> plan. Upgrade for unlimited products, digital stock,
-        and higher order limits.
+        {t('You are on the')} <span className="font-medium">{t('Free')}</span> {t('plan. Upgrade for unlimited products, digital stock, and higher order limits.')}
       </p>
       <Link
         href="/subscription"
         className="mt-2 inline-flex text-sm font-medium text-indigo-600 underline-offset-2 hover:underline dark:text-indigo-400"
       >
-        View plans and upgrade
+        {t('View plans and upgrade')}
       </Link>
     </div>
   );

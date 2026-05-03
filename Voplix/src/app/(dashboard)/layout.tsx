@@ -4,7 +4,6 @@ import { createClient } from '@/lib/supabase/server';
 import { DashboardSidebar } from '@/components/dashboard/sidebar';
 import { DashboardHeader } from '@/components/dashboard/header';
 import { CurrencyProvider } from '@/components/dashboard/currency-context';
-import { LanguageProvider } from '@/lib/i18n/LanguageContext';
 import { getOwnerProfileForLayout } from '@/lib/owner-profile';
 import { shopCurrencyFromUser } from '@/lib/currency';
 import { getPlatformAccountForUser } from '@/lib/platform-account';
@@ -57,7 +56,6 @@ export default async function DashboardLayout({
   const currency = shopCurrencyFromUser(user);
 
   return (
-    <LanguageProvider>
       <CurrencyProvider value={currency}>
         <div className="min-h-screen bg-zinc-100 dark:bg-zinc-950">
           <DashboardSidebar user={user} />
@@ -76,6 +74,5 @@ export default async function DashboardLayout({
           </Suspense>
         </div>
       </CurrencyProvider>
-    </LanguageProvider>
   );
 }

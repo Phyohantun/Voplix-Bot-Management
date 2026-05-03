@@ -14,12 +14,14 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { CaretLeft, CaretRight } from '@phosphor-icons/react';
 import { toast } from 'sonner';
 import { formatOrderTimestamp } from '@/lib/format-order';
 import { formatCurrencyAmount } from '@/lib/currency';
 import { useShopCurrency } from '@/components/dashboard/currency-context';
 import type { OrderStatusFilter } from '@/lib/owner-orders-filter';
+import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { cn } from '@/lib/utils';
 import { OrderHistoryCleanup } from '@/components/settings/order-history-cleanup';
 
@@ -38,31 +40,27 @@ interface OrdersDashboardProps {
 
 const DEFAULT_PAGE_SIZE = 20;
 
-const statusVisual: Record<
-  string,
-  { label: string; className: string; pulse?: boolean }
-> = {
+const statusVisual: Record<string, { label: string; className: string }> = {
   PENDING_PAYMENT: {
-    label: '⚪ Waiting payment',
-    className: 'border-zinc-400 bg-zinc-100 text-zinc-800 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-200',
+    label: 'Waiting payment',
+    className: 'border-zinc-300 bg-zinc-100 text-zinc-800 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-200',
   },
   SLIP_SUBMITTED: {
-    label: '🟡 Needs review',
+    label: 'Needs review',
     className:
-      'border-amber-400/80 bg-amber-50 text-amber-950 dark:border-amber-500/50 dark:bg-amber-950/40 dark:text-amber-100 animate-slip-review-pulse',
-    pulse: true,
+      'border-zinc-400 bg-zinc-200/80 text-zinc-900 dark:border-zinc-500 dark:bg-zinc-800/90 dark:text-zinc-100',
   },
   APPROVED: {
-    label: '🟢 Approved',
-    className: 'border-emerald-500/60 bg-emerald-50 text-emerald-950 dark:border-emerald-600/50 dark:bg-emerald-950/30 dark:text-emerald-100',
+    label: 'Approved',
+    className: 'border-zinc-400 bg-zinc-100 text-zinc-900 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100',
   },
   COMPLETED: {
-    label: '🔵 Completed',
-    className: 'border-sky-500/50 bg-sky-50 text-sky-950 dark:border-sky-600/40 dark:bg-sky-950/30 dark:text-sky-100',
+    label: 'Completed',
+    className: 'border-zinc-400 bg-zinc-100 text-zinc-900 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100',
   },
   REJECTED: {
-    label: '🔴 Rejected',
-    className: 'border-red-400/70 bg-red-50 text-red-950 dark:border-red-800/50 dark:bg-red-950/40 dark:text-red-100',
+    label: 'Rejected',
+    className: 'border-zinc-400 bg-zinc-100 text-zinc-900 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100',
   },
 };
 
@@ -84,6 +82,25 @@ const FILTER_TABS: { id: OrderStatusFilter; label: string; badge?: 'review' }[] 
   { id: 'rejected', label: 'Rejected' },
 ];
 
+/** Supabase embed is usually an object; some clients/configs return a one-element array. */
+function embeddedMenuItem(order: { menu_items?: unknown }): {
+  name?: string;
+  price?: number;
+  type?: string;
+  delivery_content?: string | null;
+} | undefined {
+  const raw = order.menu_items;
+  if (raw == null) return undefined;
+  if (Array.isArray(raw)) {
+    const first = raw[0];
+    return first && typeof first === 'object' ? (first as { name?: string; price?: number; type?: string; delivery_content?: string | null }) : undefined;
+  }
+  if (typeof raw === 'object') {
+    return raw as { name?: string; price?: number; type?: string; delivery_content?: string | null };
+  }
+  return undefined;
+}
+
 export function OrdersDashboard({
   orders: initialOrders,
   totalCount,
@@ -96,6 +113,7 @@ export function OrdersDashboard({
 }: OrdersDashboardProps) {
   const router = useRouter();
   const currency = useShopCurrency();
+  const { t } = useLanguage();
   const [orders, setOrders] = useState(initialOrders);
   const [appendOrders, setAppendOrders] = useState<any[]>([]);
   const [nextFetchPage, setNextFetchPage] = useState(page + 1);
@@ -107,6 +125,7 @@ export function OrdersDashboard({
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [rejectReasons, setRejectReasons] = useState<Record<string, string>>({});
+  const [manualDeliveryNotes, setManualDeliveryNotes] = useState<Record<string, string>>({});
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [bulkApproveOpen, setBulkApproveOpen] = useState(false);
 
@@ -120,7 +139,17 @@ export function OrdersDashboard({
     setHasMoreClient(true);
     setSelected(new Set());
     setExpandedId(null);
+    setManualDeliveryNotes({});
   }, [initialOrders, page, pageSize, selectedBotId, statusFilter]);
+
+  const manualOutboundText = (order: any) =>
+    manualDeliveryNotes[order.id] !== undefined
+      ? manualDeliveryNotes[order.id]
+      : (embeddedMenuItem(order)?.delivery_content ?? '');
+
+  const setManualOutboundText = (orderId: string, value: string) => {
+    setManualDeliveryNotes((prev) => ({ ...prev, [orderId]: value }));
+  };
 
   const pendingOnPage = useMemo(
     () => combinedOrders.filter((o: any) => o.status === 'SLIP_SUBMITTED'),
@@ -163,7 +192,7 @@ export function OrdersDashboard({
       const res = await fetch(`/api/orders/feed?${u.toString()}`);
       const j = (await res.json().catch(() => ({}))) as { orders?: any[]; error?: string };
       if (!res.ok) {
-        throw new Error(j.error || 'Failed to load');
+        throw new Error(j.error || t('Failed to load'));
       }
       const chunk = j.orders || [];
       if (chunk.length === 0) {
@@ -180,7 +209,7 @@ export function OrdersDashboard({
         if (chunk.length < pageSize) setHasMoreClient(false);
       }
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Could not load more');
+      toast.error(e instanceof Error ? e.message : t('Could not load more'));
     } finally {
       setLoadingMore(false);
     }
@@ -195,6 +224,7 @@ export function OrdersDashboard({
     selectedBotId,
     statusFilter,
     totalCount,
+    t
   ]);
 
   useEffect(() => {
@@ -241,20 +271,33 @@ export function OrdersDashboard({
   };
 
   const handleApprove = async (order: any) => {
+    const isManual = embeddedMenuItem(order)?.type === 'MANUAL_DELIVERY';
+    const outbound = manualOutboundText(order).trim();
+    if (isManual && !outbound) {
+      toast.error(t('Type what to send the buyer (account details, etc.), or add delivery text on the product in Menu.'));
+      return;
+    }
+
     setLoading(true);
     try {
+      const body = isManual ? { manual_message: outbound } : { manual_delivery_data: null };
       const response = await fetch(`/api/orders/${order.id}/approve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ manual_delivery_data: null }),
+        body: JSON.stringify(body),
       });
-      if (!response.ok) throw new Error('Failed to approve order');
+      if (!response.ok) throw new Error(t('Failed to approve order'));
       setOrders((prev) => prev.map((o: any) => (o.id === order.id ? { ...o, status: 'COMPLETED' } : o)));
       setAppendOrders((prev) => prev.map((o: any) => (o.id === order.id ? { ...o, status: 'COMPLETED' } : o)));
-      toast.success('Order confirmed');
+      setManualDeliveryNotes((prev) => {
+        const next = { ...prev };
+        delete next[order.id];
+        return next;
+      });
+      toast.success(t('Order confirmed'));
       router.refresh();
     } catch {
-      toast.error('Failed to approve order');
+      toast.error(t('Failed to approve order'));
     } finally {
       setLoading(false);
     }
@@ -269,20 +312,20 @@ export function OrdersDashboard({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reason }),
       });
-      if (!response.ok) throw new Error('Failed to reject order');
+      if (!response.ok) throw new Error(t('Failed to reject order'));
       setOrders((prev) => prev.map((o: any) => (o.id === order.id ? { ...o, status: 'REJECTED' } : o)));
       setAppendOrders((prev) => prev.map((o: any) => (o.id === order.id ? { ...o, status: 'REJECTED' } : o)));
-      toast.success('Order rejected');
+      toast.success(t('Order rejected'));
       router.refresh();
     } catch {
-      toast.error('Failed to reject order');
+      toast.error(t('Failed to reject order'));
     } finally {
       setLoading(false);
     }
   };
 
   const deleteOne = async (order: any) => {
-    if (!confirm(`Permanently delete order #${order.id.slice(0, 8)} from history? This cannot be undone.`)) {
+    if (!confirm(t('Permanently delete this order from history? This cannot be undone.'))) {
       return;
     }
     setLoading(true);
@@ -290,7 +333,7 @@ export function OrdersDashboard({
       const res = await fetch(`/api/orders/${order.id}`, { method: 'DELETE' });
       if (!res.ok) {
         const j = (await res.json().catch(() => ({}))) as { error?: string };
-        throw new Error(j.error || 'Delete failed');
+        throw new Error(j.error || t('Delete failed'));
       }
       setOrders((prev) => prev.filter((o: any) => o.id !== order.id));
       setAppendOrders((prev) => prev.filter((o: any) => o.id !== order.id));
@@ -299,10 +342,10 @@ export function OrdersDashboard({
         next.delete(order.id);
         return next;
       });
-      toast.success('Order removed from history');
+      toast.success(t('Order removed from history'));
       router.refresh();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Delete failed');
+      toast.error(e instanceof Error ? e.message : t('Delete failed'));
     } finally {
       setLoading(false);
     }
@@ -318,13 +361,13 @@ export function OrdersDashboard({
         body: JSON.stringify({ ids: [...selected] }),
       });
       const j = (await res.json().catch(() => ({}))) as { error?: string; deleted?: number };
-      if (!res.ok) throw new Error(j.error || 'Bulk delete failed');
-      toast.success(`Deleted ${j.deleted ?? selected.size} order(s)`);
+      if (!res.ok) throw new Error(j.error || t('Bulk delete failed'));
+      toast.success(`${t('Deleted')} ${j.deleted ?? selected.size} ${t('order(s)')}`);
       setSelected(new Set());
       setBulkDeleteOpen(false);
       router.refresh();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Bulk delete failed');
+      toast.error(e instanceof Error ? e.message : t('Bulk delete failed'));
     } finally {
       setLoading(false);
     }
@@ -344,16 +387,16 @@ export function OrdersDashboard({
         approved?: number;
         failures?: string[];
       };
-      if (!res.ok) throw new Error(j.error || 'Bulk approve failed');
-      toast.success(`Approved ${j.approved ?? 0} order(s)`);
+      if (!res.ok) throw new Error(j.error || t('Bulk approve failed'));
+      toast.success(`${t('Approved')} ${j.approved ?? 0} ${t('order(s)')}`);
       if (j.failures?.length) {
-        toast.message('Some orders were skipped', { description: j.failures.slice(0, 5).join('\n') });
+        toast.message(t('Some orders were skipped'), { description: j.failures.slice(0, 5).join('\n') });
       }
       setBulkApproveOpen(false);
       setSelected(new Set());
       router.refresh();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Bulk approve failed');
+      toast.error(e instanceof Error ? e.message : t('Bulk approve failed'));
     } finally {
       setLoading(false);
     }
@@ -368,7 +411,7 @@ export function OrdersDashboard({
           cfg.className
         )}
       >
-        {cfg.label}
+        {t(cfg.label)}
       </span>
     );
   };
@@ -398,6 +441,31 @@ export function OrdersDashboard({
     );
   };
 
+  /** Full-width card: manual delivery text (second Telegram message after approve). Not shown in the narrow Actions column. */
+  const manualOutboundEditorCard = (order: any) => {
+    if (order.status !== 'SLIP_SUBMITTED' || embeddedMenuItem(order)?.type !== 'MANUAL_DELIVERY') return null;
+    return (
+      <Card className="border-zinc-200 bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+        <CardHeader className="space-y-1 pb-2 pt-4">
+          <CardTitle className="text-sm font-semibold text-zinc-900 dark:text-white">
+            {t('Delivery details for the buyer')}
+          </CardTitle>
+          <CardDescription className="text-xs leading-relaxed">
+            {t('Telegram sends a short "order confirmed" message first, then this text (KBZ, Wave, account numbers, or how they get the product). Prefilled from your product in Menu if you saved it there — edit before approving.')}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <Textarea
+            value={manualOutboundText(order)}
+            onChange={(e) => setManualOutboundText(order.id, e.target.value)}
+            rows={5}
+            className="min-h-[120px] resize-y border-zinc-300 bg-zinc-50 text-sm text-zinc-900 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-100"
+          />
+        </CardContent>
+      </Card>
+    );
+  };
+
   const expandedPanel = (order: any) => (
     <div className="space-y-4 border-t border-zinc-200 bg-zinc-50/80 p-4 dark:border-zinc-800 dark:bg-zinc-950/50">
       <div className="flex flex-col gap-4 md:flex-row md:items-start">
@@ -413,7 +481,12 @@ export function OrdersDashboard({
         ) : null}
         <div className="min-w-0 flex-1 space-y-3">
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
-            Order <span className="font-mono text-zinc-800 dark:text-zinc-200">#{order.id.slice(0, 8)}</span>
+            {t('Order')} <span className="font-mono text-zinc-800 dark:text-zinc-200">#{order.id.slice(0, 8)}</span>
+            {embeddedMenuItem(order)?.type === 'MANUAL_DELIVERY' ? (
+              <span className="ml-2 rounded border border-zinc-300 bg-zinc-100 px-1.5 py-0.5 text-[10px] font-medium text-zinc-600 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+                {t('Manual delivery')}
+              </span>
+            ) : null}
           </p>
           {order.status === 'SLIP_SUBMITTED' ? (
             <div className="flex max-w-sm flex-col gap-2">
@@ -423,7 +496,7 @@ export function OrdersDashboard({
                 disabled={loading}
                 className="border border-zinc-600 bg-zinc-100 text-zinc-900 hover:bg-white dark:border-zinc-500 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700"
               >
-                Approve &amp; complete
+                {t('Approve & complete')}
               </Button>
               <Button
                 type="button"
@@ -432,10 +505,10 @@ export function OrdersDashboard({
                 disabled={loading}
                 className="border-zinc-600 dark:border-zinc-600"
               >
-                Reject
+                {t('Reject')}
               </Button>
               <Input
-                placeholder="Reject reason (optional)"
+                placeholder={t('Reject reason (optional)')}
                 value={rejectReasons[order.id] || ''}
                 onChange={(e) =>
                   setRejectReasons((prev) => ({ ...prev, [order.id]: e.target.value }))
@@ -444,7 +517,7 @@ export function OrdersDashboard({
               />
             </div>
           ) : (
-            <p className="text-sm text-zinc-500">This order is not awaiting slip approval.</p>
+            <p className="text-sm text-zinc-500">{t('This order is not awaiting slip approval.')}</p>
           )}
         </div>
       </div>
@@ -456,9 +529,9 @@ export function OrdersDashboard({
       <div className="flex flex-wrap gap-2 border-b border-zinc-200 pb-3 dark:border-zinc-800">
         {FILTER_TABS.map((tab) => {
           const active = statusFilter === tab.id;
-          const badge =
+            const badge =
             tab.badge === 'review' && reviewCountTotal > 0 ? (
-              <span className="ml-1 rounded-full bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-amber-900 dark:text-amber-100">
+              <span className="ml-1 rounded-full bg-zinc-200 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-800 dark:bg-zinc-700 dark:text-zinc-200">
                 {reviewCountTotal}
               </span>
             ) : null;
@@ -473,7 +546,7 @@ export function OrdersDashboard({
                   : 'text-zinc-600 hover:bg-zinc-200 dark:text-zinc-400 dark:hover:bg-zinc-800'
               )}
             >
-              {tab.label}
+              {t(tab.label)}
               {badge}
             </Link>
           );
@@ -482,17 +555,17 @@ export function OrdersDashboard({
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
         <p className="text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
-          <span className="text-zinc-700 dark:text-zinc-300">{pendingOnPage.length} on this page need review</span>
+          <span className="text-zinc-700 dark:text-zinc-300">{pendingOnPage.length} {t('on this page need review')}</span>
           {totalCount > 0 ? (
             <span className="text-zinc-500">
               {' '}
-              · Rows {showingFrom}–{showingTo} of {totalCount}
+              · {t('Rows')} {showingFrom}–{showingTo} {t('of')} {totalCount}
             </span>
           ) : null}
         </p>
         <div className="hidden flex-col gap-3 md:flex md:items-end">
           <div className="flex flex-wrap items-center gap-x-1 gap-y-2 text-sm">
-            <span className="mr-1 text-zinc-500">Rows per page</span>
+            <span className="mr-1 text-zinc-500">{t('Rows per page')}</span>
             {[20, 50, 100].map((n) => (
               <Link
                 key={n}
@@ -513,7 +586,7 @@ export function OrdersDashboard({
               {page <= 1 ? (
                 <span className="inline-flex h-8 cursor-not-allowed items-center rounded-md border border-zinc-200 px-3 text-sm text-zinc-600 dark:border-zinc-800">
                   <CaretLeft className="mr-1 h-4 w-4 opacity-60" aria-hidden />
-                  Newer
+                  {t('Newer')}
                 </span>
               ) : (
                 <Link
@@ -521,15 +594,15 @@ export function OrdersDashboard({
                   className="inline-flex h-8 items-center rounded-md border border-zinc-300 bg-white px-3 text-sm dark:border-zinc-700 dark:bg-zinc-900"
                 >
                   <CaretLeft className="mr-1 h-4 w-4" aria-hidden />
-                  Newer
+                  {t('Newer')}
                 </Link>
               )}
               <span className="px-1 text-sm tabular-nums text-zinc-500">
-                Page {page} / {totalPages}
+                {t('Page')} {page} / {totalPages}
               </span>
               {page >= totalPages ? (
                 <span className="inline-flex h-8 cursor-not-allowed items-center rounded-md border border-zinc-200 px-3 text-sm text-zinc-600 dark:border-zinc-800">
-                  Older
+                  {t('Older')}
                   <CaretRight className="ml-1 h-4 w-4 opacity-60" aria-hidden />
                 </span>
               ) : (
@@ -537,7 +610,7 @@ export function OrdersDashboard({
                   href={ordersHref(selectedBotId, page + 1, pageSize, statusFilter)}
                   className="inline-flex h-8 items-center rounded-md border border-zinc-300 bg-white px-3 text-sm dark:border-zinc-700 dark:bg-zinc-900"
                 >
-                  Older
+                  {t('Older')}
                   <CaretRight className="ml-1 h-4 w-4" aria-hidden />
                 </Link>
               )}
@@ -552,19 +625,18 @@ export function OrdersDashboard({
           role="status"
         >
           <p className="text-sm text-zinc-700 dark:text-zinc-300">
-            <span className="font-medium text-zinc-900 dark:text-white">{selected.size}</span> selected — removes rows
-            from this list only; customers are not notified.
+            <span className="font-medium text-zinc-900 dark:text-white">{selected.size}</span> {t('selected — removes rows from this list only; customers are not notified.')}
           </p>
           <div className="flex flex-wrap gap-2 sm:gap-3">
             {selectedSlipIds.length > 0 ? (
               <Button
                 type="button"
                 size="sm"
-                className="border border-amber-700/40 bg-amber-950/30 text-amber-100 hover:bg-amber-950/50"
+                className="border border-zinc-400 bg-zinc-100 text-zinc-900 hover:bg-zinc-200 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-700"
                 onClick={() => setBulkApproveOpen(true)}
                 disabled={loading}
               >
-                Approve selected slips…
+                {t('Approve selected slips…')}
               </Button>
             ) : null}
             <Button
@@ -574,7 +646,7 @@ export function OrdersDashboard({
               className="border-zinc-600 text-zinc-700 dark:text-zinc-300"
               onClick={() => setSelected(new Set())}
             >
-              Clear selection
+              {t('Clear selection')}
             </Button>
             <Button
               type="button"
@@ -583,7 +655,7 @@ export function OrdersDashboard({
               onClick={() => setBulkDeleteOpen(true)}
               disabled={loading}
             >
-              Delete selected…
+              {t('Delete selected…')}
             </Button>
           </div>
         </div>
@@ -591,14 +663,14 @@ export function OrdersDashboard({
 
       <Card className="border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
         <CardHeader className="pb-4">
-          <CardTitle className="text-base font-semibold text-zinc-900 dark:text-white">Orders</CardTitle>
+          <CardTitle className="text-base font-semibold text-zinc-900 dark:text-white">{t('Orders')}</CardTitle>
           <CardDescription className="mt-1 text-zinc-500">
-            Review slips first, then approve or reject. Use tabs to focus on what needs attention.
+            {t('Review slips first, then approve or reject. Use tabs to focus on what needs attention.')}
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-0">
           {combinedOrders.length === 0 ? (
-            <p className="text-sm text-zinc-500">No orders match this filter.</p>
+            <p className="text-sm text-zinc-500">{t('No orders match this filter.')}</p>
           ) : (
             <>
               <div className="space-y-3 md:hidden">
@@ -622,30 +694,31 @@ export function OrdersDashboard({
                               {order.telegram_username || order.telegram_user_id}
                             </p>
                             <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                              {order.menu_items?.name || '—'}
+                              {embeddedMenuItem(order)?.name || '—'}
                             </p>
                           </div>
                           {slipThumb(order, 'sm')}
                         </div>
                         <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-500">
                           <span className="tabular-nums font-medium text-zinc-800 dark:text-zinc-200">
-                            {formatCurrencyAmount(Number(order.menu_items?.price || 0), currency)}
+                            {formatCurrencyAmount(Number(embeddedMenuItem(order)?.price || 0), currency)}
                           </span>
                           <span>·</span>
                           <span className="tabular-nums">{formatOrderTimestamp(order.created_at)}</span>
                         </div>
                         <div>{statusBadge(order.status)}</div>
+                        {manualOutboundEditorCard(order)}
                         {order.status === 'SLIP_SUBMITTED' ? (
                           <div className="flex flex-col gap-2">
                             <div className="flex flex-wrap gap-2">
                               <Button
                                 type="button"
                                 size="sm"
-                                className="border border-amber-800/50 bg-amber-950/40 text-amber-50"
+                                className="border border-zinc-500 bg-zinc-200 text-zinc-900 hover:bg-zinc-300 dark:border-zinc-600 dark:bg-zinc-700 dark:text-white dark:hover:bg-zinc-600"
                                 disabled={loading}
                                 onClick={() => handleApprove(order)}
                               >
-                                Approve
+                                {t('Approve')}
                               </Button>
                               <Button
                                 type="button"
@@ -654,11 +727,11 @@ export function OrdersDashboard({
                                 disabled={loading}
                                 onClick={() => handleReject(order)}
                               >
-                                Reject
+                                {t('Reject')}
                               </Button>
                             </div>
                             <Input
-                              placeholder="Reject reason (optional)"
+                              placeholder={t('Reject reason (optional)')}
                               value={rejectReasons[order.id] || ''}
                               onChange={(e) =>
                                 setRejectReasons((prev) => ({ ...prev, [order.id]: e.target.value }))
@@ -675,7 +748,7 @@ export function OrdersDashboard({
                           disabled={loading}
                           onClick={() => deleteOne(order)}
                         >
-                          Delete from list
+                          {t('Delete from list')}
                         </Button>
                       </div>
                     </div>
@@ -685,10 +758,10 @@ export function OrdersDashboard({
                 {!isDeepPage && hasMoreClient && orders.length + appendOrders.length < totalCount ? (
                   <div ref={loadMoreRef} className="flex justify-center py-4">
                     {loadingMore ? (
-                      <span className="text-sm text-zinc-500">Loading…</span>
+                      <span className="text-sm text-zinc-500">{t('Loading…')}</span>
                     ) : (
                       <Button type="button" variant="outline" size="sm" onClick={() => void loadMore()}>
-                        Load more
+                        {t('Load more')}
                       </Button>
                     )}
                   </div>
@@ -712,16 +785,18 @@ export function OrdersDashboard({
                             aria-label="Select all on this page"
                           />
                         </th>
-                        <th className="min-w-[10rem] px-2 py-3">Customer / product</th>
-                        <th className="px-2 py-3 whitespace-nowrap">Price</th>
-                        <th className="min-w-[9rem] px-2 py-3 whitespace-nowrap">Time</th>
-                        <th className="px-2 py-3">Slip</th>
-                        <th className="min-w-[8rem] px-2 py-3">Status</th>
-                        <th className="min-w-[9rem] px-2 py-3">Actions</th>
+                        <th className="min-w-[10rem] px-2 py-3">{t('Customer / product')}</th>
+                        <th className="px-2 py-3 whitespace-nowrap">{t('Price')}</th>
+                        <th className="min-w-[9rem] px-2 py-3 whitespace-nowrap">{t('Time')}</th>
+                        <th className="px-2 py-3">{t('Slip')}</th>
+                        <th className="min-w-[8rem] px-2 py-3">{t('Status')}</th>
+                        <th className="min-w-[9rem] px-2 py-3">{t('Actions')}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800/80">
-                      {combinedOrders.map((order: any) => (
+                      {combinedOrders.map((order: any) => {
+                        const manualDeliveryCard = manualOutboundEditorCard(order);
+                        return (
                         <Fragment key={order.id}>
                           <tr className="align-middle text-zinc-800 dark:text-zinc-200">
                             <td className="px-2 py-3">
@@ -737,10 +812,10 @@ export function OrdersDashboard({
                               <p className="font-medium text-zinc-900 dark:text-white">
                                 {order.telegram_username || order.telegram_user_id}
                               </p>
-                              <p className="break-words text-zinc-600 dark:text-zinc-400">{order.menu_items?.name || '—'}</p>
+                              <p className="break-words text-zinc-600 dark:text-zinc-400">{embeddedMenuItem(order)?.name || '—'}</p>
                             </td>
                             <td className="px-2 py-3 tabular-nums whitespace-nowrap">
-                              {formatCurrencyAmount(Number(order.menu_items?.price || 0), currency)}
+                              {formatCurrencyAmount(Number(embeddedMenuItem(order)?.price || 0), currency)}
                             </td>
                             <td className="px-2 py-3 tabular-nums text-xs text-zinc-500 whitespace-nowrap">
                               {formatOrderTimestamp(order.created_at)}
@@ -753,17 +828,17 @@ export function OrdersDashboard({
                                   <Button
                                     type="button"
                                     size="sm"
-                                    className="h-8 border border-amber-800/50 bg-amber-950/40 text-amber-50 hover:bg-amber-950/60"
+                                    className="h-8 border border-zinc-500 bg-zinc-200 text-zinc-900 hover:bg-zinc-300 dark:border-zinc-600 dark:bg-zinc-700 dark:text-white dark:hover:bg-zinc-600"
                                     disabled={loading}
                                     onClick={() => handleApprove(order)}
                                   >
-                                    Approve
+                                    {t('Approve')}
                                   </Button>
                                   <Button type="button" size="sm" variant="outline" className="h-8" disabled={loading} onClick={() => handleReject(order)}>
-                                    Reject
+                                    {t('Reject')}
                                   </Button>
                                   <Input
-                                    placeholder="Reject reason"
+                                    placeholder={t('Reject reason')}
                                     value={rejectReasons[order.id] || ''}
                                     onChange={(e) =>
                                       setRejectReasons((p) => ({ ...p, [order.id]: e.target.value }))
@@ -782,10 +857,17 @@ export function OrdersDashboard({
                                 disabled={loading}
                                 onClick={() => deleteOne(order)}
                               >
-                                Delete
+                                {t('Delete')}
                               </Button>
                             </td>
                           </tr>
+                          {manualDeliveryCard ? (
+                            <tr className="bg-zinc-50/60 dark:bg-zinc-950/25">
+                              <td colSpan={7} className="border-t border-zinc-200 px-3 py-3 dark:border-zinc-800">
+                                {manualDeliveryCard}
+                              </td>
+                            </tr>
+                          ) : null}
                           {expandedId === order.id ? (
                             <tr className="bg-zinc-50/80 dark:bg-zinc-950/30">
                               <td colSpan={7} className="p-0">
@@ -794,7 +876,8 @@ export function OrdersDashboard({
                             </tr>
                           ) : null}
                         </Fragment>
-                      ))}
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -807,22 +890,22 @@ export function OrdersDashboard({
       <Dialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
         <DialogContent className="border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
           <DialogHeader>
-            <DialogTitle className="text-zinc-900 dark:text-white">Delete selected orders?</DialogTitle>
+            <DialogTitle className="text-zinc-900 dark:text-white">{t('Delete selected orders?')}</DialogTitle>
             <DialogDescription className="text-zinc-500">
-              This permanently removes <strong className="text-zinc-700 dark:text-zinc-300">{selected.size}</strong>{' '}
-              row(s). Customers are not messaged on Telegram.
+              {t('This permanently removes')} <strong className="text-zinc-700 dark:text-zinc-300">{selected.size}</strong>{' '}
+              {t('row(s). Customers are not messaged on Telegram.')}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-3">
             <Button variant="outline" onClick={() => setBulkDeleteOpen(false)}>
-              Cancel
+              {t('Cancel')}
             </Button>
             <Button
               className="border border-red-900/50 bg-red-950/40 text-red-100 hover:bg-red-950/60"
               onClick={deleteSelected}
               disabled={loading}
             >
-              Delete
+              {t('Delete')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -831,23 +914,25 @@ export function OrdersDashboard({
       <Dialog open={bulkApproveOpen} onOpenChange={setBulkApproveOpen}>
         <DialogContent className="border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
           <DialogHeader>
-            <DialogTitle className="text-zinc-900 dark:text-white">Approve multiple orders?</DialogTitle>
+            <DialogTitle className="text-zinc-900 dark:text-white">{t('Approve multiple orders?')}</DialogTitle>
             <DialogDescription className="text-zinc-500">
-              You are about to approve <strong className="text-zinc-800 dark:text-zinc-200">{selectedSlipIds.length}</strong>{' '}
-              order(s) that have a slip submitted. Each one is completed and the customer is notified. This cannot be
-              undone.
+              {t('You are about to approve')} <strong className="text-zinc-800 dark:text-zinc-200">{selectedSlipIds.length}</strong>{' '}
+              {t('order(s) that have a slip submitted. Each one is completed and the customer is notified. This cannot be undone.')}
+              <span className="mt-2 block text-xs text-zinc-600 dark:text-zinc-400">
+                {t('Manual (non-digital) products are skipped in bulk — open each one and approve so you can type what to send the buyer.')}
+              </span>
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-3">
             <Button variant="outline" onClick={() => setBulkApproveOpen(false)}>
-              Cancel
+              {t('Cancel')}
             </Button>
             <Button
-              className="border border-amber-800/50 bg-amber-950/50 text-amber-50 hover:bg-amber-950/70"
+              className="bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
               onClick={bulkApproveSelected}
               disabled={loading || selectedSlipIds.length === 0}
             >
-              Approve {selectedSlipIds.length} order(s)
+              {t('Approve')} {selectedSlipIds.length} {t('order(s)')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -856,9 +941,9 @@ export function OrdersDashboard({
       {cleanupBots.length > 0 ? (
         <section className="space-y-3 pt-2">
           <div>
-            <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">Order archive</h2>
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">{t('Order archive')}</h2>
             <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-              Remove old completed and rejected rows from your database. Customers are not notified.
+              {t('Remove old completed and rejected rows from your database. Customers are not notified.')}
             </p>
           </div>
           <OrderHistoryCleanup bots={cleanupBots} />

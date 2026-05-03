@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { ChatCircle, ShoppingCart, List, Gear, Package } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
+import { useLanguage } from '@/lib/i18n/LanguageContext';
 
 const items = [
   { href: '/menu', label: 'Menu', icon: List, match: (p: string) => p.startsWith('/menu') },
@@ -19,6 +20,7 @@ const items = [
 ] as const;
 
 export function MobileBottomNav() {
+  const { t } = useLanguage();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const bot = searchParams.get('bot');
@@ -50,7 +52,7 @@ export function MobileBottomNav() {
                   className={cn('h-6 w-6', active && 'text-indigo-600 dark:text-indigo-400')}
                   {...(active ? { weight: 'fill' as const } : {})}
                 />
-                <span className="truncate">{item.label}</span>
+                <span className="truncate">{t(item.label)}</span>
               </Link>
             </li>
           );

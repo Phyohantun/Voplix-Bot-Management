@@ -6,6 +6,8 @@ import { FreePlanUpgradeBanner } from '@/components/dashboard/free-plan-banner';
 import { getPlanEnforcementSnapshot } from '@/lib/plan-limits';
 import { applyOrderStatusFilter, parseOrderStatusFilter, type OrderStatusFilter } from '@/lib/owner-orders-filter';
 
+import { PageHeader } from '@/components/dashboard/page-header';
+
 async function getBots(userId: string) {
   const supabase = await createClient();
   const { data, error } = await (supabase as any)
@@ -39,7 +41,9 @@ async function getOrdersPage(
 
   let query = (supabase as any)
     .from('orders')
-    .select('*, menu_items!inner(name, price), bots!inner(bot_username, user_id)', { count: 'exact' })
+    .select('*, menu_items!inner(name, price, type, delivery_content), bots!inner(bot_username, user_id)', {
+      count: 'exact',
+    })
     .eq('bots.user_id', userId)
     .order('created_at', { ascending: false })
     .range(from, to);
@@ -137,15 +141,6 @@ export default async function OrdersPage({
   return (
     <div className="space-y-6">
       <AutoRefresh intervalMs={30000} />
-      <header className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-white">Orders</h1>
-          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            Review slips first, then approve or reject. Tabs help you focus on what needs attention.
-          </p>
-        </div>
-      </header>
-
       {planSnapshot.plan === 'free' ? <FreePlanUpgradeBanner /> : null}
 
       <OrdersDashboard

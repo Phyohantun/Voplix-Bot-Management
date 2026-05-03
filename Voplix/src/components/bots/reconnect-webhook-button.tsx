@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { ArrowClockwise, SpinnerGap } from '@phosphor-icons/react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
@@ -24,6 +25,7 @@ interface ReconnectResponse {
 export function ReconnectWebhookButton({ botId }: ReconnectWebhookButtonProps) {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const { t } = useLanguage();
 
   const handleReconnect = async () => {
     setLoading(true);
@@ -33,16 +35,16 @@ export function ReconnectWebhookButton({ botId }: ReconnectWebhookButtonProps) {
       });
       const data = (await response.json()) as ReconnectResponse;
       if (!response.ok) {
-        toast.error(data.error || 'Could not refresh the Telegram link');
+        toast.error(data.error || t('Could not refresh the Telegram link'));
         return;
       }
 
       if (data.webhookInfoError) {
-        toast.warning(`Link updated, but status check failed: ${data.webhookInfoError}`);
+        toast.warning(t('Link updated, but status check failed: {error}').replace('{error}', data.webhookInfoError));
       } else if (data.webhookInfo?.last_error_message) {
-        toast.warning(`Telegram reported an issue: ${data.webhookInfo.last_error_message}`);
+        toast.warning(t('Telegram reported an issue: {error}').replace('{error}', data.webhookInfo.last_error_message));
       } else {
-        toast.success('Telegram link is healthy');
+        toast.success(t('Telegram link is healthy'));
       }
 
       console.log('[webhook reconnect]', {
@@ -54,7 +56,7 @@ export function ReconnectWebhookButton({ botId }: ReconnectWebhookButtonProps) {
 
       router.refresh();
     } catch {
-      toast.error('Could not refresh the Telegram link');
+      toast.error(t('Could not refresh the Telegram link'));
     } finally {
       setLoading(false);
     }
@@ -73,7 +75,7 @@ export function ReconnectWebhookButton({ botId }: ReconnectWebhookButtonProps) {
       ) : (
         <ArrowClockwise className="mr-1 h-3 w-3" />
       )}
-      Refresh link
+      {t('Refresh link')}
     </Button>
   );
 }

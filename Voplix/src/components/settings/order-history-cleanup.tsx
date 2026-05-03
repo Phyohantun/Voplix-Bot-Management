@@ -7,11 +7,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
+import { useLanguage } from '@/lib/i18n/LanguageContext';
 
 type BotOption = { id: string; bot_username: string };
 
 export function OrderHistoryCleanup({ bots }: { bots: BotOption[] }) {
   const router = useRouter();
+  const { t } = useLanguage();
   const [botId, setBotId] = useState(bots[0]?.id ?? '');
   const [cleanupDays, setCleanupDays] = useState(90);
   const [loading, setLoading] = useState(false);
@@ -22,10 +24,10 @@ export function OrderHistoryCleanup({ bots }: { bots: BotOption[] }) {
 
   const runCleanup = async () => {
     if (!botId) {
-      toast.error('Choose a shop first');
+      toast.error(t('Choose a shop first'));
       return;
     }
-    const msg = `Remove completed and rejected orders older than ${cleanupDays} days for this shop? This cannot be undone.`;
+    const msg = t('Remove completed and rejected orders older than {days} days for this shop? This cannot be undone.').replace('{days}', cleanupDays.toString());
     if (!confirm(msg)) return;
 
     setLoading(true);
@@ -41,19 +43,19 @@ export function OrderHistoryCleanup({ bots }: { bots: BotOption[] }) {
         truncated?: boolean;
       };
       if (!res.ok) {
-        throw new Error(j.error || 'Cleanup failed');
+        throw new Error(j.error || t('Cleanup failed'));
       }
       toast.success(
         j.deleted === 0
-          ? 'No old finished orders matched those settings — nothing was removed.'
-          : `Removed ${j.deleted} old order(s) from your list.` +
+          ? t('No old finished orders matched those settings — nothing was removed.')
+          : t('Removed {count} old order(s) from your list.').replace('{count}', (j.deleted || 0).toString()) +
               (j.truncated
-                ? ' If the list is still long, run cleanup again to remove another batch.'
+                ? t(' If the list is still long, run cleanup again to remove another batch.')
                 : '')
       );
       router.refresh();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Cleanup failed');
+      toast.error(e instanceof Error ? e.message : t('Cleanup failed'));
     } finally {
       setLoading(false);
     }
@@ -62,17 +64,16 @@ export function OrderHistoryCleanup({ bots }: { bots: BotOption[] }) {
   return (
     <Card className="border-zinc-200 dark:border-zinc-800/80 bg-zinc-50 dark:bg-zinc-900/50 shadow-none">
       <CardHeader className="pb-4">
-        <CardTitle className="text-base font-medium text-zinc-900 dark:text-white">Order history cleanup</CardTitle>
+        <CardTitle className="text-base font-medium text-zinc-900 dark:text-white">{t('Order history cleanup')}</CardTitle>
         <CardDescription className="text-zinc-500">
-          Remove many <strong className="font-medium text-zinc-600 dark:text-zinc-400">completed</strong> and{' '}
-          <strong className="font-medium text-zinc-600 dark:text-zinc-400">rejected</strong> orders at once. Waiting
-          and in-progress orders are never removed. Only affects your dashboard list.
+          {t('Remove many')} <strong className="font-medium text-zinc-600 dark:text-zinc-400">{t('completed')}</strong> {t('and')}{' '}
+          <strong className="font-medium text-zinc-600 dark:text-zinc-400">{t('rejected')}</strong> {t('orders at once. Waiting and in-progress orders are never removed. Only affects your dashboard list.')}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-1.5">
           <Label htmlFor="cleanup-bot" className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
-            Shop
+            {t('Shop')}
           </Label>
           <select
             id="cleanup-bot"
@@ -89,7 +90,7 @@ export function OrderHistoryCleanup({ bots }: { bots: BotOption[] }) {
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="cleanup-days" className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
-            Older than (days)
+            {t('Older than (days)')}
           </Label>
           <Input
             id="cleanup-days"
@@ -108,7 +109,7 @@ export function OrderHistoryCleanup({ bots }: { bots: BotOption[] }) {
           onClick={runCleanup}
           disabled={loading || !botId}
         >
-          {loading ? 'Working…' : 'Remove old orders'}
+          {loading ? t('Working…') : t('Remove old orders')}
         </Button>
       </CardContent>
     </Card>

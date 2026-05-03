@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
+import { useLanguage } from '@/lib/i18n/LanguageContext';
 
 interface ProfileFormProps {
   initialFirstName: string;
@@ -23,17 +24,18 @@ export function ProfileForm({
   const router = useRouter();
   const pathname = usePathname();
   const supabase = createClient();
+  const { t } = useLanguage();
   const [firstName, setFirstName] = useState(initialFirstName);
   const [lastName, setLastName] = useState(initialLastName);
   const [loading, setLoading] = useState(false);
 
   const onSave = async () => {
     if (!firstName.trim()) {
-      toast.error('Please enter your first name');
+      toast.error(t('Please enter your first name'));
       return;
     }
     if (!lastName.trim()) {
-      toast.error('Please enter your last name');
+      toast.error(t('Please enter your last name'));
       return;
     }
 
@@ -61,10 +63,10 @@ export function ProfileForm({
 
       if (!response.ok) {
         const j = (await response.json().catch(() => ({}))) as { error?: string };
-        throw new Error(j.error || 'Failed to save profile');
+        throw new Error(j.error || t('Failed to save profile'));
       }
 
-      toast.success('Saved');
+      toast.success(t('Saved'));
       if (pathname.startsWith('/settings')) {
         router.refresh();
       } else {
@@ -72,7 +74,7 @@ export function ProfileForm({
         router.refresh();
       }
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to save profile');
+      toast.error(e instanceof Error ? e.message : t('Failed to save profile'));
     } finally {
       setLoading(false);
     }
@@ -85,11 +87,11 @@ export function ProfileForm({
   return (
     <Card className="border-zinc-200 dark:border-zinc-800/80 bg-zinc-50 dark:bg-zinc-900/50 shadow-none">
       <CardHeader className="pb-4">
-        <CardTitle className="text-base font-medium text-zinc-900 dark:text-white">Your name</CardTitle>
+        <CardTitle className="text-base font-medium text-zinc-900 dark:text-white">{t('Your name')}</CardTitle>
         <CardDescription className="text-zinc-500">
           {mode === 'setup'
-            ? 'Add your name to finish setup.'
-            : 'Shown in the app header and on receipts where a name is used.'}
+            ? t('Add your name to finish setup.')
+            : t('Shown in the app header and on receipts where a name is used.')}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -104,26 +106,26 @@ export function ProfileForm({
             >
               {initial}
             </div>
-            <p>Your profile uses a colored initial. Photo upload is not available yet.</p>
+            <p>{t('Your profile uses a colored initial. Photo upload is not available yet.')}</p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="space-y-2">
-            <Label className="text-zinc-700 dark:text-zinc-300">First Name</Label>
+            <Label className="text-zinc-700 dark:text-zinc-300">{t('First Name')}</Label>
             <Input
               value={firstName}
               onChange={(e) => setFirstName(e.target.value)}
-              placeholder="e.g. John"
+              placeholder={t('e.g. John')}
               className="bg-zinc-200 dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-white"
             />
           </div>
           <div className="space-y-2">
-            <Label className="text-zinc-700 dark:text-zinc-300">Last Name</Label>
+            <Label className="text-zinc-700 dark:text-zinc-300">{t('Last Name')}</Label>
             <Input
               value={lastName}
               onChange={(e) => setLastName(e.target.value)}
-              placeholder="e.g. Doe"
+              placeholder={t('e.g. Doe')}
               className="bg-zinc-200 dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-white"
             />
           </div>
@@ -134,7 +136,7 @@ export function ProfileForm({
           disabled={loading}
           className="w-full bg-zinc-100 font-medium text-zinc-900 hover:bg-white"
         >
-          {loading ? 'Saving...' : mode === 'setup' ? 'Continue' : 'Save'}
+          {loading ? t('Saving...') : mode === 'setup' ? t('Continue') : t('Save')}
         </Button>
       </CardContent>
     </Card>
