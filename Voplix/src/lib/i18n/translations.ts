@@ -74,6 +74,16 @@ export const translations: Record<string, string> = {
   "Message to send the customer": "ဝယ်ယူသူထံ ပေးပို့မည့် စာတို",
   "After you approve, the bot sends a short confirmation, then this text — bank details, login info, or how they receive the product. If you saved text on the product in Menu, it appears here; you can edit it before approving.": "အတည်ပြုပြီးနောက် ဘော့တ်က အတိုချုပ် အတည်ပြုချက်ကို ဦးစွာပို့ပြီး ဤစာသားကို ပို့ပါမည် — ဘဏ်အချက်အလက်၊ ဝင်ရောက်ရမည့်အချက်အလက် သို့မဟုတ် ကုန်ပစ္စည်းရယူနည်း။ Menu တွင် ကုန်ပစ္စည်းအတွက် စာသားသိမ်းထားပါက ဤနေရာတွင် ပေါ်လာမည်၊ အတည်မပြုမီ ပြင်နိုင်ပါသည်။",
   "You send the product": "သင်က ကုန်ပစ္စည်းကို ပေးပို့မည်",
+  "Customer delivery message": "ဝယ်ယူသူထံ ပို့ရမည့် ပေးပို့မှု စာတို",
+  "Required": "လိုအပ်သည်",
+  "After you approve the slip, the buyer receives a short confirmation, then this message. You must write it here each time so nothing is sent by mistake.":
+    "ငွေလွှဲပြေစာ အတည်ပြုပြီးနောက် ဝယ်ယူသူသည် အတိုချုပ် အတည်ပြုချက်ကို ဦးစွာရရှိပြီး ထို့နောက် ဤစာတိုကို ရရှိပါမည်။ မှားယွင်းပို့မှုမရှိစေရန် ဤနေရာတွင် တစ်ကြိမ်ချင်းစီ ရေးသွင်းရန် လိုအပ်ပါသည်။",
+  "Optional: text saved on the product in Menu (copy if helpful)":
+    "ရွေးချယ်နိုင်သည် — Menu တွင် ကုန်ပစ္စည်းအတွက် သိမ်းထားသော စာသား (လိုအပ်ပါက ကူးယူနိုင်သည်)",
+  "Write bank details, account numbers, app links, or clear instructions for the buyer…":
+    "ဘဏ်အချက်အလက်၊ အကောင့်နံပါတ်၊ အက်ပ်လင့်များ သို့မဟုတ် ဝယ်ယူသူအတွက် ရှင်းလင်းသော ညွှန်ကြားချက်များ ရေးပါ…",
+  "Enter the customer delivery message above. It is required before you can approve this order.":
+    "အထက်ပါ ဝယ်ယူသူ ပေးပို့မှု စာတိုကို ဖြည့်ပါ။ ဤအော်ဒါကို အတည်မပြုမီ လိုအပ်ပါသည်။",
   "Open the Orders page for this one": "ဤအော်ဒါအတွက် အော်ဒါစာမျက်နှာကို ဖွင့်ပါ",
   "You need to add the customer message (bank details, etc.) before approving.": "အတည်မပြုမီ ဝယ်ယူသူထံပေးမည့် စာတို (ဘဏ်အချက်အလက် စသည်) ကို ဖြည့်ရန် လိုအပ်ပါသည်။",
   "Bold text and links are optional; you can add a picture at the bottom": "စာလုံးထူးနှင့် လင့်များ ရွေးချယ်နိုင်သည်၊ အောက်တွင် ပုံတွဲနိုင်ပါသည်",
@@ -231,6 +241,30 @@ export const translations: Record<string, string> = {
   "Slip submitted. We will review it shortly.": "ပြေစာ တင်ပြပြီးပါပြီ။ မကြာမီ စစ်ဆေးပေးပါမည်။",
   "Signed in as": "အကောင့်ဝင်ထားသည်",
   "Plans: Free · Pro (45,000 MMK) · Plus (65,000 MMK).": "အစီအစဉ်များ: Free · Pro (45,000 MMK) · Plus (65,000 MMK)။",
+  "per month for paid tiers; bank transfer and slip approval.":
+    "ငွေပေးချေသော အစီအစဉ်များအတွက် တစ်လလျှင်; ဘဏ်လွှဲပြီး ပြေစာအတည်ပြုချက်။",
+  "Plans at a glance": "အစီအစဉ်များ အကျဉ်းချုပ်",
+  "Billing is manual: bank transfer each period. We verify your slip. Cards are not stored and nothing is charged automatically.":
+    "ငွေပေးချေမှုကို လက်ဖြင့် လုပ်ဆောင်ရသည် — သက်တမ်းတစ်ခုစီအတွက် ဘဏ်လွှဲပါ။ သင့်ပြေစာကို ကျွန်ုပ်တို့ စစ်ဆေးပါသည်။ ကတ်ကို သိမ်းထားခြင်း မရှိပါ၊ အလိုအလျောက် ငွေဖြတ်ခြင်း လည်းမရှိပါ။",
+  "No monthly fee": "လစဉ်ကြေး မရှိပါ",
+  "per month": "တစ်လလျှင်",
+  "Your current plan": "သင်၏ လက်ရှိအစီအစဉ်",
+  "1 bot · up to 5 products · 50 orders per month": "ဘော့တ် ၁ ခု · ကုန်ပစ္စည်း ၅ ခုအထိ · လတစ်လလျှင် အော်ဒါ ၅၀",
+  "Manual fulfillment only; no digital stock or auto-send":
+    "လူကိုယ်တိုင် ပေးပို့မှုသာ; ဒီဂျစ်တယ် စတော့ သို့မဟုတ် အလိုအလျောက် ပို့မှုမရှိပါ",
+  "2 bots; unlimited products and orders": "ဘော့တ် ၂ ခု; ကုန်ပစ္စည်းနှင့် အော်ဒါ အကန့်အသတ်မရှိ",
+  "Digital auto-delivery, stock, saved bot messages, exports":
+    "ဒီဂျစ်တယ် အလိုအလျောက် ပေးပို့မှု၊ စတော့၊ သိမ်းထားသော ဘော့တ် စာသားများ၊ ထုတ်ယူမှုများ",
+  "5 bots; same product and order limits as Pro": "ဘော့တ် ၅ ခု; Pro နှင့် တူညီသော ကုန်ပစ္စည်းနှင့် အော်ဒါ ကန့်သတ်ချက်များ",
+  "Broadcast, advanced analytics, sales vs prior month":
+    "ကြေညာချက်ပေးပို့ခြင်း၊ အဆင့်မြင့် ခွဲခြမ်းစိတ်ဖြာမှု၊ ယခင်လနှင့် ရောင်းအား နှိုင်းယှဉ်ချက်",
+  "These limits are enforced in the app. Paid prices are the MMK amounts set for this platform.":
+    "ဤကန့်သတ်ချက်များကို အက်ပ်တွင် အသုံးချပါသည်။ ငွေပေးချေသော ဈေးနှုန်းများသည် ဤပလက်ဖောင်းအတွက် သတ်မှတ်ထားသော MMK ပမာဏများ ဖြစ်သည်။",
+  "Renewal / expiry": "သက်တမ်းတိုး / ကုန်ဆုံးရက်",
+  "— (Free plan)": "— (အခမဲ့ အစီအစဉ်)",
+  "Expired": "သက်တမ်းကုန်ပါပြီ",
+  "Pro/Plus access ends at the time above unless you renew before then.":
+    "ထိုအချိန်မတိုင်မီ သက်တမ်းမတိုးပါက Pro/Plus အသုံးပြုခွင့် ပြီးဆုံးပါမည်။",
   "Full marketing page": "အပြည့်အစုံ ကြော်ငြာစာမျက်နှာ",
   "Current plan": "လက်ရှိ အစီအစဉ်",
   "Orders this month": "ယခုလအတွက် အော်ဒါများ",
@@ -241,6 +275,21 @@ export const translations: Record<string, string> = {
   "Upgrade below": "အောက်တွင် အဆင့်မြှင့်ပါ",
   "Plan comparison": "အစီအစဉ် နှိုင်းယှဉ်ချက်",
   "Same limits as our public pricing — no need to leave this page.": "ကျွန်ုပ်တို့၏ အများပြည်သူဆိုင်ရာ ဈေးနှုန်းသတ်မှတ်ချက်များအတိုင်းဖြစ်သည် — ဤစာမျက်နှာမှ ထွက်သွားရန်မလိုပါ။",
+  "Renew by bank transfer before access ends (see renewal date at the top). Cards are not stored; there are no automatic charges.":
+    "အသုံးပြုခွင့် မကုန်မီ ဘဏ်လွှဲပြီး သက်တမ်းတိုးပါ (ထိပ်ရှိ သက်တမ်းတိုးရက်ကို ကြည့်ပါ)။ ကတ်ကို သိမ်းထားခြင်း မရှိပါ၊ အလိုအလျောက် ငွေဖြတ်ခြင်း လည်းမရှိပါ။",
+  "On this tier:": "ဤအဆင့်တွင်:",
+  "Pick Pro or Plus, pay with the details on this page, then upload your slip. Your plan updates after we approve the payment.":
+    "Pro သို့မဟုတ် Plus ကို ရွေးပါ၊ ဤစာမျက်နှာရှိ အချက်အလက်များဖြင့် ငွေပေးချေပါ၊ ထို့နောက် ပြေစာတင်ပါ။ ငွေပေးချေမှုကို အတည်ပြုပြီးနောက် သင်၏အစီအစဉ် ပြောင်းလဲပါမည်။",
+  "Monthly billing": "လစဉ် ငွေပေးချေမှု",
+  "Pro and Plus prices are for one month of access. When your payment slip is approved, one month is added automatically to your renewal date at the top of this page. If you already have time left, the new month is added after that date.":
+    "Pro နှင့် Plus ဈေးနှုန်းများသည် တစ်လတာအသုံးပြုခွင့် အတွက် ဖြစ်သည်။ သင့်ငွေလွှဲပြေစာ အတည်ပြုပြီးပါက ဤစာမျက်နှာထိပ်ရှိ သက်တမ်းတိုးရက်သို့ တစ်လ အလိုအလျောက် ထပ်ထည့်ပေးပါမည်။ သင့်တွင် အချိန်ကျန်ပါက အသစ်တစ်လကို ထိုရက်ပြီးနောက် ထပ်ထည့်ပါမည်။",
+  "Want three or more months in a single payment?": "တစ်ကြိမ်တည်းတွင် သုံးလ သို့မဟုတ် ပိုကြာအောင် ဝယ်ယူလိုပါသလား?",
+  "Message us on Telegram:": "Telegram တွင် စာပို့ပါ —",
+  "Each approved slip on this page extends access by one month.":
+    "ဤစာမျက်နှာမှ အတည်ပြုပြီးသော ပြေစာတစ်ခုစီသည် အသုံးပြုခွင့်ကို တစ်လတိုးမြှင့်ပေးပါသည်။",
+  "Pick Pro or Plus, pay one month’s fee with the details on this page, then upload your slip. When we approve it, your plan and paid end date update automatically for one month.":
+    "Pro သို့မဟုတ် Plus ကို ရွေးပါ၊ ဤစာမျက်နှာရှိ အချက်အလက်များဖြင့် တစ်လစာကြေးပေးချေပြီး ပြေစာတင်ပါ။ အတည်ပြုပြီးပါက သင်၏အစီအစဉ်နှင့် ပေးချေထားသော သက်တမ်းကုန်ရက် တို့သည် တစ်လအတွက် အလိုအလျောက် ပြင်ဆင်ပေးပါမည်။",
+  "For several months at once, use Telegram:": "လအများအပြားကို တစ်ခါတည်း လိုပါက Telegram သုံးပါ —",
   "Feature": "လုပ်ဆောင်ချက်",
   "Pro": "Pro",
   "Plus": "Plus",

@@ -279,7 +279,7 @@ export function AdminUsersTable({ initialUsers }: { initialUsers: AdminUserRow[]
               <th className="px-3 py-2">Signed up</th>
               <th className="px-3 py-2">Status</th>
               <th className="px-3 py-2">Plan</th>
-              <th className="px-3 py-2">Period end</th>
+              <th className="px-3 py-2">Subscription expires</th>
               <th className="px-3 py-2">Features</th>
               <th className="px-3 py-2">Notes</th>
               <th className="px-3 py-2">Actions</th>

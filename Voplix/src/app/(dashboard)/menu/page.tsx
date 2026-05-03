@@ -35,12 +35,13 @@ interface MenuItemRecord {
 }
 
 import { PageHeader } from '@/components/dashboard/page-header';
+import { BOT_SELECT_SAFE } from '@/lib/bot-client-fields';
 
 async function getBots(userId: string) {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from('bots')
-    .select('*')
+    .select(BOT_SELECT_SAFE)
     .eq('user_id', userId)
     .eq('is_active', true)
     .order('created_at', { ascending: false });

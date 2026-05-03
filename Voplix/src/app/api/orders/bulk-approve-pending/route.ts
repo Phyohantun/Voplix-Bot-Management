@@ -36,7 +36,7 @@ export async function POST(request: Request) {
 
     const { data: rows, error } = await (supabaseAdmin as any)
       .from('orders')
-      .select('id')
+      .select('id, menu_items!inner(type)')
       .eq('status', 'SLIP_SUBMITTED')
       .in('bot_id', scopedIds)
       .order('created_at', { ascending: true });
@@ -45,17 +45,24 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    const ids = ((rows as { id: string }[]) || []).map((r) => r.id);
+    type Row = { id: string; menu_items: { type: string } };
+    const list = (rows as Row[]) || [];
     let approved = 0;
     const failures: string[] = [];
 
-    for (const id of ids) {
-      const r = await approveSlipOrderForOwner(id, user.id, { manual_delivery_data: null });
+    for (const row of list) {
+      if (row.menu_items?.type === 'MANUAL_DELIVERY') {
+        failures.push(
+          `${row.id.slice(0, 8)}: manual product — open Orders, add the customer message, then approve one by one`
+        );
+        continue;
+      }
+      const r = await approveSlipOrderForOwner(row.id, user.id, {});
       if (r.ok) approved++;
-      else failures.push(`${id.slice(0, 8)}: ${r.error}`);
+      else failures.push(`${row.id.slice(0, 8)}: ${r.error}`);
     }
 
-    return NextResponse.json({ approved, attempted: ids.length, failures });
+    return NextResponse.json({ approved, attempted: list.length, failures });
   } catch (e) {
     console.error('bulk-approve-pending', e);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

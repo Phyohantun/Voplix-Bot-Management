@@ -11,7 +11,6 @@ import {
 import { effectivePlanTier, loadPlatformAccountFlagsAdmin } from '@/lib/plan-limits';
 
 type ApproveBody = {
-  manual_delivery_data?: Record<string, unknown> | null;
   manual_message?: string | null;
 };
 
@@ -44,7 +43,7 @@ export async function approveSlipOrderForOwner(
     return { ok: false, error: 'Order is not waiting for slip approval', status: 400 };
   }
 
-  const { manual_delivery_data, manual_message } = body;
+  const { manual_message } = body;
 
   let deliveryContent = '';
 
@@ -86,24 +85,23 @@ export async function approveSlipOrderForOwner(
     }
   } else if (order.menu_items.type === 'MANUAL_DELIVERY') {
     const pasted = typeof manual_message === 'string' ? manual_message.trim() : '';
-    if (pasted) {
-      const normalized = ownerDeliveryAsPlainText(pasted);
-      deliveryContent = normalized || 'Thank you for your purchase!';
-    } else if (manual_delivery_data && typeof manual_delivery_data === 'object') {
-      deliveryContent = Object.entries(manual_delivery_data)
-        .filter(([_, value]) => value != null && String(value).trim() !== '')
-        .map(([key, value]) => {
-          const label = key.replace(/_/g, ' ');
-          const body = ownerDeliveryAsPlainText(String(value)) || String(value).trim();
-          return `${label}: ${body}`;
-        })
-        .join('\n');
-    } else {
-      const fromMenu = order.menu_items.delivery_content
-        ? ownerDeliveryAsPlainText(String(order.menu_items.delivery_content))
-        : '';
-      deliveryContent = fromMenu || 'Thank you for your purchase!';
+    if (!pasted) {
+      return {
+        ok: false,
+        error:
+          'This product is fulfilled by you. Enter the exact message the customer should receive (accounts, links, instructions) before approving.',
+        status: 400,
+      };
     }
+    const normalized = ownerDeliveryAsPlainText(pasted);
+    if (!normalized) {
+      return {
+        ok: false,
+        error: 'That message is empty after removing formatting. Type the details you want to send the customer.',
+        status: 400,
+      };
+    }
+    deliveryContent = normalized;
   } else {
     const fromMenu = order.menu_items.delivery_content
       ? ownerDeliveryAsPlainText(String(order.menu_items.delivery_content))

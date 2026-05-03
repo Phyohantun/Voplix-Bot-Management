@@ -3,6 +3,10 @@ import { createClient } from '@/lib/supabase/server';
 import redis, { getRedisDiagnostics } from '@/lib/redis';
 
 export async function GET() {
+  if (process.env.NODE_ENV === 'production' && process.env.ALLOW_DEBUG_HEALTH_APIS !== 'true') {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  }
+
   const supabase = await createClient();
   const {
     data: { user },

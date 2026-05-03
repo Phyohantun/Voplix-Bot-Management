@@ -24,6 +24,7 @@ import type { OrderStatusFilter } from '@/lib/owner-orders-filter';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { cn } from '@/lib/utils';
 import { OrderHistoryCleanup } from '@/components/settings/order-history-cleanup';
+import { telegramHtmlToPlain } from '@/lib/bot-telegram-copy';
 
 type CleanupBotOption = { id: string; bot_username: string };
 
@@ -142,21 +143,17 @@ export function OrdersDashboard({
     setManualDeliveryNotes({});
   }, [initialOrders, page, pageSize, selectedBotId, statusFilter]);
 
-  const manualOutboundText = (order: any) =>
-    manualDeliveryNotes[order.id] !== undefined
-      ? manualDeliveryNotes[order.id]
-      : (embeddedMenuItem(order)?.delivery_content ?? '');
+  /** Draft message for manual-delivery orders only (required before approve; not prefilled from Menu). */
+  const manualMessageDraft = (order: any) =>
+    embeddedMenuItem(order)?.type === 'MANUAL_DELIVERY' ? (manualDeliveryNotes[order.id] ?? '') : '';
+
+  const manualApproveBlocked = (order: any) =>
+    order.status === 'SLIP_SUBMITTED' &&
+    embeddedMenuItem(order)?.type === 'MANUAL_DELIVERY' &&
+    !manualMessageDraft(order).trim();
 
   const setManualOutboundText = (orderId: string, value: string) => {
-    setManualDeliveryNotes((prev) => {
-      const next = { ...prev };
-      if (value === '') {
-        delete next[orderId];
-      } else {
-        next[orderId] = value;
-      }
-      return next;
-    });
+    setManualDeliveryNotes((prev) => ({ ...prev, [orderId]: value }));
   };
 
   const pendingOnPage = useMemo(
@@ -280,17 +277,15 @@ export function OrdersDashboard({
 
   const handleApprove = async (order: any) => {
     const isManual = embeddedMenuItem(order)?.type === 'MANUAL_DELIVERY';
-    const outbound = manualOutboundText(order).trim();
+    const outbound = manualMessageDraft(order).trim();
     if (isManual && !outbound) {
-      toast.error(
-        t('Write what the customer should receive (account number, link, instructions) in the box above, or save default text on this product in Menu.')
-      );
+      toast.error(t('Enter the customer delivery message above. It is required before you can approve this order.'));
       return;
     }
 
     setLoading(true);
     try {
-      const body = isManual ? { manual_message: outbound } : { manual_delivery_data: null };
+      const body = isManual ? { manual_message: outbound } : {};
       const response = await fetch(`/api/orders/${order.id}/approve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -457,23 +452,52 @@ export function OrdersDashboard({
   /** Full-width card: manual delivery text (second Telegram message after approve). Not shown in the narrow Actions column. */
   const manualOutboundEditorCard = (order: any) => {
     if (order.status !== 'SLIP_SUBMITTED' || embeddedMenuItem(order)?.type !== 'MANUAL_DELIVERY') return null;
+    const item = embeddedMenuItem(order);
+    const savedRaw = item?.delivery_content;
+    const savedPlain =
+      typeof savedRaw === 'string' && savedRaw.trim()
+        ? telegramHtmlToPlain(savedRaw).trim() || savedRaw.trim()
+        : '';
+
     return (
-      <Card className="border-zinc-200 bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
-        <CardHeader className="space-y-1 pb-2 pt-4">
-          <CardTitle className="text-sm font-semibold text-zinc-900 dark:text-white">
-            {t('Message to send the customer')}
+      <Card className="overflow-hidden border-zinc-300 bg-white shadow-sm dark:border-zinc-600 dark:bg-zinc-950/80">
+        <CardHeader className="space-y-1.5 border-b border-zinc-100 bg-zinc-50/90 pb-4 pt-4 dark:border-zinc-800 dark:bg-zinc-900/50">
+          <CardTitle className="flex flex-wrap items-baseline gap-2 text-base font-semibold text-zinc-900 dark:text-white">
+            <span>{t('Customer delivery message')}</span>
+            <span className="text-sm font-normal text-red-600 dark:text-red-400" aria-hidden>
+              ({t('Required')})
+            </span>
           </CardTitle>
-          <CardDescription className="text-xs leading-relaxed">
-            {t('After you approve, the bot sends a short confirmation, then this text — bank details, login info, or how they receive the product. If you saved text on the product in Menu, it appears here; you can edit it before approving.')}
+          <CardDescription className="text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+            {t('After you approve the slip, the buyer receives a short confirmation, then this message. You must write it here each time so nothing is sent by mistake.')}
           </CardDescription>
         </CardHeader>
-        <CardContent className="pt-0">
-          <Textarea
-            value={manualOutboundText(order)}
-            onChange={(e) => setManualOutboundText(order.id, e.target.value)}
-            rows={5}
-            className="min-h-[120px] resize-y border-zinc-300 bg-zinc-50 text-sm text-zinc-900 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-100"
-          />
+        <CardContent className="space-y-4 pt-4">
+          {savedPlain ? (
+            <details className="rounded-lg border border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900/40">
+              <summary className="cursor-pointer select-none px-3 py-2.5 text-xs font-medium text-zinc-700 marker:text-zinc-500 dark:text-zinc-300">
+                {t('Optional: text saved on the product in Menu (copy if helpful)')}
+              </summary>
+              <div className="border-t border-zinc-200 px-3 py-3 text-xs leading-relaxed whitespace-pre-wrap text-zinc-600 dark:border-zinc-700 dark:text-zinc-400">
+                {savedPlain}
+              </div>
+            </details>
+          ) : null}
+          <div className="space-y-2">
+            <label htmlFor={`manual-msg-${order.id}`} className="sr-only">
+              {t('Customer delivery message')}
+            </label>
+            <Textarea
+              id={`manual-msg-${order.id}`}
+              required
+              aria-required
+              value={manualMessageDraft(order)}
+              onChange={(e) => setManualOutboundText(order.id, e.target.value)}
+              rows={6}
+              placeholder={t('Write bank details, account numbers, app links, or clear instructions for the buyer…')}
+              className="min-h-[140px] resize-y border-zinc-300 bg-white text-sm leading-relaxed text-zinc-900 placeholder:text-zinc-400 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-100 dark:placeholder:text-zinc-500"
+            />
+          </div>
         </CardContent>
       </Card>
     );
@@ -506,7 +530,7 @@ export function OrdersDashboard({
               <Button
                 type="button"
                 onClick={() => handleApprove(order)}
-                disabled={loading}
+                disabled={loading || manualApproveBlocked(order)}
                 className="border border-zinc-600 bg-zinc-100 text-zinc-900 hover:bg-white dark:border-zinc-500 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700"
               >
                 {t('Approve & complete')}
@@ -728,7 +752,7 @@ export function OrdersDashboard({
                                 type="button"
                                 size="sm"
                                 className="border border-zinc-500 bg-zinc-200 text-zinc-900 hover:bg-zinc-300 dark:border-zinc-600 dark:bg-zinc-700 dark:text-white dark:hover:bg-zinc-600"
-                                disabled={loading}
+                                disabled={loading || manualApproveBlocked(order)}
                                 onClick={() => handleApprove(order)}
                               >
                                 {t('Approve')}
@@ -842,7 +866,7 @@ export function OrdersDashboard({
                                     type="button"
                                     size="sm"
                                     className="h-8 border border-zinc-500 bg-zinc-200 text-zinc-900 hover:bg-zinc-300 dark:border-zinc-600 dark:bg-zinc-700 dark:text-white dark:hover:bg-zinc-600"
-                                    disabled={loading}
+                                    disabled={loading || manualApproveBlocked(order)}
                                     onClick={() => handleApprove(order)}
                                   >
                                     {t('Approve')}

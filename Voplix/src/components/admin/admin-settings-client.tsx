@@ -189,7 +189,11 @@ export function AdminSettingsClient({
             />
           </div>
           <div className="space-y-2">
-            <Label className="text-zinc-300">Days added per approval</Label>
+            <Label className="text-zinc-300">Days per approved slip (30 = one month)</Label>
+            <p className="text-xs text-zinc-500">
+              Each time you approve a subscription payment, this many days are added to the user’s paid access (stacked
+              from their current end date if it is still in the future).
+            </p>
             <Input
               type="number"
               min={1}

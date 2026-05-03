@@ -43,6 +43,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
       .select('subscription_period_days')
       .eq('id', 'default')
       .maybeSingle();
+    /** One billing period per approved slip (default 30 days ≈ one month). Stacks from current end if still active. */
     const days = Math.max(1, Math.min(3650, Math.floor(Number(settings?.subscription_period_days) || 30)));
     const existingEndRaw = ex.subscription_period_end as string | null | undefined;
     const existingEnd = existingEndRaw ? new Date(existingEndRaw) : null;

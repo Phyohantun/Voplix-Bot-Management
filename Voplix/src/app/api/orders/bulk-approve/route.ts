@@ -51,7 +51,7 @@ export async function POST(request: Request) {
         );
         continue;
       }
-      const r = await approveSlipOrderForOwner(row.id, user.id, { manual_delivery_data: null });
+      const r = await approveSlipOrderForOwner(row.id, user.id, {});
       if (r.ok) approved++;
       else failures.push(`${row.id.slice(0, 8)}: ${r.error}`);
     }

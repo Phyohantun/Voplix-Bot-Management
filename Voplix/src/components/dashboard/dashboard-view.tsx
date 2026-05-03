@@ -123,7 +123,7 @@ export function DashboardView({
       const res = await fetch(`/api/orders/${orderId}/approve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ manual_delivery_data: null }),
+        body: JSON.stringify({}),
       });
       if (!res.ok) {
         const j = (await res.json().catch(() => ({}))) as { error?: string };

@@ -95,6 +95,11 @@ export default async function SubscriptionPage() {
 
   const bankHtml = sanitizeOwnerHtml(bankRaw);
   const supportWhatsappUrl = (process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP_URL || '').trim();
+  const multiMonthTelegramUser = (
+    process.env.NEXT_PUBLIC_SUBSCRIPTION_MULTI_MONTH_TELEGRAM || 'ismecy'
+  )
+    .trim()
+    .replace(/^@/, '') || 'ismecy';
 
   return (
     <SubscriptionClient
@@ -110,6 +115,7 @@ export default async function SubscriptionPage() {
       pricePlusMmk={pricePlusMmk}
       promptpayUrl={promptpayUrl}
       lastRejection={lastRejection}
+      multiMonthTelegramUser={multiMonthTelegramUser}
     />
   );
 }

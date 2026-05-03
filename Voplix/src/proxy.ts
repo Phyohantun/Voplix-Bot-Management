@@ -11,6 +11,27 @@ function copyCookies(from: NextResponse, to: NextResponse) {
   });
 }
 
+/** Logged-in shop owner UI (must match (dashboard) routes + subscription + onboarding). */
+const OWNER_APP_PREFIXES = [
+  '/dashboard',
+  '/subscription',
+  '/onboarding',
+  '/bots',
+  '/menu',
+  '/orders',
+  '/broadcast',
+  '/stock',
+  '/profile',
+  '/settings',
+  '/profile-setup',
+  '/account-pending',
+  '/account-suspended',
+] as const;
+
+function isOwnerAppPath(pathname: string): boolean {
+  return OWNER_APP_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+}
+
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -89,11 +110,7 @@ export async function proxy(request: NextRequest) {
       pathname.startsWith('/signup/');
 
     if (!exempt) {
-      if (
-        pathname.startsWith('/dashboard') ||
-        pathname.startsWith('/subscription') ||
-        pathname.startsWith('/onboarding')
-      ) {
+      if (isOwnerAppPath(pathname)) {
         return NextResponse.redirect(new URL('/maintenance', request.url));
       }
       if (pathname.startsWith('/api/')) {
@@ -144,7 +161,7 @@ export async function proxy(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (pathname.startsWith('/dashboard') || pathname.startsWith('/onboarding')) {
+  if (isOwnerAppPath(pathname)) {
     if (!user) {
       return NextResponse.redirect(new URL('/login', request.url));
     }
@@ -164,10 +181,22 @@ export const config = {
     '/admin/:path*',
     '/dashboard/:path*',
     '/subscription',
+    '/subscription/:path*',
     '/onboarding/:path*',
     '/maintenance',
     '/login',
     '/signup',
+    '/bots/:path*',
+    '/menu/:path*',
+    '/orders/:path*',
+    '/broadcast/:path*',
+    '/stock/:path*',
+    '/profile/:path*',
+    '/settings/:path*',
+    '/profile-setup',
+    '/profile-setup/:path*',
+    '/account-pending',
+    '/account-suspended',
     '/api/:path*',
   ],
 };

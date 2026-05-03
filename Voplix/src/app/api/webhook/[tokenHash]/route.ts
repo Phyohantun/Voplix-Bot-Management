@@ -121,6 +121,14 @@ export async function POST(
   { params }: { params: Promise<{ tokenHash: string }> }
 ) {
   try {
+    const webhookSecret = process.env.TELEGRAM_WEBHOOK_SECRET?.trim();
+    if (webhookSecret && webhookSecret.length >= 16) {
+      const headerSecret = request.headers.get('x-telegram-bot-api-secret-token');
+      if (headerSecret !== webhookSecret) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+    }
+
     const { tokenHash } = await params;
     const update: TelegramUpdate = await request.json();
 

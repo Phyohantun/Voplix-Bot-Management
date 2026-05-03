@@ -4,6 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 import { validateBotToken, setWebhook } from '@/lib/telegram';
 import { encrypt, hashToken } from '@/lib/encryption';
 import { checkCanInsertNewBot } from '@/lib/plan-limits';
+import { BOT_SELECT_SAFE } from '@/lib/bot-client-fields';
 
 export async function POST(request: Request) {
   try {
@@ -69,7 +70,7 @@ export async function POST(request: Request) {
           updated_at: new Date().toISOString(),
         })
         .eq('id', existingBot.id)
-        .select()
+        .select(BOT_SELECT_SAFE)
         .single();
 
       if (updateError) {
@@ -95,7 +96,7 @@ export async function POST(request: Request) {
         webhook_set: true,
         is_active: true,
       })
-      .select()
+      .select(BOT_SELECT_SAFE)
       .single();
 
     if (error) {
@@ -120,7 +121,7 @@ export async function GET() {
 
     const { data: bots, error } = await (supabaseAdmin
       .from('bots') as any)
-      .select('*')
+      .select(BOT_SELECT_SAFE)
       .eq('user_id', user.id)
       .eq('is_active', true)
       .order('created_at', { ascending: false });

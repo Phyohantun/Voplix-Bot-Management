@@ -30,6 +30,7 @@ export function SubscriptionClient({
   pricePlusMmk,
   promptpayUrl,
   lastRejection,
+  multiMonthTelegramUser,
 }: {
   userEmail: string;
   currentPlan: string;
@@ -43,6 +44,8 @@ export function SubscriptionClient({
   pricePlusMmk: number;
   promptpayUrl: string | null;
   lastRejection: LastRejection;
+  /** Telegram username (no @) for multi-month purchases; opens https://t.me/{user} */
+  multiMonthTelegramUser: string;
 }) {
   const router = useRouter();
   const { t } = useLanguage();
@@ -93,21 +96,99 @@ export function SubscriptionClient({
   };
 
   const planLabel = useMemo(() => currentPlan.toUpperCase(), [currentPlan]);
+  const tgUser = multiMonthTelegramUser.replace(/^@/, '').trim() || 'ismecy';
+  const tgUrl = `https://t.me/${tgUser}`;
+  const tgLabel = `@${tgUser}`;
+
+  const planTableRows = useMemo(
+    () =>
+      PLAN_COMPARISON_ROWS.filter((r) => r.feature !== 'Price').concat([
+        {
+          feature: 'Price',
+          free: `0 MMK`,
+          pro: `${priceProMmk.toLocaleString()} MMK / mo`,
+          plus: `${pricePlusMmk.toLocaleString()} MMK / mo`,
+        },
+      ]),
+    [priceProMmk, pricePlusMmk]
+  );
+
+  const planCardRing = (active: boolean) =>
+    cn(
+      'flex flex-col rounded-xl border p-4 shadow-sm transition-shadow dark:bg-zinc-950/60',
+      active
+        ? 'border-indigo-500 bg-indigo-50/40 ring-2 ring-indigo-500 dark:border-indigo-500 dark:bg-indigo-950/20'
+        : 'border-zinc-200 bg-white dark:border-zinc-700'
+    );
+
+  const renewalExpiryLine = () => {
+    if (!subscriptionPeriodEnd?.trim()) {
+      return (
+        <span className="text-zinc-700 dark:text-zinc-300">
+          {planSnapshot.plan === 'free' ? t('— (Free plan)') : t('No fixed end date')}
+        </span>
+      );
+    }
+    const expired =
+      planSnapshot.paid_period_lapsed || new Date(subscriptionPeriodEnd).getTime() <= Date.now();
+    return (
+      <span className="text-zinc-900 dark:text-white">
+        {formatDateTimeUtc(subscriptionPeriodEnd)}
+        {expired ? (
+          <span className="ml-2 font-normal text-amber-700 dark:text-amber-300">({t('Expired')})</span>
+        ) : null}
+      </span>
+    );
+  };
+
+  const showUpgradeCta = planSnapshot.plan !== 'plus' || planSnapshot.paid_period_lapsed;
 
   return (
-    <div className="mx-auto max-w-3xl space-y-8">
-      <header className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+    <div className="mx-auto max-w-5xl space-y-10">
+      <header className="space-y-4 border-b border-zinc-200 pb-8 dark:border-zinc-800">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-white">{t('Subscription')}</h1>
-          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            {t('Signed in as')} <span className="font-medium text-zinc-800 dark:text-zinc-200">{userEmail}</span>.{' '}
-            {t(`Plans: Free · Pro (${priceProMmk.toLocaleString()} MMK) · Plus (${pricePlusMmk.toLocaleString()} MMK).`)}{' '}
-            <Link href="/pricing" className="text-indigo-600 underline-offset-2 hover:underline dark:text-indigo-400">
-              {t('Full marketing page')}
-            </Link>
+          <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+            <span className="text-zinc-500">{t('Signed in as')}</span>{' '}
+            <span className="font-mono text-zinc-800 dark:text-zinc-200">{userEmail || '—'}</span>
           </p>
         </div>
+        <div className="rounded-xl border border-zinc-200 bg-zinc-50/90 px-4 py-3 dark:border-zinc-700 dark:bg-zinc-900/40">
+          <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">{t('Renewal / expiry')}</p>
+          <p className="mt-1.5 text-sm font-medium tabular-nums">{renewalExpiryLine()}</p>
+          {planSnapshot.plan !== 'free' && subscriptionPeriodEnd && !planSnapshot.paid_period_lapsed ? (
+            <p className="mt-2 text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
+              {t('Pro/Plus access ends at the time above unless you renew before then.')}
+            </p>
+          ) : null}
+        </div>
       </header>
+
+      <Card className="border-indigo-200/80 bg-indigo-50/40 dark:border-indigo-900/50 dark:bg-indigo-950/20">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base font-medium text-zinc-900 dark:text-white">{t('Monthly billing')}</CardTitle>
+          <CardDescription className="text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">
+            {t(
+              'Pro and Plus prices are for one month of access. When your payment slip is approved, one month is added automatically to your renewal date at the top of this page. If you already have time left, the new month is added after that date.'
+            )}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">
+          <p>
+            {t('Want three or more months in a single payment?')}{' '}
+            {t('Message us on Telegram:')}{' '}
+            <a
+              href={tgUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-indigo-700 underline-offset-2 hover:underline dark:text-indigo-300"
+            >
+              {tgLabel}
+            </a>
+            .
+          </p>
+        </CardContent>
+      </Card>
 
       <Card className="border-zinc-200 dark:border-zinc-800">
         <CardHeader className="pb-3">
@@ -147,30 +228,88 @@ export function SubscriptionClient({
           ) : (
             <p className="text-sm text-zinc-600 dark:text-zinc-400">{t('Orders: unlimited on your current plan.')}</p>
           )}
-          <div className="flex flex-wrap items-center gap-3">
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">
-              <span className="font-medium text-zinc-800 dark:text-zinc-200">{t('Paid access until:')}</span>{' '}
-              {subscriptionPeriodEnd
-                ? formatDateTimeUtc(subscriptionPeriodEnd)
-                : tier === 'free'
-                  ? t('— (upgrade to start a paid period)')
-                  : t('No fixed end date')}
-            </p>
-            {!atTop ? (
+          {showUpgradeCta ? (
+            <div className="flex flex-wrap items-center gap-3 pt-1">
               <Link
                 href="#upgrade"
                 className="inline-flex h-9 items-center justify-center rounded-md bg-indigo-600 px-4 text-sm font-medium text-white hover:bg-indigo-700"
               >
                 {t('Upgrade below')}
               </Link>
-            ) : null}
-          </div>
+            </div>
+          ) : null}
         </CardContent>
       </Card>
 
+      <section className="space-y-4" id="plans-overview">
+        <div>
+          <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">{t('Plans at a glance')}</h2>
+          <p className="mt-1 max-w-3xl text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+            {t('Billing is manual: bank transfer each period. We verify your slip. Cards are not stored and nothing is charged automatically.')}{' '}
+            {t('Each approved slip on this page extends access by one month.')}
+          </p>
+        </div>
+        <div className="grid gap-4 lg:grid-cols-3">
+          <div className={planCardRing(tier === 'free')}>
+            <div className="flex items-start justify-between gap-2">
+              <p className="text-sm font-semibold text-zinc-900 dark:text-white">{t('Free')}</p>
+              {tier === 'free' ? (
+                <span className="shrink-0 rounded-full bg-indigo-600/15 px-2 py-0.5 text-[11px] font-medium text-indigo-800 dark:bg-indigo-400/15 dark:text-indigo-200">
+                  {t('Your current plan')}
+                </span>
+              ) : null}
+            </div>
+            <p className="mt-3 text-2xl font-semibold tabular-nums text-zinc-900 dark:text-white">0 MMK</p>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">{t('No monthly fee')}</p>
+            <ul className="mt-4 space-y-2 text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">
+              <li>{t('1 bot · up to 5 products · 50 orders per month')}</li>
+              <li>{t('Manual fulfillment only; no digital stock or auto-send')}</li>
+            </ul>
+          </div>
+          <div className={planCardRing(tier === 'pro')}>
+            <div className="flex items-start justify-between gap-2">
+              <p className="text-sm font-semibold text-zinc-900 dark:text-white">{t('Pro')}</p>
+              {tier === 'pro' ? (
+                <span className="shrink-0 rounded-full bg-indigo-600/15 px-2 py-0.5 text-[11px] font-medium text-indigo-800 dark:bg-indigo-400/15 dark:text-indigo-200">
+                  {t('Your current plan')}
+                </span>
+              ) : null}
+            </div>
+            <p className="mt-3 text-2xl font-semibold tabular-nums text-zinc-900 dark:text-white">
+              {priceProMmk.toLocaleString()} MMK
+            </p>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">{t('per month')}</p>
+            <ul className="mt-4 space-y-2 text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">
+              <li>{t('2 bots; unlimited products and orders')}</li>
+              <li>{t('Digital auto-delivery, stock, saved bot messages, exports')}</li>
+            </ul>
+          </div>
+          <div className={planCardRing(tier === 'plus')}>
+            <div className="flex items-start justify-between gap-2">
+              <p className="text-sm font-semibold text-zinc-900 dark:text-white">{t('Plus')}</p>
+              {tier === 'plus' ? (
+                <span className="shrink-0 rounded-full bg-indigo-600/15 px-2 py-0.5 text-[11px] font-medium text-indigo-800 dark:bg-indigo-400/15 dark:text-indigo-200">
+                  {t('Your current plan')}
+                </span>
+              ) : null}
+            </div>
+            <p className="mt-3 text-2xl font-semibold tabular-nums text-zinc-900 dark:text-white">
+              {pricePlusMmk.toLocaleString()} MMK
+            </p>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">{t('per month')}</p>
+            <ul className="mt-4 space-y-2 text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">
+              <li>{t('5 bots; same product and order limits as Pro')}</li>
+              <li>{t('Broadcast, advanced analytics, sales vs prior month')}</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
       <section className="space-y-2" id="compare">
         <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">{t('Plan comparison')}</h2>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">{t('Same limits as our public pricing — no need to leave this page.')}</p>
+        <p className="max-w-3xl text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+          {t('These limits are enforced in the app. Paid prices are the MMK amounts set for this platform.')}
+        </p>
         <Card className="overflow-hidden border-zinc-200 dark:border-zinc-800">
           <CardContent className="p-0">
             <div className="overflow-x-auto">
@@ -184,7 +323,7 @@ export function SubscriptionClient({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
-                  {PLAN_COMPARISON_ROWS.map((row) => (
+                  {planTableRows.map((row) => (
                     <tr key={row.feature} className="text-zinc-800 dark:text-zinc-200">
                       <td className="px-3 py-2 text-zinc-600 dark:text-zinc-400">{t(row.feature)}</td>
                       <td className="px-3 py-2 tabular-nums">{row.free}</td>
@@ -311,11 +450,13 @@ export function SubscriptionClient({
           <CardHeader>
             <CardTitle className="text-base font-medium text-zinc-900 dark:text-white">{t('You are on Plus')}</CardTitle>
             <CardDescription className="text-zinc-700 dark:text-zinc-300">
-              {t('Thank you for using Voplix. Your subscription renews manually after each bank transfer cycle — there is no automatic card charge in this release.')}
+              {t(
+                'Renew by bank transfer before access ends (see renewal date at the top). Cards are not stored; there are no automatic charges.'
+              )}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-2 text-sm text-zinc-700 dark:text-zinc-300">
-            <p className="font-medium text-zinc-900 dark:text-white">{t('Included with Plus')}</p>
+            <p className="font-medium text-zinc-900 dark:text-white">{t('On this tier:')}</p>
             <ul className="list-inside list-disc space-y-1">
               <li>{t('Up to 5 bots and unlimited products / orders')}</li>
               <li>{t('Broadcast to past customers')}</li>
@@ -329,7 +470,18 @@ export function SubscriptionClient({
           <CardHeader>
             <CardTitle className="text-base font-medium text-zinc-900 dark:text-white">{t('Upgrade with bank transfer')}</CardTitle>
             <CardDescription className="text-zinc-600 dark:text-zinc-400">
-              {t('Choose a plan, pay using the details above, then attach your slip. Our team activates your account after verification.')}
+              {t('Pick Pro or Plus, pay one month’s fee with the details on this page, then upload your slip. When we approve it, your plan and paid end date update automatically for one month.')}
+              {' '}
+              {t('For several months at once, use Telegram:')}{' '}
+              <a
+                href={tgUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-indigo-600 underline-offset-2 hover:underline dark:text-indigo-400"
+              >
+                {tgLabel}
+              </a>
+              .
             </CardDescription>
           </CardHeader>
           <CardContent>

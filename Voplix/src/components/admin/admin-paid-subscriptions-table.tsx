@@ -82,7 +82,7 @@ export function AdminPaidSubscriptionsTable({ initialRows }: { initialRows: Admi
           <tr className="border-b border-zinc-800 bg-zinc-900/60 text-xs font-medium uppercase tracking-wide text-zinc-500">
             <th className="px-3 py-2">Customer</th>
             <th className="px-3 py-2">Plan</th>
-            <th className="px-3 py-2">Period end</th>
+            <th className="px-3 py-2">Expires</th>
             <th className="px-3 py-2">Status</th>
             <th className="px-3 py-2"> </th>
           </tr>
@@ -96,7 +96,7 @@ export function AdminPaidSubscriptionsTable({ initialRows }: { initialRows: Admi
               </td>
               <td className="px-3 py-3 capitalize text-zinc-300">{r.plan_tier}</td>
               <td className="px-3 py-3 text-xs text-zinc-400">
-                {r.subscription_period_end ? formatDateTimeUtc(r.subscription_period_end) : '— (no expiry)'}
+                {r.subscription_period_end ? formatDateTimeUtc(r.subscription_period_end) : '—'}
               </td>
               <td className="px-3 py-3 text-xs">
                 {isActivePaid(r) ? (

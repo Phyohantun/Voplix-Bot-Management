@@ -3,6 +3,7 @@ import { getPlanEnforcementSnapshot } from '@/lib/plan-limits';
 import { fetchBotCardStatsMap } from '@/lib/bots-page-stats';
 import { shopCurrencyFromUser } from '@/lib/currency';
 import { BotsClient } from '@/components/bots/bots-client';
+import { BOT_SELECT_SAFE } from '@/lib/bot-client-fields';
 
 interface BotRecord {
   id: string;
@@ -20,7 +21,7 @@ async function getBots(userId: string) {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from('bots')
-    .select('*')
+    .select(BOT_SELECT_SAFE)
     .eq('user_id', userId)
     .eq('is_active', true)
     .order('created_at', { ascending: false });

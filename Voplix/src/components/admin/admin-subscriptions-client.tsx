@@ -18,6 +18,10 @@ export type SubscriptionRequestRow = {
   admin_notes: string | null;
   reviewed_at: string | null;
   created_at: string;
+  account_snapshot?: {
+    plan_tier: string;
+    subscription_period_end: string | null;
+  } | null;
 };
 
 export function AdminSubscriptionsClient({
@@ -166,11 +170,12 @@ export function AdminSubscriptionsClient({
           </p>
         ) : (
           <div className="mt-4 overflow-x-auto rounded-xl border border-zinc-800">
-            <table className="w-full min-w-[720px] border-collapse text-left text-sm">
+            <table className="w-full min-w-[860px] border-collapse text-left text-sm">
               <thead>
                 <tr className="border-b border-zinc-800 bg-zinc-900/60 text-xs font-medium uppercase tracking-wide text-zinc-500">
                   <th className="px-3 py-2">Customer</th>
-                  <th className="px-3 py-2">Plan</th>
+                  <th className="px-3 py-2">Requested plan</th>
+                  <th className="px-3 py-2">Current expiry</th>
                   <th className="px-3 py-2">Submitted</th>
                   <th className="px-3 py-2">Slip</th>
                   <th className="px-3 py-2">Reject note</th>
@@ -185,6 +190,16 @@ export function AdminSubscriptionsClient({
                       <div className="mt-0.5 font-mono text-[11px] text-zinc-500">{r.user_id}</div>
                     </td>
                     <td className="px-3 py-3 capitalize text-zinc-300">{r.plan_tier}</td>
+                    <td className="px-3 py-3 text-xs text-zinc-400">
+                      {r.account_snapshot?.subscription_period_end
+                        ? formatDateTimeUtc(r.account_snapshot.subscription_period_end)
+                        : '—'}
+                      {r.account_snapshot?.plan_tier ? (
+                        <div className="mt-0.5 text-[11px] text-zinc-500">
+                          Now: <span className="capitalize">{r.account_snapshot.plan_tier}</span>
+                        </div>
+                      ) : null}
+                    </td>
                     <td className="px-3 py-3 text-xs text-zinc-500">{formatDateTimeUtc(r.created_at)}</td>
                     <td className="px-3 py-3">
                       <Button

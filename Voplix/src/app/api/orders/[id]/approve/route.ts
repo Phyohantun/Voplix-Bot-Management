@@ -23,10 +23,9 @@ export async function POST(
     } catch {
       body = {};
     }
-    const { manual_delivery_data, manual_message } = body;
+    const { manual_message } = body;
 
     const result = await approveSlipOrderForOwner(id, user.id, {
-      manual_delivery_data: manual_delivery_data as Record<string, unknown> | null | undefined,
       manual_message: typeof manual_message === 'string' ? manual_message : undefined,
     });
 

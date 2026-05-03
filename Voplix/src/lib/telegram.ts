@@ -36,13 +36,19 @@ export async function validateBotToken(token: string): Promise<{ ok: boolean; re
 
 export async function setWebhook(token: string, webhookUrl: string): Promise<{ ok: boolean; error?: string }> {
   try {
+    const secret = process.env.TELEGRAM_WEBHOOK_SECRET?.trim();
+    const payload: Record<string, unknown> = {
+      url: webhookUrl,
+      allowed_updates: ['message', 'callback_query'],
+    };
+    /** When set (≥16 chars), Telegram sends `X-Telegram-Bot-Api-Secret-Token` on each update — verify in webhook POST. */
+    if (secret && secret.length >= 16) {
+      payload.secret_token = secret;
+    }
     const response = await fetchWithTimeout(`${TELEGRAM_API_BASE}${token}/setWebhook`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        url: webhookUrl,
-        allowed_updates: ['message', 'callback_query'],
-      }),
+      body: JSON.stringify(payload),
     });
     
     const data = await response.json();

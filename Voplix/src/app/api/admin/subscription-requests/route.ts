@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { enrichSubscriptionRequestsWithAccountSnapshots } from '@/lib/admin-subscription-requests-enrich';
 
 export async function GET() {
   try {
@@ -12,7 +13,10 @@ export async function GET() {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ requests: data ?? [] });
+    const raw = data ?? [];
+    const requests = await enrichSubscriptionRequestsWithAccountSnapshots(raw);
+
+    return NextResponse.json({ requests });
   } catch (e) {
     console.error('[GET /api/admin/subscription-requests]', e);
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });

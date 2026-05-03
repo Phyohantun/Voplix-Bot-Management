@@ -1,4 +1,7 @@
-/** Plain-text plan matrix for dashboard subscription page (keep in sync with marketing /pricing). */
+/**
+ * Plain-text plan matrix for subscription UI. The Price row is replaced at runtime with admin-configured MMK amounts.
+ * Public /pricing page uses its own copy for logged-out visitors.
+ */
 export const PLAN_COMPARISON_ROWS: { feature: string; free: string; pro: string; plus: string }[] = [
   { feature: 'Bots', free: '1', pro: '2', plus: '5' },
   { feature: 'Products', free: '5', pro: 'Unlimited', plus: 'Unlimited' },
@@ -11,5 +14,5 @@ export const PLAN_COMPARISON_ROWS: { feature: string; free: string; pro: string;
   { feature: 'Export PDF / CSV', free: 'No', pro: 'Yes', plus: 'Yes' },
   { feature: 'Broadcast', free: 'No', pro: 'No', plus: 'Yes' },
   { feature: 'Advanced analytics', free: 'No', pro: 'No', plus: 'Yes' },
-  { feature: 'Price', free: '0 MMK', pro: '45,000 MMK', plus: '65,000 MMK' },
+  { feature: 'Price', free: '0 MMK', pro: '—', plus: '—' },
 ];

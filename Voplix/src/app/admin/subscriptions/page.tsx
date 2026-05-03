@@ -2,6 +2,7 @@ import { AdminHeader } from '@/components/admin/admin-header';
 import { AdminSubscriptionsClient, type SubscriptionRequestRow } from '@/components/admin/admin-subscriptions-client';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { listAllUsersWithPlatformAccounts } from '@/lib/admin-users-list';
+import { enrichSubscriptionRequestsWithAccountSnapshots } from '@/lib/admin-subscription-requests-enrich';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,7 +26,8 @@ export default async function AdminSubscriptionsPage() {
     if (rErr) {
       loadWarnings.push(`Subscription requests: ${rErr.message}`);
     } else {
-      requests = (reqData as SubscriptionRequestRow[]) ?? [];
+      const raw = (reqData as Omit<SubscriptionRequestRow, 'account_snapshot'>[]) ?? [];
+      requests = await enrichSubscriptionRequestsWithAccountSnapshots(raw);
     }
   } catch (e) {
     loadWarnings.push(e instanceof Error ? e.message : 'Failed to load requests');
