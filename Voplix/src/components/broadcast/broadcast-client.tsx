@@ -21,6 +21,7 @@ import { Megaphone, Users, PaperPlaneTilt, SpinnerGap, Broadcast } from '@phosph
 import { toast } from 'sonner';
 import { formatOrderTimestamp } from '@/lib/format-order';
 import { sanitizeOwnerHtml } from '@/lib/sanitize-html';
+import { telegramHtmlToPlain } from '@/lib/bot-telegram-copy';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { cn } from '@/lib/utils';
 const TG_MAX = 4096;
@@ -103,7 +104,10 @@ export function BroadcastClient({ bots, initialBotId, canUseBroadcast }: Broadca
   const messageLen = formData.message.length;
   const warnLen = messageLen >= Math.floor(TG_MAX * 0.9);
 
-  const previewHtml = useMemo(() => sanitizeOwnerHtml(formData.message), [formData.message]);
+  const previewPlain = useMemo(() => {
+    const safe = sanitizeOwnerHtml(formData.message);
+    return telegramHtmlToPlain(safe).replace(/\s+$/, '');
+  }, [formData.message]);
 
   const openConfirm = async () => {
     if (!formData.bot_id) {
@@ -251,7 +255,7 @@ export function BroadcastClient({ bots, initialBotId, canUseBroadcast }: Broadca
           </CardHeader>
           <CardContent className="space-y-3">
             <ul className="list-inside list-disc space-y-1 text-sm text-zinc-700 dark:text-zinc-300">
-              <li>{t('Send rich HTML messages (bold, links) with optional hero image')}</li>
+              <li>{t('Bold text and links are optional; you can add a picture at the bottom')}</li>
               <li>{t('Target all tracked users or paid customers only')}</li>
               <li>{t('Built-in batching so large lists send safely')}</li>
               <li>{t('Full history of what you sent, with sent/failed counts')}</li>
@@ -303,15 +307,15 @@ export function BroadcastClient({ bots, initialBotId, canUseBroadcast }: Broadca
 
             <div className="space-y-2">
               <div className="flex items-center justify-between gap-2">
-                <Label className="text-zinc-700 dark:text-zinc-300">{t('Message (HTML allowed)')}</Label>
+                <Label className="text-zinc-700 dark:text-zinc-300">{t('Message')}</Label>
                 <span className={cn('text-xs tabular-nums', warnLen ? 'font-medium text-amber-600 dark:text-amber-400' : 'text-zinc-500')}>
-                  {messageLen} / {TG_MAX} {t('characters')}
+                  {messageLen} / {TG_MAX}
                 </span>
               </div>
               <Textarea
                 value={formData.message}
                 onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                placeholder={t('Enter your message here… (e.g. <b>Sale</b>)')}
+                placeholder={t('Write your announcement in normal words. You can use a new line for each sentence.')}
                 rows={6}
                 disabled={!canUseBroadcast}
                 className="resize-none border-zinc-300 bg-zinc-200 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
@@ -327,7 +331,7 @@ export function BroadcastClient({ bots, initialBotId, canUseBroadcast }: Broadca
                 onChange={(e) => void onImageFile(e)}
                 className="border-zinc-300 bg-zinc-200 text-sm text-zinc-900 file:mr-2 file:rounded file:border-0 file:bg-zinc-300 file:px-2 file:py-1 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white dark:file:bg-zinc-700"
               />
-              <p className="text-xs text-zinc-500">{t('JPG, PNG, or WebP · max 5 MB · stored for Telegram to fetch')}</p>
+              <p className="text-xs text-zinc-500">{t('JPG, PNG, or WebP · max 5 MB')}</p>
               {formData.image_url ? (
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-xs text-zinc-600 dark:text-zinc-400">{t('Image attached')}</span>
@@ -366,7 +370,9 @@ export function BroadcastClient({ bots, initialBotId, canUseBroadcast }: Broadca
         <Card className="border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
           <CardHeader>
             <CardTitle className="text-zinc-900 dark:text-white">{t('Preview')}</CardTitle>
-            <CardDescription className="text-zinc-600 dark:text-zinc-400">{t('Telegram-style bubble (HTML rendered).')}</CardDescription>
+            <CardDescription className="text-zinc-600 dark:text-zinc-400">
+              {t('Rough preview — customers see the same words in the bot chat.')}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {selectedBot ? (
@@ -377,7 +383,7 @@ export function BroadcastClient({ bots, initialBotId, canUseBroadcast }: Broadca
                   </div>
                   <div>
                     <p className="font-medium text-zinc-900 dark:text-white">@{selectedBot.bot_username}</p>
-                    <p className="text-sm text-zinc-600 dark:text-zinc-400">{t('Telegram bot')}</p>
+                    <p className="text-sm text-zinc-600 dark:text-zinc-400">{t('Your shop bot')}</p>
                   </div>
                 </div>
 
@@ -389,12 +395,9 @@ export function BroadcastClient({ bots, initialBotId, canUseBroadcast }: Broadca
                         <img src={formData.image_url} alt="" className="max-h-40 w-full object-cover" />
                       </div>
                     ) : null}
-                    <div
-                      className="prose prose-sm max-w-none text-sm leading-relaxed text-white prose-p:my-1 prose-a:text-white prose-strong:text-white"
-                      dangerouslySetInnerHTML={{
-                        __html: previewHtml || `<span class="opacity-80">${t('Your message preview appears here.')}</span>`,
-                      }}
-                    />
+                    <p className="whitespace-pre-wrap text-left text-sm leading-relaxed text-white">
+                      {previewPlain || t('Your message preview appears here.')}
+                    </p>
                     <p className="mt-1 text-right text-[10px] text-white/80 tabular-nums">{t('now')}</p>
                   </div>
                 </div>

@@ -5,7 +5,7 @@ export type PendingOrderRow = {
   telegram_username: string | null;
   created_at: string;
   slip_image_url: string | null;
-  menu_items: { name: string; price: number } | null;
+  menu_items: { name: string; price: number; type?: string } | null;
 };
 
 export type DashboardTrend = {
@@ -221,7 +221,7 @@ export async function fetchDashboardPageModel(
       .in('bot_id', scopeIds),
     (supabase as any)
       .from('orders')
-      .select('id, telegram_username, created_at, slip_image_url, menu_items(name, price)')
+      .select('id, telegram_username, created_at, slip_image_url, menu_items(name, price, type)')
       .eq('status', 'SLIP_SUBMITTED')
       .in('bot_id', scopeIds)
       .order('created_at', { ascending: false })

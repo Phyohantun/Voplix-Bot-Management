@@ -6,6 +6,7 @@ import {
   applyTemplate,
   escapeHtml,
   plainLinesToTelegramDeliveryHtml,
+  telegramHtmlToPlain,
 } from '@/lib/bot-telegram-copy';
 import { effectivePlanTier, loadPlatformAccountFlagsAdmin } from '@/lib/plan-limits';
 
@@ -13,6 +14,12 @@ type ApproveBody = {
   manual_delivery_data?: Record<string, unknown> | null;
   manual_message?: string | null;
 };
+
+/** Turn owner-typed or menu-saved HTML into plain lines for the buyer (no raw tags). */
+function ownerDeliveryAsPlainText(raw: string): string {
+  const plain = telegramHtmlToPlain(raw).replace(/\r\n/g, '\n').trim();
+  return plain;
+}
 
 /**
  * Completes an order after slip verification: assigns delivery, marks COMPLETED, notifies customer on Telegram.
@@ -80,17 +87,28 @@ export async function approveSlipOrderForOwner(
   } else if (order.menu_items.type === 'MANUAL_DELIVERY') {
     const pasted = typeof manual_message === 'string' ? manual_message.trim() : '';
     if (pasted) {
-      deliveryContent = pasted;
+      const normalized = ownerDeliveryAsPlainText(pasted);
+      deliveryContent = normalized || 'Thank you for your purchase!';
     } else if (manual_delivery_data && typeof manual_delivery_data === 'object') {
       deliveryContent = Object.entries(manual_delivery_data)
-        .filter(([_, value]) => value)
-        .map(([key, value]) => `${key}: ${value}`)
+        .filter(([_, value]) => value != null && String(value).trim() !== '')
+        .map(([key, value]) => {
+          const label = key.replace(/_/g, ' ');
+          const body = ownerDeliveryAsPlainText(String(value)) || String(value).trim();
+          return `${label}: ${body}`;
+        })
         .join('\n');
     } else {
-      deliveryContent = order.menu_items.delivery_content || 'Thank you for your purchase!';
+      const fromMenu = order.menu_items.delivery_content
+        ? ownerDeliveryAsPlainText(String(order.menu_items.delivery_content))
+        : '';
+      deliveryContent = fromMenu || 'Thank you for your purchase!';
     }
   } else {
-    deliveryContent = order.menu_items.delivery_content || 'Thank you for your purchase!';
+    const fromMenu = order.menu_items.delivery_content
+      ? ownerDeliveryAsPlainText(String(order.menu_items.delivery_content))
+      : '';
+    deliveryContent = fromMenu || 'Thank you for your purchase!';
   }
 
   const storedManual =

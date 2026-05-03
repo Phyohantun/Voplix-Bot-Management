@@ -148,7 +148,15 @@ export function OrdersDashboard({
       : (embeddedMenuItem(order)?.delivery_content ?? '');
 
   const setManualOutboundText = (orderId: string, value: string) => {
-    setManualDeliveryNotes((prev) => ({ ...prev, [orderId]: value }));
+    setManualDeliveryNotes((prev) => {
+      const next = { ...prev };
+      if (value === '') {
+        delete next[orderId];
+      } else {
+        next[orderId] = value;
+      }
+      return next;
+    });
   };
 
   const pendingOnPage = useMemo(
@@ -274,7 +282,9 @@ export function OrdersDashboard({
     const isManual = embeddedMenuItem(order)?.type === 'MANUAL_DELIVERY';
     const outbound = manualOutboundText(order).trim();
     if (isManual && !outbound) {
-      toast.error(t('Type what to send the buyer (account details, etc.), or add delivery text on the product in Menu.'));
+      toast.error(
+        t('Write what the customer should receive (account number, link, instructions) in the box above, or save default text on this product in Menu.')
+      );
       return;
     }
 
@@ -286,7 +296,10 @@ export function OrdersDashboard({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
-      if (!response.ok) throw new Error(t('Failed to approve order'));
+      if (!response.ok) {
+        const j = (await response.json().catch(() => ({}))) as { error?: string };
+        throw new Error(j.error || t('Failed to approve order'));
+      }
       setOrders((prev) => prev.map((o: any) => (o.id === order.id ? { ...o, status: 'COMPLETED' } : o)));
       setAppendOrders((prev) => prev.map((o: any) => (o.id === order.id ? { ...o, status: 'COMPLETED' } : o)));
       setManualDeliveryNotes((prev) => {
@@ -448,10 +461,10 @@ export function OrdersDashboard({
       <Card className="border-zinc-200 bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
         <CardHeader className="space-y-1 pb-2 pt-4">
           <CardTitle className="text-sm font-semibold text-zinc-900 dark:text-white">
-            {t('Delivery details for the buyer')}
+            {t('Message to send the customer')}
           </CardTitle>
           <CardDescription className="text-xs leading-relaxed">
-            {t('Telegram sends a short "order confirmed" message first, then this text (KBZ, Wave, account numbers, or how they get the product). Prefilled from your product in Menu if you saved it there — edit before approving.')}
+            {t('After you approve, the bot sends a short confirmation, then this text — bank details, login info, or how they receive the product. If you saved text on the product in Menu, it appears here; you can edit it before approving.')}
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-0">
@@ -484,7 +497,7 @@ export function OrdersDashboard({
             {t('Order')} <span className="font-mono text-zinc-800 dark:text-zinc-200">#{order.id.slice(0, 8)}</span>
             {embeddedMenuItem(order)?.type === 'MANUAL_DELIVERY' ? (
               <span className="ml-2 rounded border border-zinc-300 bg-zinc-100 px-1.5 py-0.5 text-[10px] font-medium text-zinc-600 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
-                {t('Manual delivery')}
+                {t('You send the product')}
               </span>
             ) : null}
           </p>

@@ -108,6 +108,16 @@ export function DashboardView({
   }, [router]);
 
   const approveOne = async (orderId: string) => {
+    const row = model.pendingOrders.find((o) => o.id === orderId);
+    const itemType = row?.menu_items?.type;
+    if (itemType === 'MANUAL_DELIVERY') {
+      toast.message(t('Open the Orders page for this one'), {
+        description: t('You need to add the customer message (bank details, etc.) before approving.'),
+      });
+      router.push(`${ordersHref}${ordersHref.includes('?') ? '&' : '?'}filter=review`);
+      return;
+    }
+
     setApproveId(orderId);
     try {
       const res = await fetch(`/api/orders/${orderId}/approve`, {
