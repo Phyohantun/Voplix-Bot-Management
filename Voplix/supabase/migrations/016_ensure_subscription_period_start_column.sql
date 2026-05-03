@@ -1,9 +1,8 @@
--- Start of the current paid access window (set when a subscription slip is approved).
+-- Idempotent: safe if 015 already ran. Fixes remote DBs that skipped 015 or stale PostgREST cache.
 ALTER TABLE public.platform_accounts
   ADD COLUMN IF NOT EXISTS subscription_current_period_start TIMESTAMPTZ;
 
 COMMENT ON COLUMN public.platform_accounts.subscription_current_period_start IS
   'When the current Pro/Plus period began; updated on each approved subscription payment.';
 
--- Refresh PostgREST API schema cache (avoids "column ... not found in the schema cache").
 NOTIFY pgrst, 'reload schema';

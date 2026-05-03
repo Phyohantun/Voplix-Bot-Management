@@ -1,4 +1,3 @@
-import { Suspense } from 'react';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { DashboardSidebar } from '@/components/dashboard/sidebar';
@@ -7,7 +6,6 @@ import { CurrencyProvider } from '@/components/dashboard/currency-context';
 import { getOwnerProfileForLayout } from '@/lib/owner-profile';
 import { shopCurrencyFromUser } from '@/lib/currency';
 import { getPlatformAccountForUser } from '@/lib/platform-account';
-import { MobileBottomNav } from '@/components/dashboard/mobile-bottom-nav';
 import { DashboardActivityProvider } from '@/components/dashboard/dashboard-activity-context';
 import { DashboardAlertStrip } from '@/components/dashboard/dashboard-alert-strip';
 import { DashboardActivityPoller } from '@/components/dashboard/dashboard-activity-poller';
@@ -78,11 +76,8 @@ export default async function DashboardLayout({
                 bots={(bots as any[]) || []}
               />
               <DashboardAlertStrip />
-              <main className="px-4 py-6 pb-28 sm:px-6 sm:py-8 lg:px-8 lg:pb-8">{children}</main>
+              <main className="px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:pb-8">{children}</main>
             </div>
-            <Suspense fallback={null}>
-              <MobileBottomNav />
-            </Suspense>
             <DashboardActivityPoller />
           </div>
         </DashboardActivityProvider>
