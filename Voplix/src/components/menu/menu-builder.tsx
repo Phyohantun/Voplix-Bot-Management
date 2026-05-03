@@ -75,10 +75,10 @@ type FormState = {
   delivery_content: string;
 };
 
-const emptyForm = (canDigital: boolean): FormState => ({
+const emptyForm = (): FormState => ({
   name: '',
   price: '0',
-  type: canDigital ? 'DIGITAL_DELIVERY' : 'MANUAL_DELIVERY',
+  type: 'MANUAL_DELIVERY',
   delivery_content: '',
 });
 
@@ -144,7 +144,7 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems, planSn
     selectedBot.payment_instructions,
     selectedBot.telegram_customer_copy,
   ]);
-  const [formData, setFormData] = useState<FormState>(() => emptyForm(planSnapshot.canCreateDigitalProduct));
+  const [formData, setFormData] = useState<FormState>(() => emptyForm());
 
   useEffect(() => {
     if (!planSnapshot.canCreateDigitalProduct && formData.type === 'DIGITAL_DELIVERY' && !editingItem) {
@@ -191,7 +191,7 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems, planSn
       };
       setMenuItems([...menuItems, merged]);
       setIsCreateOpen(false);
-      setFormData(emptyForm(planSnapshot.canCreateDigitalProduct));
+      setFormData(emptyForm());
       toast.success(t('Product added — it will show on /start in Telegram'));
       if (merged.type === 'DIGITAL_DELIVERY' && planSnapshot.canUseStockManagement) {
         setShowStockNudge(true);
@@ -239,7 +239,7 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems, planSn
       };
       setMenuItems(menuItems.map((item) => (item.id === editingItem.id ? merged : item)));
       setEditingItem(null);
-      setFormData(emptyForm(planSnapshot.canCreateDigitalProduct));
+      setFormData(emptyForm());
       toast.success(t('Product updated'));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t('Failed to update'));
@@ -442,15 +442,15 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems, planSn
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="bg-zinc-200 dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700">
+                <SelectItem value="MANUAL_DELIVERY" className="text-zinc-900 dark:text-white">
+                  {TYPE_LABEL(t).MANUAL_DELIVERY}
+                </SelectItem>
                 <SelectItem
                   value="DIGITAL_DELIVERY"
                   disabled={!planSnapshot.canCreateDigitalProduct}
                   className="text-zinc-900 dark:text-white"
                 >
                   {TYPE_LABEL(t).DIGITAL_DELIVERY}
-                </SelectItem>
-                <SelectItem value="MANUAL_DELIVERY" className="text-zinc-900 dark:text-white">
-                  {TYPE_LABEL(t).MANUAL_DELIVERY}
                 </SelectItem>
               </SelectContent>
             </Select>
@@ -459,6 +459,21 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems, planSn
         ) : (
           <>
             <div className="grid gap-3 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, type: 'MANUAL_DELIVERY' })}
+                className={cn(
+                  'rounded-xl border-2 p-4 text-left transition-colors',
+                  formData.type === 'MANUAL_DELIVERY'
+                    ? 'border-indigo-500 bg-indigo-50/80 dark:border-indigo-500 dark:bg-indigo-950/40'
+                    : 'border-zinc-200 bg-zinc-50 hover:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-900/60'
+                )}
+              >
+                <p className="text-lg font-semibold text-zinc-900 dark:text-white">{t('Manual')}</p>
+                <p className="mt-2 text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">
+                  {t('You paste delivery details when you approve the order — good for custom work or off-platform fulfillment.')}
+                </p>
+              </button>
               <button
                 type="button"
                 disabled={!planSnapshot.canCreateDigitalProduct}
@@ -476,24 +491,9 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems, planSn
                   !planSnapshot.canCreateDigitalProduct && 'cursor-not-allowed opacity-50'
                 )}
               >
-                <p className="text-lg font-semibold text-zinc-900 dark:text-white">{t('Digital 🤖')}</p>
+                <p className="text-lg font-semibold text-zinc-900 dark:text-white">{t('Digital')}</p>
                 <p className="mt-2 text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">
                   {t('After you approve payment, the customer receives the next free line from your Stock page.')}
-                </p>
-              </button>
-              <button
-                type="button"
-                onClick={() => setFormData({ ...formData, type: 'MANUAL_DELIVERY' })}
-                className={cn(
-                  'rounded-xl border-2 p-4 text-left transition-colors',
-                  formData.type === 'MANUAL_DELIVERY'
-                    ? 'border-indigo-500 bg-indigo-50/80 dark:border-indigo-500 dark:bg-indigo-950/40'
-                    : 'border-zinc-200 bg-zinc-50 hover:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-900/60'
-                )}
-              >
-                <p className="text-lg font-semibold text-zinc-900 dark:text-white">{t('Manual 👤')}</p>
-                <p className="mt-2 text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">
-                  {t('You paste delivery details when you approve the order — good for custom work or off-platform fulfillment.')}
                 </p>
               </button>
             </div>
@@ -668,7 +668,7 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems, planSn
             open={isCreateOpen}
             onOpenChange={(open) => {
               setIsCreateOpen(open);
-              if (open) setFormData(emptyForm(planSnapshot.canCreateDigitalProduct));
+              if (open) setFormData(emptyForm());
             }}
           >
             <DialogTrigger
@@ -874,7 +874,7 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems, planSn
         onOpenChange={(open) => {
           if (!open) {
             setEditingItem(null);
-            setFormData(emptyForm(planSnapshot.canCreateDigitalProduct));
+            setFormData(emptyForm());
           }
         }}
       >

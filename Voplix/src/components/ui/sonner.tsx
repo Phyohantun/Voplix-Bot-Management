@@ -6,7 +6,8 @@ import { Toaster as Sonner, type ToasterProps } from "sonner"
 import { CheckCircle, Info, WarningCircle, XCircle, SpinnerGap } from "@phosphor-icons/react"
 
 const Toaster = ({ position: positionProp, ...props }: ToasterProps) => {
-  const { theme = "system" } = useTheme()
+  const { resolvedTheme } = useTheme()
+  const toastTheme = resolvedTheme === "dark" ? "dark" : "light"
   const [position, setPosition] = useState<NonNullable<ToasterProps["position"]>>(
     positionProp ?? "bottom-center"
   )
@@ -22,7 +23,7 @@ const Toaster = ({ position: positionProp, ...props }: ToasterProps) => {
 
   return (
     <Sonner
-      theme={theme as ToasterProps["theme"]}
+      theme={toastTheme as ToasterProps["theme"]}
       position={positionProp ?? position}
       className="toaster group"
       icons={{

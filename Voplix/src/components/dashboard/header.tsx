@@ -8,7 +8,6 @@ import { DashboardSidebar } from './sidebar';
 import { useEffect, useMemo, useState, useTransition } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useTheme } from 'next-themes';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { LanguageToggle } from '@/components/language-toggle';
@@ -32,7 +31,6 @@ const BOT_SCOPED_PAGES = ['/dashboard', '/menu', '/stock', '/orders', '/broadcas
 
 export function DashboardHeader({ user, profile, announcements, unreadCount, bots }: DashboardHeaderProps) {
   const { t } = useLanguage();
-  const { setTheme } = useTheme();
   const [openProfile, setOpenProfile] = useState(false);
   const [openNotifications, setOpenNotifications] = useState(false);
   const supabase = createClient();
@@ -62,7 +60,6 @@ export function DashboardHeader({ user, profile, announcements, unreadCount, bot
   const bellUnread = activity?.unreadAnnouncements ?? unreadCount;
 
   const onLogout = async () => {
-    setTheme('light');
     await supabase.auth.signOut();
     router.push('/login');
     router.refresh();

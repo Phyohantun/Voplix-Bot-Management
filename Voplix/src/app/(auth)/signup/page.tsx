@@ -1,11 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowLeft } from '@phosphor-icons/react';
-import { useTheme } from 'next-themes';
 import { createClient } from '@/lib/supabase/client';
 import { VoplixWordmark } from '@/components/brand/voplix-wordmark';
 import { getClientSiteUrl } from '@/lib/site-url';
@@ -19,7 +18,6 @@ import { validateOwnerPasswordStrength } from '@/lib/password-policy';
 
 export default function SignupPage() {
   const router = useRouter();
-  const { setTheme } = useTheme();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
@@ -27,10 +25,6 @@ export default function SignupPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const supabase = createClient();
-
-  useEffect(() => {
-    setTheme('light');
-  }, [setTheme]);
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -82,21 +76,21 @@ export default function SignupPage() {
   };
 
   return (
-    <Card className="border-zinc-300 dark:border-zinc-700/70 bg-zinc-50 dark:bg-zinc-900/70 shadow-2xl backdrop-blur-xl">
+    <Card className="border-zinc-300 bg-zinc-50 shadow-2xl backdrop-blur-xl">
       <CardHeader className="space-y-4">
         <div className="flex flex-col items-center gap-3 pb-1">
           <Link
             href="/"
-            className="flex items-center gap-1.5 rounded-lg outline-none ring-offset-2 ring-offset-zinc-100 focus-visible:ring-2 focus-visible:ring-indigo-500 dark:ring-offset-zinc-950"
+            className="flex items-center gap-1.5 rounded-lg outline-none ring-offset-2 ring-offset-zinc-100 focus-visible:ring-2 focus-visible:ring-indigo-500"
           >
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl ring-1 ring-zinc-300 dark:ring-zinc-600">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl ring-1 ring-zinc-300">
               <Image src="/apple-touch-icon.png" alt="" width={44} height={44} className="h-full w-full object-cover" />
             </div>
             <VoplixWordmark className="text-xl sm:text-2xl" />
           </Link>
         </div>
-        <CardTitle className="text-2xl text-zinc-900 dark:text-white">Create an account</CardTitle>
-        <CardDescription className="text-zinc-600 dark:text-zinc-400">
+        <CardTitle className="text-2xl text-zinc-900">Create an account</CardTitle>
+        <CardDescription className="text-zinc-600">
           Create your owner account to manage bots and orders.
         </CardDescription>
       </CardHeader>
@@ -104,7 +98,7 @@ export default function SignupPage() {
         <form onSubmit={handleSignup} className="space-y-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="firstName" className="text-zinc-700 dark:text-zinc-300">First Name</Label>
+              <Label htmlFor="firstName" className="text-zinc-700">First Name</Label>
               <Input
                 id="firstName"
                 type="text"
@@ -112,11 +106,11 @@ export default function SignupPage() {
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
                 required
-                className="bg-zinc-200 dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-white"
+                className="bg-zinc-200 border-zinc-300 text-zinc-900"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="lastName" className="text-zinc-700 dark:text-zinc-300">Last Name</Label>
+              <Label htmlFor="lastName" className="text-zinc-700">Last Name</Label>
               <Input
                 id="lastName"
                 type="text"
@@ -124,12 +118,12 @@ export default function SignupPage() {
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
                 required
-                className="bg-zinc-200 dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-white"
+                className="bg-zinc-200 border-zinc-300 text-zinc-900"
               />
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="email" className="text-zinc-700 dark:text-zinc-300">Email</Label>
+            <Label htmlFor="email" className="text-zinc-700">Email</Label>
             <Input
               id="email"
               type="email"
@@ -137,11 +131,11 @@ export default function SignupPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="bg-zinc-200 dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-white"
+              className="bg-zinc-200 border-zinc-300 text-zinc-900"
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="password" className="text-zinc-700 dark:text-zinc-300">Password</Label>
+            <Label htmlFor="password" className="text-zinc-700">Password</Label>
             <Input
               id="password"
               type="password"
@@ -149,11 +143,11 @@ export default function SignupPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="bg-zinc-200 dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-white"
+              className="bg-zinc-200 border-zinc-300 text-zinc-900"
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="confirmPassword" className="text-zinc-700 dark:text-zinc-300">Confirm Password</Label>
+            <Label htmlFor="confirmPassword" className="text-zinc-700">Confirm Password</Label>
             <Input
               id="confirmPassword"
               type="password"
@@ -161,7 +155,7 @@ export default function SignupPage() {
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
-              className="bg-zinc-200 dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-white"
+              className="bg-zinc-200 border-zinc-300 text-zinc-900"
             />
           </div>
           <Button
@@ -175,17 +169,17 @@ export default function SignupPage() {
 
         <div className="relative py-1">
           <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t border-zinc-200 dark:border-zinc-700" />
+            <span className="w-full border-t border-zinc-200" />
           </div>
           <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-zinc-50 px-2 text-zinc-500 dark:bg-zinc-900/70 dark:text-zinc-400">Or</span>
+            <span className="bg-zinc-50 px-2 text-zinc-500">Or</span>
           </div>
         </div>
         <GoogleAuthButton label="Sign up with Google" />
 
-        <p className="text-center text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="text-center text-sm text-zinc-600">
           Already have an account?{' '}
-          <Link href="/login" className="text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300">
+          <Link href="/login" className="text-indigo-600 hover:text-indigo-500">
             Login
           </Link>
         </p>
