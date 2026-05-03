@@ -27,7 +27,9 @@ export function OrderHistoryCleanup({ bots }: { bots: BotOption[] }) {
       toast.error(t('Choose a shop first'));
       return;
     }
-    const msg = t('Remove completed and rejected orders older than {days} days for this shop? This cannot be undone.').replace('{days}', cleanupDays.toString());
+    const msg = t(
+      'Hide completed and rejected orders older than {days} days for this shop? They disappear from your list; revenue from completed sales stays in your totals.'
+    ).replace('{days}', cleanupDays.toString());
     if (!confirm(msg)) return;
 
     setLoading(true);
@@ -48,10 +50,10 @@ export function OrderHistoryCleanup({ bots }: { bots: BotOption[] }) {
       toast.success(
         j.deleted === 0
           ? t('No old finished orders matched those settings — nothing was removed.')
-          : t('Removed {count} old order(s) from your list.').replace('{count}', (j.deleted || 0).toString()) +
-              (j.truncated
-                ? t(' If the list is still long, run cleanup again to remove another batch.')
-                : '')
+          : t('Hidden {count} old row(s) from your order list (revenue unchanged).').replace(
+              '{count}',
+              (j.deleted || 0).toString()
+            ) + (j.truncated ? t(' If the list is still long, run cleanup again to remove another batch.') : '')
       );
       router.refresh();
     } catch (e) {
@@ -66,8 +68,7 @@ export function OrderHistoryCleanup({ bots }: { bots: BotOption[] }) {
       <CardHeader className="pb-4">
         <CardTitle className="text-base font-medium text-zinc-900 dark:text-white">{t('Order history cleanup')}</CardTitle>
         <CardDescription className="text-zinc-500">
-          {t('Remove many')} <strong className="font-medium text-zinc-600 dark:text-zinc-400">{t('completed')}</strong> {t('and')}{' '}
-          <strong className="font-medium text-zinc-600 dark:text-zinc-400">{t('rejected')}</strong> {t('orders at once. Waiting and in-progress orders are never removed. Only affects your dashboard list.')}
+          {t('Bulk-hide old completed and rejected rows. Waiting and in-progress orders are never affected.')}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">

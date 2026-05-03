@@ -9,6 +9,7 @@ import {
   resolveOrderDeliveryFollowupHtml,
   telegramHtmlToPlain,
 } from '@/lib/bot-telegram-copy';
+import { roundMoney } from '@/lib/order-revenue';
 import { effectivePlanTier, loadPlatformAccountFlagsAdmin } from '@/lib/plan-limits';
 
 type ApproveBody = {
@@ -113,11 +114,15 @@ export async function approveSlipOrderForOwner(
   const storedManual =
     order.menu_items.type === 'MANUAL_DELIVERY' ? { message: deliveryContent } : null;
 
+  const snapshotRevenue = roundMoney(Number(order.menu_items.price ?? 0));
+
   const { error: updateError } = await (supabaseAdmin
     .from('orders') as any)
     .update({
       status: 'COMPLETED',
       manual_delivery_data: storedManual,
+      revenue_amount: snapshotRevenue,
+      revenue_manually_edited: false,
       updated_at: new Date().toISOString(),
     })
     .eq('id', orderId);

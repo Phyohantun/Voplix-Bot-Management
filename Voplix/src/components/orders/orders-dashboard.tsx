@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
 import {
   Dialog,
   DialogContent,
@@ -26,6 +27,7 @@ import { cn } from '@/lib/utils';
 import { OrderHistoryCleanup } from '@/components/settings/order-history-cleanup';
 import { telegramHtmlToPlain } from '@/lib/bot-telegram-copy';
 import { OrderSlipMedia } from '@/components/orders/order-slip-media';
+import { orderCountsTowardRevenue, revenueAmountFromOrderRow, roundMoney } from '@/lib/order-revenue';
 
 type CleanupBotOption = { id: string; bot_username: string };
 
@@ -130,6 +132,9 @@ export function OrdersDashboard({
   const [manualDeliveryNotes, setManualDeliveryNotes] = useState<Record<string, string>>({});
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [bulkApproveOpen, setBulkApproveOpen] = useState(false);
+  const [revenueDialogOrder, setRevenueDialogOrder] = useState<any | null>(null);
+  const [revenueDraft, setRevenueDraft] = useState('');
+  const [revenueSaving, setRevenueSaving] = useState(false);
 
   const isDeepPage = page > 1;
   const combinedOrders = useMemo(() => [...orders, ...appendOrders], [orders, appendOrders]);
@@ -296,8 +301,21 @@ export function OrdersDashboard({
         const j = (await response.json().catch(() => ({}))) as { error?: string };
         throw new Error(j.error || t('Failed to approve order'));
       }
-      setOrders((prev) => prev.map((o: any) => (o.id === order.id ? { ...o, status: 'COMPLETED' } : o)));
-      setAppendOrders((prev) => prev.map((o: any) => (o.id === order.id ? { ...o, status: 'COMPLETED' } : o)));
+      const snap = roundMoney(Number(embeddedMenuItem(order)?.price ?? 0));
+      setOrders((prev) =>
+        prev.map((o: any) =>
+          o.id === order.id
+            ? { ...o, status: 'COMPLETED', revenue_amount: snap, revenue_manually_edited: false }
+            : o
+        )
+      );
+      setAppendOrders((prev) =>
+        prev.map((o: any) =>
+          o.id === order.id
+            ? { ...o, status: 'COMPLETED', revenue_amount: snap, revenue_manually_edited: false }
+            : o
+        )
+      );
       setManualDeliveryNotes((prev) => {
         const next = { ...prev };
         delete next[order.id];
@@ -333,8 +351,60 @@ export function OrdersDashboard({
     }
   };
 
+  const openRevenueEdit = (order: any) => {
+    setRevenueDialogOrder(order);
+    setRevenueDraft(String(revenueAmountFromOrderRow(order)));
+  };
+
+  const saveRevenueEdit = async () => {
+    if (!revenueDialogOrder) return;
+    const n = Number(revenueDraft);
+    if (!Number.isFinite(n) || n < 0) {
+      toast.error(t('Enter a valid amount'));
+      return;
+    }
+    setRevenueSaving(true);
+    try {
+      const res = await fetch(`/api/orders/${revenueDialogOrder.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ revenue_amount: roundMoney(n) }),
+      });
+      const j = (await res.json().catch(() => ({}))) as { error?: string; revenue_amount?: number };
+      if (!res.ok) throw new Error(j.error || t('Could not save'));
+      const nextAmt = j.revenue_amount ?? roundMoney(n);
+      setOrders((prev) =>
+        prev.map((o: any) =>
+          o.id === revenueDialogOrder.id
+            ? { ...o, revenue_amount: nextAmt, revenue_manually_edited: true }
+            : o
+        )
+      );
+      setAppendOrders((prev) =>
+        prev.map((o: any) =>
+          o.id === revenueDialogOrder.id
+            ? { ...o, revenue_amount: nextAmt, revenue_manually_edited: true }
+            : o
+        )
+      );
+      toast.success(t('Revenue updated'));
+      setRevenueDialogOrder(null);
+      router.refresh();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t('Could not save'));
+    } finally {
+      setRevenueSaving(false);
+    }
+  };
+
   const deleteOne = async (order: any) => {
-    if (!confirm(t('Permanently delete this order from history? This cannot be undone.'))) {
+    if (
+      !confirm(
+        t(
+          'Remove this order from your history? It will disappear from this list. Completed sales still count toward your revenue totals.'
+        )
+      )
+    ) {
       return;
     }
     setLoading(true);
@@ -666,7 +736,10 @@ export function OrdersDashboard({
           role="status"
         >
           <p className="text-sm text-zinc-700 dark:text-zinc-300">
-            <span className="font-medium text-zinc-900 dark:text-white">{selected.size}</span> {t('selected — removes rows from this list only; customers are not notified.')}
+            <span className="font-medium text-zinc-900 dark:text-white">{selected.size}</span>{' '}
+            {t(
+              'selected — hidden from this list only; revenue from completed sales is unchanged. Customers are not notified.'
+            )}
           </p>
           <div className="flex flex-wrap gap-2 sm:gap-3">
             {selectedSlipIds.length > 0 ? (
@@ -744,6 +817,21 @@ export function OrdersDashboard({
                           <span className="tabular-nums font-medium text-zinc-800 dark:text-zinc-200">
                             {formatCurrencyAmount(Number(embeddedMenuItem(order)?.price || 0), currency)}
                           </span>
+                          {orderCountsTowardRevenue(order.status) ? (
+                            <>
+                              <span>·</span>
+                              <span className="tabular-nums text-zinc-700 dark:text-zinc-300">
+                                {t('Revenue')}: {formatCurrencyAmount(revenueAmountFromOrderRow(order), currency)}
+                              </span>
+                              <button
+                                type="button"
+                                className="text-[11px] font-medium text-indigo-600 underline-offset-2 hover:underline dark:text-indigo-400"
+                                onClick={() => openRevenueEdit(order)}
+                              >
+                                {t('Edit')}
+                              </button>
+                            </>
+                          ) : null}
                           <span>·</span>
                           <span className="tabular-nums">{formatOrderTimestamp(order.created_at)}</span>
                         </div>
@@ -811,7 +899,7 @@ export function OrdersDashboard({
 
               <div className="hidden md:block">
                 <div className="overflow-x-auto rounded-md border border-zinc-200 dark:border-zinc-800">
-                  <table className="w-full min-w-[860px] border-collapse text-sm">
+                  <table className="w-full min-w-[940px] border-collapse text-sm">
                     <thead>
                       <tr className="border-b border-zinc-200 bg-zinc-100/90 text-left text-xs font-medium uppercase tracking-wide text-zinc-500 dark:border-zinc-800 dark:bg-zinc-950/50">
                         <th className="w-10 px-2 py-3">
@@ -828,6 +916,7 @@ export function OrdersDashboard({
                         </th>
                         <th className="min-w-[10rem] px-2 py-3">{t('Customer / product')}</th>
                         <th className="px-2 py-3 whitespace-nowrap">{t('Price')}</th>
+                        <th className="min-w-[7rem] px-2 py-3 whitespace-nowrap">{t('Revenue')}</th>
                         <th className="min-w-[9rem] px-2 py-3 whitespace-nowrap">{t('Time')}</th>
                         <th className="px-2 py-3">{t('Slip')}</th>
                         <th className="min-w-[8rem] px-2 py-3">{t('Status')}</th>
@@ -857,6 +946,27 @@ export function OrdersDashboard({
                             </td>
                             <td className="px-2 py-3 tabular-nums whitespace-nowrap">
                               {formatCurrencyAmount(Number(embeddedMenuItem(order)?.price || 0), currency)}
+                            </td>
+                            <td className="px-2 py-3 align-top text-xs whitespace-nowrap">
+                              {orderCountsTowardRevenue(order.status) ? (
+                                <div className="flex flex-col gap-0.5">
+                                  <span className="tabular-nums font-medium text-zinc-800 dark:text-zinc-200">
+                                    {formatCurrencyAmount(revenueAmountFromOrderRow(order), currency)}
+                                  </span>
+                                  {order.revenue_manually_edited ? (
+                                    <span className="text-[10px] text-zinc-500">{t('Edited manually')}</span>
+                                  ) : null}
+                                  <button
+                                    type="button"
+                                    className="w-fit text-left text-[11px] font-medium text-indigo-600 underline-offset-2 hover:underline dark:text-indigo-400"
+                                    onClick={() => openRevenueEdit(order)}
+                                  >
+                                    {t('Edit revenue')}
+                                  </button>
+                                </div>
+                              ) : (
+                                <span className="text-zinc-500">—</span>
+                              )}
                             </td>
                             <td className="px-2 py-3 tabular-nums text-xs text-zinc-500 whitespace-nowrap">
                               {formatOrderTimestamp(order.created_at)}
@@ -904,14 +1014,14 @@ export function OrdersDashboard({
                           </tr>
                           {manualDeliveryCard ? (
                             <tr className="bg-zinc-50/60 dark:bg-zinc-950/25">
-                              <td colSpan={7} className="border-t border-zinc-200 px-3 py-3 dark:border-zinc-800">
+                              <td colSpan={8} className="border-t border-zinc-200 px-3 py-3 dark:border-zinc-800">
                                 {manualDeliveryCard}
                               </td>
                             </tr>
                           ) : null}
                           {expandedId === order.id ? (
                             <tr className="bg-zinc-50/80 dark:bg-zinc-950/30">
-                              <td colSpan={7} className="p-0">
+                              <td colSpan={8} className="p-0">
                                 {expandedPanel(order)}
                               </td>
                             </tr>
@@ -933,8 +1043,10 @@ export function OrdersDashboard({
           <DialogHeader>
             <DialogTitle className="text-zinc-900 dark:text-white">{t('Delete selected orders?')}</DialogTitle>
             <DialogDescription className="text-zinc-500">
-              {t('This permanently removes')} <strong className="text-zinc-700 dark:text-zinc-300">{selected.size}</strong>{' '}
-              {t('row(s). Customers are not messaged on Telegram.')}
+              {t('Hides')} <strong className="text-zinc-700 dark:text-zinc-300">{selected.size}</strong>{' '}
+              {t(
+                'order row(s) from this list. Revenue from completed sales stays in your totals. Customers are not messaged on Telegram.'
+              )}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-3">
@@ -979,12 +1091,58 @@ export function OrdersDashboard({
         </DialogContent>
       </Dialog>
 
+      <Dialog
+        open={!!revenueDialogOrder}
+        onOpenChange={(o) => {
+          if (!o) {
+            setRevenueDialogOrder(null);
+            setRevenueDraft('');
+          }
+        }}
+      >
+        <DialogContent className="border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
+          <DialogHeader>
+            <DialogTitle className="text-zinc-900 dark:text-white">{t('Edit recorded revenue')}</DialogTitle>
+            <DialogDescription className="text-zinc-500">
+              {t(
+                'This amount is used in your dashboard totals and shop stats. The product price column is unchanged.'
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="revenue-edit" className="text-zinc-700 dark:text-zinc-300">
+              {t('Amount')}
+            </Label>
+            <Input
+              id="revenue-edit"
+              type="number"
+              inputMode="decimal"
+              min={0}
+              step="0.01"
+              value={revenueDraft}
+              onChange={(e) => setRevenueDraft(e.target.value)}
+              className="border-zinc-300 bg-white dark:border-zinc-600 dark:bg-zinc-950"
+            />
+          </div>
+          <DialogFooter className="gap-2 sm:gap-3">
+            <Button variant="outline" onClick={() => setRevenueDialogOrder(null)} disabled={revenueSaving}>
+              {t('Cancel')}
+            </Button>
+            <Button onClick={() => void saveRevenueEdit()} disabled={revenueSaving}>
+              {revenueSaving ? t('Saving…') : t('Save')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {cleanupBots.length > 0 ? (
         <section className="space-y-3 pt-2">
           <div>
             <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">{t('Order archive')}</h2>
             <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-              {t('Remove old completed and rejected rows from your database. Customers are not notified.')}
+              {t(
+                'Hide old completed and rejected rows from your list. Revenue from completed sales stays in totals. Customers are not notified.'
+              )}
             </p>
           </div>
           <OrderHistoryCleanup bots={cleanupBots} />

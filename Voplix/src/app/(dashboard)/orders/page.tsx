@@ -89,7 +89,8 @@ async function countSlipSubmittedForOwner(userId: string, botId: string | null) 
     .from('orders')
     .select('id', { count: 'exact', head: true })
     .in('bot_id', ids)
-    .eq('status', 'SLIP_SUBMITTED');
+    .eq('status', 'SLIP_SUBMITTED')
+    .is('deleted_at', null);
 
   if (botId && ids.includes(botId)) {
     q = q.eq('bot_id', botId);

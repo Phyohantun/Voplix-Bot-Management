@@ -39,7 +39,7 @@ export async function GET(request: Request) {
       const { data: paidUsers } = await (supabaseAdmin.from('orders') as any)
         .select('telegram_user_id')
         .eq('bot_id', botId)
-        .eq('status', 'COMPLETED');
+        .in('status', ['COMPLETED', 'APPROVED']);
 
       const paidUserIds = [...new Set((paidUsers || []).map((u: { telegram_user_id: string }) => u.telegram_user_id))];
 

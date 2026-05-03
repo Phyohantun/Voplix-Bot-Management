@@ -107,7 +107,26 @@ export const translations: Record<string, string> = {
   "Order rejected": "အော်ဒါ ငြင်းပယ်လိုက်ပါသည်",
   "Failed to reject order": "အော်ဒါ ငြင်းပယ်ခြင်း မအောင်မြင်ပါ",
   "Permanently delete this order from history? This cannot be undone.": "ဤအော်ဒါကို စားရင်းမှ အပြီးတိုင် ဖျက်မည်လား? ပြန်လည်ပြင်ဆင်၍မရပါ။",
+  "Remove this order from your history? It will disappear from this list. Completed sales still count toward your revenue totals.":
+    "ဤအော်ဒါကို သင်၏ စာရင်းမှ ဖယ်ရှားမည်လား? ဤစာရင်းတွင် မပေါ်တော့ပါ။ ပြီးစီးသော ရောင်းချမှုများသည် သင်၏ ဝင်ငွေစုစုပေါင်းတွင် ဆက်ပါဝင်ပါသည်။",
   "Order removed from history": "အော်ဒါကို စားရင်းမှ ဖယ်ရှားပြီးပါပြီ",
+  "Hides": "ဖျောက်မည်",
+  "order row(s) from this list. Revenue from completed sales stays in your totals. Customers are not messaged on Telegram.":
+    "အော်ဒါ အတန်းများ ဤစာရင်းမှ။ ပြီးစီးသော ရောင်းချမှု ဝင်ငွေသည် စုစုပေါင်းတွင် ဆက်ရှိပါသည်။ ဝယ်ယူသူများကို Telegram မှ အကြောင်းမကြားပါ။",
+  "selected — hidden from this list only; revenue from completed sales is unchanged. Customers are not notified.":
+    "ခု ရွေးချယ်ထားသည် — ဤစာရင်းမှသာ ဖျောက်ထားသည်; ပြီးစီးသော ရောင်းချမှု ဝင်ငွေမပြောင်းပါ။ ဝယ်ယူသူများကို အကြောင်းမကြားပါ။",
+  "Edit recorded revenue": "မှတ်တမ်းတင်ထားသော ဝင်ငွေကို ပြင်မည်",
+  "This amount is used in your dashboard totals and shop stats. The product price column is unchanged.":
+    "ဤပမာဏသည် ဒက်ရှ်ဘုတ် စုစုပေါင်းနှင့် ဆိုင်စာရင်းအချက်အလက်များတွင် အသုံးပြုပါသည်။ ကုန်ပစ္စည်း ဈေးနှုန်းကော်လံ မပြောင်းပါ။",
+  "Amount": "ပမာဏ",
+  "Edit revenue": "ဝင်ငွေ ပြင်မည်",
+  "Edited manually": "လက်ဖြင့် ပြင်ထားသည်",
+  "Revenue updated": "ဝင်ငွေ ပြင်ပြီးပါပြီ",
+  "Enter a valid amount": "မှန်ကန်သော ပမာဏ ထည့်ပါ",
+  "Could not save": "သိမ်းဆည်း၍ မရပါ",
+  "Hide old completed and rejected rows from your list. Revenue from completed sales stays in totals. Customers are not notified.":
+    "ပြီးစီးပြီး ငြင်းပယ်ထားသော အဟောင်းအတန်းများကို စာရင်းမှ ဖျောက်မည်။ ပြီးစီးသော ရောင်းချမှု ဝင်ငွေသည် စုစုပေါင်းတွင် ဆက်ရှိပါသည်။ ဝယ်ယူသူများကို အကြောင်းမကြားပါ။",
+  "Edit": "ပြင်မည်",
   "Delete failed": "ဖျက်ခြင်း မအောင်မြင်ပါ",
   "Deleted": "ဖျက်လိုက်ပါသည်",
   "order(s)": "အော်ဒါ(များ)",
@@ -131,6 +150,11 @@ export const translations: Record<string, string> = {
   "Page": "စာမျက်နှာ",
   "Older": "ပိုဟောင်းသော",
   "selected — removes rows from this list only; customers are not notified.": "ခု ရွေးချယ်ထားသည် — ဤစာရင်းမှသာ အတန်းများကို ဖယ်ရှားမည်; ဝယ်ယူသူများကို အကြောင်းကြားမည်မဟုတ်ပါ။",
+  "Hide completed and rejected orders older than {days} days for this shop? They disappear from your list; revenue from completed sales stays in your totals.":
+    "ဤဆိုင်အတွက် {days} ရက်ထက်ပိုဟောင်းသော ပြီးစီးပြီး ငြင်းပယ်ထားသော အော်ဒါများကို ဖျောက်မည်လား? စာရင်းတွင် မပေါ်တော့ပါ; ပြီးစီးသော ရောင်းချမှု ဝင်ငွေသည် စုစုပေါင်းတွင် ဆက်ရှိပါသည်။",
+  "Hidden {count} old row(s) from your order list (revenue unchanged).": "အော်ဒါစာရင်းမှ အဟောင်းအတန်း {count} ခု ဖျောက်လိုက်ပါပြီ (ဝင်ငွေ မပြောင်းပါ)။",
+  "Bulk-hide old completed and rejected rows. Waiting and in-progress orders are never affected.":
+    "ပြီးစီးပြီး ငြင်းပယ်ထားသော အဟောင်းအတန်းများကို အများအပြား ဖျောက်မည်။ စောင့်ဆိုင်းနေသော နှင့် လုပ်ဆောင်ဆဲ အော်ဒါများကို မထိပါ။",
   "Approve selected slips…": "ရွေးချယ်ထားသော ပြေစာများကို အတည်ပြုမည်…",
   "Clear selection": "ရွေးချယ်မှုများကို ဖျက်မည်",
   "Delete selected…": "ရွေးချယ်ထားသည်များကို ဖျက်မည်…",

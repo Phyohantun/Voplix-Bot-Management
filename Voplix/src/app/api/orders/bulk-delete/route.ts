@@ -56,7 +56,11 @@ export async function POST(request: Request) {
 
     await clearStockRefsForOrders(ownedIds);
 
-    const { error: delError } = await (supabaseAdmin as any).from('orders').delete().in('id', ownedIds);
+    const { error: delError } = await (supabaseAdmin as any)
+      .from('orders')
+      .update({ deleted_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+      .in('id', ownedIds)
+      .is('deleted_at', null);
 
     if (delError) {
       return NextResponse.json({ error: delError.message }, { status: 500 });

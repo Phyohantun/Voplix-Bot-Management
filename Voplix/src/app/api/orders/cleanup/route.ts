@@ -56,6 +56,7 @@ export async function POST(request: Request) {
       .select('id')
       .eq('bot_id', botId)
       .in('status', [...ALLOWED_STATUS])
+      .is('deleted_at', null)
       .lt('created_at', cutoff.toISOString())
       .limit(MAX_DELETE);
 
@@ -71,7 +72,10 @@ export async function POST(request: Request) {
 
     await clearStockRefsForOrders(ids);
 
-    const { error: delError } = await (supabaseAdmin as any).from('orders').delete().in('id', ids);
+    const { error: delError } = await (supabaseAdmin as any)
+      .from('orders')
+      .update({ deleted_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+      .in('id', ids);
 
     if (delError) {
       return NextResponse.json({ error: delError.message }, { status: 500 });

@@ -38,6 +38,7 @@ export async function POST(request: Request) {
       .from('orders')
       .select('id, menu_items!inner(type)')
       .eq('status', 'SLIP_SUBMITTED')
+      .is('deleted_at', null)
       .in('bot_id', scopedIds)
       .order('created_at', { ascending: true });
 

@@ -13,7 +13,8 @@ export async function countPendingSlipOrdersForUser(userId: string): Promise<num
   const { count, error } = await (supabaseAdmin.from('orders') as any)
     .select('*', { count: 'exact', head: true })
     .in('bot_id', ids)
-    .eq('status', 'SLIP_SUBMITTED');
+    .eq('status', 'SLIP_SUBMITTED')
+    .is('deleted_at', null);
 
   if (error) {
     console.warn('[countPendingSlipOrdersForUser]', error.message);

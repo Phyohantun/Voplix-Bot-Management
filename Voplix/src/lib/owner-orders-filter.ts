@@ -8,9 +8,10 @@ export function parseOrderStatusFilter(v: string | null | undefined): OrderStatu
 
 /** Apply status filter to a Supabase orders query (already scoped to owner via bots join). */
 export function applyOrderStatusFilter(query: any, filter: OrderStatusFilter) {
-  if (filter === 'review') return query.eq('status', 'SLIP_SUBMITTED');
-  if (filter === 'completed') return query.in('status', ['COMPLETED', 'APPROVED']);
-  if (filter === 'rejected') return query.eq('status', 'REJECTED');
-  if (filter === 'waiting') return query.eq('status', 'PENDING_PAYMENT');
-  return query;
+  let q = query;
+  if (filter === 'review') q = q.eq('status', 'SLIP_SUBMITTED');
+  else if (filter === 'completed') q = q.in('status', ['COMPLETED', 'APPROVED']);
+  else if (filter === 'rejected') q = q.eq('status', 'REJECTED');
+  else if (filter === 'waiting') q = q.eq('status', 'PENDING_PAYMENT');
+  return q.is('deleted_at', null);
 }

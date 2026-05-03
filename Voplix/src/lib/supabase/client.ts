@@ -95,6 +95,9 @@ export type Database = {
           status: 'PENDING_PAYMENT' | 'SLIP_SUBMITTED' | 'APPROVED' | 'COMPLETED' | 'REJECTED';
           slip_image_url: string | null;
           manual_delivery_data: Record<string, string> | null;
+          revenue_amount: number | null;
+          revenue_manually_edited: boolean;
+          deleted_at: string | null;
           created_at: string;
           updated_at: string;
         };

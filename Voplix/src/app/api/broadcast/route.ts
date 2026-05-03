@@ -82,7 +82,7 @@ export async function POST(request: Request) {
         .from('orders') as any)
         .select('telegram_user_id')
         .eq('bot_id', bot_id)
-        .eq('status', 'COMPLETED');
+        .in('status', ['COMPLETED', 'APPROVED']);
 
       const paidUserIds = [...new Set(paidUsers?.map((u: any) => u.telegram_user_id) || [])];
       

@@ -21,13 +21,17 @@ export async function GET(
 
   const { data: orderRaw, error: orderError } = await supabaseAdmin
     .from('orders')
-    .select('slip_image_url, bot_id')
+    .select('slip_image_url, bot_id, deleted_at')
     .eq('id', id)
     .single();
 
-  const orderRow = orderRaw as { slip_image_url: string | null; bot_id: string } | null;
+  const orderRow = orderRaw as { slip_image_url: string | null; bot_id: string; deleted_at: string | null } | null;
 
   if (orderError || !orderRow) {
+    return new Response('Not found', { status: 404 });
+  }
+
+  if (orderRow.deleted_at) {
     return new Response('Not found', { status: 404 });
   }
 

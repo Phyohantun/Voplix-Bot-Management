@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { revenueAmountFromOrderRow } from '@/lib/order-revenue';
 
 export type PendingOrderRow = {
   id: string;
@@ -68,6 +69,7 @@ async function countOrdersInRange(
     .from('orders')
     .select('*', { count: 'exact', head: true })
     .in('bot_id', ids)
+    .is('deleted_at', null)
     .gte('created_at', start)
     .lt('created_at', end);
   return count ?? 0;
@@ -84,16 +86,16 @@ async function sumCompletedRevenueInRange(
   if (botIds.length === 0) return 0;
   let q = (supabase as any)
     .from('orders')
-    .select('menu_items(price)')
-    .eq('status', 'COMPLETED')
+    .select('revenue_amount, menu_items(price)')
+    .in('status', ['COMPLETED', 'APPROVED'])
     .eq('bots.user_id', userId)
     .gte('updated_at', start)
     .lt('updated_at', end);
   if (botFilter && botIds.includes(botFilter)) q = q.eq('bot_id', botFilter);
   const { data, error } = await q;
   if (error || !data) return 0;
-  return (data as { menu_items: { price: number } | null }[]).reduce(
-    (s, row) => s + Number(row.menu_items?.price || 0),
+  return (data as Parameters<typeof revenueAmountFromOrderRow>[0][]).reduce(
+    (s, row) => s + revenueAmountFromOrderRow(row),
     0
   );
 }
@@ -128,6 +130,7 @@ async function countSlipActivityInRange(
     .select('*', { count: 'exact', head: true })
     .eq('status', 'SLIP_SUBMITTED')
     .in('bot_id', ids)
+    .is('deleted_at', null)
     .gte('updated_at', start)
     .lt('updated_at', end);
   return count ?? 0;
@@ -218,24 +221,30 @@ export async function fetchDashboardPageModel(
       .from('orders')
       .select('*', { count: 'exact', head: true })
       .eq('status', 'SLIP_SUBMITTED')
-      .in('bot_id', scopeIds),
+      .in('bot_id', scopeIds)
+      .is('deleted_at', null),
     (supabase as any)
       .from('orders')
       .select('id, telegram_username, created_at, slip_image_url, menu_items(name, price, type)')
       .eq('status', 'SLIP_SUBMITTED')
       .in('bot_id', scopeIds)
+      .is('deleted_at', null)
       .order('created_at', { ascending: false })
       .limit(8),
     (() => {
-      let q = (supabase as any).from('orders').select('id, bots!inner(user_id)').eq('bots.user_id', userId);
+      let q = (supabase as any)
+        .from('orders')
+        .select('id, bots!inner(user_id)')
+        .eq('bots.user_id', userId)
+        .is('deleted_at', null);
       if (selectedBotId && botIds.includes(selectedBotId)) q = q.eq('bot_id', selectedBotId);
       return q;
     })(),
     (() => {
       let q = (supabase as any)
         .from('orders')
-        .select('menu_items(price)')
-        .eq('status', 'COMPLETED')
+        .select('revenue_amount, menu_items(price)')
+        .in('status', ['COMPLETED', 'APPROVED'])
         .eq('bots.user_id', userId);
       if (selectedBotId && botIds.includes(selectedBotId)) q = q.eq('bot_id', selectedBotId);
       return q;
@@ -255,8 +264,8 @@ export async function fetchDashboardPageModel(
   const pendingData = (pendingOrdersResult?.data as PendingOrderRow[]) || [];
   const totalOrders = (totalOrdersResult?.data as unknown[])?.length || 0;
   const revenue =
-    ((revenueRows?.data as { menu_items: { price: number } | null }[]) || []).reduce(
-      (s, r) => s + Number(r.menu_items?.price || 0),
+    ((revenueRows?.data as Parameters<typeof revenueAmountFromOrderRow>[0][]) || []).reduce(
+      (s, r) => s + revenueAmountFromOrderRow(r),
       0
     ) || 0;
 
@@ -296,7 +305,8 @@ export async function fetchDashboardPageModel(
   const { count: orderCount } = await (supabase as any)
     .from('orders')
     .select('*', { count: 'exact', head: true })
-    .in('bot_id', botIds);
+    .in('bot_id', botIds)
+    .is('deleted_at', null);
 
   const gettingStarted: GettingStartedState = {
     hasBot: totalBots > 0,
