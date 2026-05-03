@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -105,6 +105,25 @@ function embeddedMenuItem(order: { menu_items?: unknown }): {
   return undefined;
 }
 
+function menuPlainTemplate(order: { menu_items?: unknown }): string {
+  const item = embeddedMenuItem(order);
+  const savedRaw = item?.delivery_content;
+  if (typeof savedRaw !== 'string' || !savedRaw.trim()) return '';
+  return telegramHtmlToPlain(savedRaw).trim() || savedRaw.trim();
+}
+
+/** Prefill manual-delivery drafts from Menu template so owners can approve in one step. */
+function buildManualPrefill(orders: any[]): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const o of orders) {
+    if (o.status !== 'SLIP_SUBMITTED') continue;
+    if (embeddedMenuItem(o)?.type !== 'MANUAL_DELIVERY') continue;
+    const plain = menuPlainTemplate(o);
+    if (plain) out[o.id] = plain;
+  }
+  return out;
+}
+
 export function OrdersDashboard({
   orders: initialOrders,
   totalCount,
@@ -126,7 +145,7 @@ export function OrdersDashboard({
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [slipDialogOrderId, setSlipDialogOrderId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [rejectReasons, setRejectReasons] = useState<Record<string, string>>({});
   const [manualDeliveryNotes, setManualDeliveryNotes] = useState<Record<string, string>>({});
@@ -145,11 +164,10 @@ export function OrdersDashboard({
     setNextFetchPage(page + 1);
     setHasMoreClient(true);
     setSelected(new Set());
-    setExpandedId(null);
-    setManualDeliveryNotes({});
+    setManualDeliveryNotes(buildManualPrefill(initialOrders));
   }, [initialOrders, page, pageSize, selectedBotId, statusFilter]);
 
-  /** Draft message for manual-delivery orders only (required before approve; not prefilled from Menu). */
+  /** Draft for manual-delivery orders (required before approve; prefilled from Menu when saved). */
   const manualMessageDraft = (order: any) =>
     embeddedMenuItem(order)?.type === 'MANUAL_DELIVERY' ? (manualDeliveryNotes[order.id] ?? '') : '';
 
@@ -209,6 +227,16 @@ export function OrdersDashboard({
       if (chunk.length === 0) {
         setHasMoreClient(false);
       } else {
+        const prefillChunk = buildManualPrefill(chunk);
+        if (Object.keys(prefillChunk).length > 0) {
+          setManualDeliveryNotes((prev) => {
+            const merged = { ...prev };
+            for (const [id, text] of Object.entries(prefillChunk)) {
+              if (!(id in merged)) merged[id] = text;
+            }
+            return merged;
+          });
+        }
         setAppendOrders((prev) => {
           const seen = new Set(
             [...orders, ...prev].map((x: any) => x.id)
@@ -495,137 +523,55 @@ export function OrdersDashboard({
     );
   };
 
-  const slipThumb = (order: any, size: 'sm' | 'md') => {
+  const renderSlipButton = (order: any) => {
     if (!order.slip_image_url) {
       return <span className="text-xs text-zinc-500">—</span>;
     }
-    const h = size === 'sm' ? 'h-11 w-11' : 'h-28 w-28';
     return (
-      <button
+      <Button
         type="button"
-        onClick={() => setExpandedId((id) => (id === order.id ? null : order.id))}
-        className={cn(
-          'relative shrink-0 overflow-hidden rounded-md border border-zinc-300 bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900',
-          h
-        )}
-        aria-label="Toggle slip preview"
+        variant="outline"
+        size="sm"
+        className="h-8 whitespace-nowrap text-xs"
+        onClick={() => setSlipDialogOrderId(order.id)}
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={`/api/orders/${order.id}/slip`}
-          alt=""
-          className="h-full w-full object-cover"
-        />
-      </button>
+        {t('View slip')}
+      </Button>
     );
   };
 
-  /** Full-width card: manual delivery text (second Telegram message after approve). Not shown in the narrow Actions column. */
-  const manualOutboundEditorCard = (order: any) => {
-    if (order.status !== 'SLIP_SUBMITTED' || embeddedMenuItem(order)?.type !== 'MANUAL_DELIVERY') return null;
-    const item = embeddedMenuItem(order);
-    const savedRaw = item?.delivery_content;
-    const savedPlain =
-      typeof savedRaw === 'string' && savedRaw.trim()
-        ? telegramHtmlToPlain(savedRaw).trim() || savedRaw.trim()
-        : '';
-
+  /** Manual products: one short block under the order — same row on desktop, no second table row. */
+  const renderManualInline = (order: any) => {
+    if (order.status !== 'SLIP_SUBMITTED' || embeddedMenuItem(order)?.type !== 'MANUAL_DELIVERY') {
+      return null;
+    }
+    const templateHint = menuPlainTemplate(order);
     return (
-      <Card className="overflow-hidden border-zinc-300 bg-white shadow-sm dark:border-zinc-600 dark:bg-zinc-950/80">
-        <CardHeader className="space-y-1.5 border-b border-zinc-100 bg-zinc-50/90 pb-4 pt-4 dark:border-zinc-800 dark:bg-zinc-900/50">
-          <CardTitle className="flex flex-wrap items-baseline gap-2 text-base font-semibold text-zinc-900 dark:text-white">
-            <span>{t('Customer delivery message')}</span>
-            <span className="text-sm font-normal text-red-600 dark:text-red-400" aria-hidden>
-              ({t('Required')})
-            </span>
-          </CardTitle>
-          <CardDescription className="text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
-            {t('After you approve the slip, the buyer receives a short confirmation, then this message. You must write it here each time so nothing is sent by mistake.')}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4 pt-4">
-          {savedPlain ? (
-            <details className="rounded-lg border border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900/40">
-              <summary className="cursor-pointer select-none px-3 py-2.5 text-xs font-medium text-zinc-700 marker:text-zinc-500 dark:text-zinc-300">
-                {t('Optional: text saved on the product in Menu (copy if helpful)')}
-              </summary>
-              <div className="border-t border-zinc-200 px-3 py-3 text-xs leading-relaxed whitespace-pre-wrap text-zinc-600 dark:border-zinc-700 dark:text-zinc-400">
-                {savedPlain}
-              </div>
-            </details>
-          ) : null}
-          <div className="space-y-2">
-            <label htmlFor={`manual-msg-${order.id}`} className="sr-only">
-              {t('Customer delivery message')}
-            </label>
-            <Textarea
-              id={`manual-msg-${order.id}`}
-              required
-              aria-required
-              value={manualMessageDraft(order)}
-              onChange={(e) => setManualOutboundText(order.id, e.target.value)}
-              rows={6}
-              placeholder={t('Write bank details, account numbers, app links, or clear instructions for the buyer…')}
-              className="min-h-[140px] resize-y border-zinc-300 bg-white text-sm leading-relaxed text-zinc-900 placeholder:text-zinc-400 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-100 dark:placeholder:text-zinc-500"
-            />
-          </div>
-        </CardContent>
-      </Card>
+      <div className="mt-3 max-w-md space-y-2 border-t border-zinc-200 pt-3 dark:border-zinc-700">
+        <p className="text-xs font-medium text-zinc-800 dark:text-zinc-200">
+          {t('Message to buyer (sent after Approve)')}
+        </p>
+        {templateHint ? (
+          <p className="text-[11px] leading-snug text-zinc-500 dark:text-zinc-400">
+            {t('Prefilled from your product in Menu — edit if needed.')}
+          </p>
+        ) : null}
+        <Textarea
+          aria-label={t('Message to buyer (sent after Approve)')}
+          rows={4}
+          value={manualMessageDraft(order)}
+          onChange={(e) => setManualOutboundText(order.id, e.target.value)}
+          placeholder={t('Bank details, links, or instructions for the buyer…')}
+          className="min-h-[96px] resize-y border-zinc-300 bg-white text-sm dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-100"
+        />
+        {manualApproveBlocked(order) ? (
+          <p className="text-[11px] text-amber-700 dark:text-amber-300">
+            {t('Add a short message above to enable Approve.')}
+          </p>
+        ) : null}
+      </div>
     );
   };
-
-  const expandedPanel = (order: any) => (
-    <div className="space-y-4 border-t border-zinc-200 bg-zinc-50/80 p-4 dark:border-zinc-800 dark:bg-zinc-950/50">
-      <div className="flex flex-col gap-4 md:flex-row md:items-start">
-        {order.slip_image_url ? (
-          <div className="shrink-0 overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-800">
-            <OrderSlipMedia orderId={order.id} />
-          </div>
-        ) : null}
-        <div className="min-w-0 flex-1 space-y-3">
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
-            {t('Order')} <span className="font-mono text-zinc-800 dark:text-zinc-200">#{order.id.slice(0, 8)}</span>
-            {embeddedMenuItem(order)?.type === 'MANUAL_DELIVERY' ? (
-              <span className="ml-2 rounded border border-zinc-300 bg-zinc-100 px-1.5 py-0.5 text-[10px] font-medium text-zinc-600 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
-                {t('You send the product')}
-              </span>
-            ) : null}
-          </p>
-          {order.status === 'SLIP_SUBMITTED' ? (
-            <div className="flex max-w-sm flex-col gap-2">
-              <Button
-                type="button"
-                onClick={() => handleApprove(order)}
-                disabled={loading || manualApproveBlocked(order)}
-                className="border border-zinc-600 bg-zinc-100 text-zinc-900 hover:bg-white dark:border-zinc-500 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700"
-              >
-                {t('Approve & complete')}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => handleReject(order)}
-                disabled={loading}
-                className="border-zinc-600 dark:border-zinc-600"
-              >
-                {t('Reject')}
-              </Button>
-              <Input
-                placeholder={t('Reject reason (optional)')}
-                value={rejectReasons[order.id] || ''}
-                onChange={(e) =>
-                  setRejectReasons((prev) => ({ ...prev, [order.id]: e.target.value }))
-                }
-                className="border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900"
-              />
-            </div>
-          ) : (
-            <p className="text-sm text-zinc-500">{t('This order is not awaiting slip approval.')}</p>
-          )}
-        </div>
-      </div>
-    </div>
-  );
 
   return (
     <div className="space-y-5">
@@ -779,7 +725,9 @@ export function OrdersDashboard({
         <CardHeader className="pb-4">
           <CardTitle className="text-base font-semibold text-zinc-900 dark:text-white">{t('Orders')}</CardTitle>
           <CardDescription className="mt-1 text-zinc-500">
-            {t('Review slips first, then approve or reject. Use tabs to focus on what needs attention.')}
+            {t(
+              'Tap View slip to check the payment proof, add your message to the buyer if the product needs it, then Approve. Use tabs for orders that need review.'
+            )}
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-0">
@@ -802,7 +750,7 @@ export function OrdersDashboard({
                         aria-label={`Select order ${order.id.slice(0, 8)}`}
                       />
                       <div className="min-w-0 flex-1 space-y-2">
-                        <div className="flex flex-wrap items-start gap-2">
+                        <div className="flex flex-wrap items-start justify-between gap-2">
                           <div className="min-w-0 flex-1">
                             <p className="font-medium text-zinc-900 dark:text-white">
                               {order.telegram_username || order.telegram_user_id}
@@ -811,8 +759,9 @@ export function OrdersDashboard({
                               {embeddedMenuItem(order)?.name || '—'}
                             </p>
                           </div>
-                          {slipThumb(order, 'sm')}
+                          <div className="shrink-0 self-start">{renderSlipButton(order)}</div>
                         </div>
+                        {renderManualInline(order)}
                         <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-500">
                           <span className="tabular-nums font-medium text-zinc-800 dark:text-zinc-200">
                             {formatCurrencyAmount(Number(embeddedMenuItem(order)?.price || 0), currency)}
@@ -836,7 +785,6 @@ export function OrdersDashboard({
                           <span className="tabular-nums">{formatOrderTimestamp(order.created_at)}</span>
                         </div>
                         <div>{statusBadge(order.status)}</div>
-                        {manualOutboundEditorCard(order)}
                         {order.status === 'SLIP_SUBMITTED' ? (
                           <div className="flex flex-col gap-2">
                             <div className="flex flex-wrap gap-2">
@@ -881,7 +829,6 @@ export function OrdersDashboard({
                         </Button>
                       </div>
                     </div>
-                    {expandedId === order.id ? expandedPanel(order) : null}
                   </div>
                 ))}
                 {!isDeepPage && hasMoreClient && orders.length + appendOrders.length < totalCount ? (
@@ -924,11 +871,8 @@ export function OrdersDashboard({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800/80">
-                      {combinedOrders.map((order: any) => {
-                        const manualDeliveryCard = manualOutboundEditorCard(order);
-                        return (
-                        <Fragment key={order.id}>
-                          <tr className="align-middle text-zinc-800 dark:text-zinc-200">
+                      {combinedOrders.map((order: any) => (
+                          <tr key={order.id} className="align-middle text-zinc-800 dark:text-zinc-200">
                             <td className="px-2 py-3">
                               <input
                                 type="checkbox"
@@ -938,11 +882,12 @@ export function OrdersDashboard({
                                 aria-label={`Select order ${order.id.slice(0, 8)}`}
                               />
                             </td>
-                            <td className="max-w-[16rem] px-2 py-3">
+                            <td className="max-w-[18rem] px-2 py-3 align-top">
                               <p className="font-medium text-zinc-900 dark:text-white">
                                 {order.telegram_username || order.telegram_user_id}
                               </p>
                               <p className="break-words text-zinc-600 dark:text-zinc-400">{embeddedMenuItem(order)?.name || '—'}</p>
+                              {renderManualInline(order)}
                             </td>
                             <td className="px-2 py-3 tabular-nums whitespace-nowrap">
                               {formatCurrencyAmount(Number(embeddedMenuItem(order)?.price || 0), currency)}
@@ -971,7 +916,7 @@ export function OrdersDashboard({
                             <td className="px-2 py-3 tabular-nums text-xs text-zinc-500 whitespace-nowrap">
                               {formatOrderTimestamp(order.created_at)}
                             </td>
-                            <td className="px-2 py-3">{slipThumb(order, 'sm')}</td>
+                            <td className="px-2 py-3 align-top">{renderSlipButton(order)}</td>
                             <td className="px-2 py-3">{statusBadge(order.status)}</td>
                             <td className="px-2 py-3">
                               {order.status === 'SLIP_SUBMITTED' ? (
@@ -1012,23 +957,7 @@ export function OrdersDashboard({
                               </Button>
                             </td>
                           </tr>
-                          {manualDeliveryCard ? (
-                            <tr className="bg-zinc-50/60 dark:bg-zinc-950/25">
-                              <td colSpan={8} className="border-t border-zinc-200 px-3 py-3 dark:border-zinc-800">
-                                {manualDeliveryCard}
-                              </td>
-                            </tr>
-                          ) : null}
-                          {expandedId === order.id ? (
-                            <tr className="bg-zinc-50/80 dark:bg-zinc-950/30">
-                              <td colSpan={8} className="p-0">
-                                {expandedPanel(order)}
-                              </td>
-                            </tr>
-                          ) : null}
-                        </Fragment>
-                        );
-                      })}
+                      ))}
                     </tbody>
                   </table>
                 </div>
@@ -1088,6 +1017,30 @@ export function OrdersDashboard({
               {t('Approve')} {selectedSlipIds.length} {t('order(s)')}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={slipDialogOrderId != null}
+        onOpenChange={(open) => {
+          if (!open) setSlipDialogOrderId(null);
+        }}
+      >
+        <DialogContent className="max-w-lg border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle className="text-zinc-900 dark:text-white">{t('Payment slip')}</DialogTitle>
+            <DialogDescription className="text-zinc-500">
+              {t('Order')}{' '}
+              <span className="font-mono text-zinc-700 dark:text-zinc-300">
+                #{slipDialogOrderId?.slice(0, 8) ?? '—'}
+              </span>
+            </DialogDescription>
+          </DialogHeader>
+          {slipDialogOrderId ? (
+            <div className="max-h-[min(70vh,520px)] overflow-auto rounded-lg border border-zinc-200 dark:border-zinc-700">
+              <OrderSlipMedia orderId={slipDialogOrderId} />
+            </div>
+          ) : null}
         </DialogContent>
       </Dialog>
 
