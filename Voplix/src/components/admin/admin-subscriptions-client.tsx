@@ -3,10 +3,10 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { formatDateTimeUtc } from '@/lib/format-date-utc';
+import type { AdminUserRow } from '@/lib/admin-users-list';
+import { AdminPaidSubscriptionsTable } from '@/components/admin/admin-paid-subscriptions-table';
 
 export type SubscriptionRequestRow = {
   id: string;
@@ -21,29 +21,28 @@ export type SubscriptionRequestRow = {
 };
 
 export function AdminSubscriptionsClient({
-  initialBankHtml,
   initialRequests,
+  initialPaidUsers,
   loadWarnings = [],
 }: {
-  initialBankHtml: string;
   initialRequests: SubscriptionRequestRow[];
+  initialPaidUsers: AdminUserRow[];
   loadWarnings?: string[];
 }) {
   const router = useRouter();
-  const [bankHtml, setBankHtml] = useState(initialBankHtml);
   const [rows, setRows] = useState<SubscriptionRequestRow[]>(initialRequests);
-  const [savingBank, setSavingBank] = useState(false);
+  const [paidUsers, setPaidUsers] = useState<AdminUserRow[]>(initialPaidUsers);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [rejectNote, setRejectNote] = useState<Record<string, string>>({});
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
-    setBankHtml(initialBankHtml);
-  }, [initialBankHtml]);
-
-  useEffect(() => {
     setRows(initialRequests);
   }, [initialRequests]);
+
+  useEffect(() => {
+    setPaidUsers(initialPaidUsers);
+  }, [initialPaidUsers]);
 
   const refreshList = async (opts?: { silent?: boolean }) => {
     setRefreshing(true);
@@ -61,27 +60,6 @@ export function AdminSubscriptionsClient({
       toast.error(e instanceof Error ? e.message : 'Refresh failed');
     } finally {
       setRefreshing(false);
-    }
-  };
-
-  const saveBank = async () => {
-    setSavingBank(true);
-    try {
-      const res = await fetch('/api/admin/subscription-settings', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bank_instructions_html: bankHtml }),
-      });
-      const j = (await res.json().catch(() => ({}))) as { error?: string };
-      if (!res.ok) {
-        throw new Error(j.error || 'Save failed');
-      }
-      toast.success('Bank instructions saved');
-      router.refresh();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Save failed');
-    } finally {
-      setSavingBank(false);
     }
   };
 
@@ -161,39 +139,13 @@ export function AdminSubscriptionsClient({
         </div>
       ) : null}
 
-      <section className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-5 sm:p-6">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">Bank &amp; payment instructions</h2>
-        <p className="mt-1 text-sm text-zinc-500">
-          Shown to logged-in customers on the Subscription page. HTML supported (e.g. &lt;b&gt;, &lt;br&gt;, links).
-        </p>
-        <div className="mt-4 space-y-2">
-          <Label htmlFor="bank-html" className="text-zinc-300">
-            Customer-facing HTML
-          </Label>
-          <Textarea
-            id="bank-html"
-            value={bankHtml}
-            onChange={(e) => setBankHtml(e.target.value)}
-            rows={10}
-            className="border-zinc-700 bg-zinc-950 font-mono text-sm text-zinc-100"
-          />
-        </div>
-        <Button
-          type="button"
-          className="mt-4 bg-zinc-100 text-zinc-900 hover:bg-white"
-          disabled={savingBank}
-          onClick={saveBank}
-        >
-          {savingBank ? 'Saving…' : 'Save instructions'}
-        </Button>
-      </section>
-
       <section>
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">Pending slips</h2>
             <p className="mt-1 text-sm text-zinc-500">
-              Approve to set plan to Pro or Plus (Plus unlocks broadcast). Reject to decline without changing plan.
+              Approve to set plan to Pro or Plus (Plus unlocks broadcast). Reject to decline without changing plan — the
+              customer sees your note on the Subscription page.
             </p>
           </div>
           <Button
@@ -249,7 +201,7 @@ export function AdminSubscriptionsClient({
                       <input
                         value={rejectNote[r.id] ?? ''}
                         onChange={(e) => setRejectNote((prev) => ({ ...prev, [r.id]: e.target.value }))}
-                        placeholder="Optional (shown on reject)"
+                        placeholder="Reason (shown to customer)"
                         className="w-full min-w-[140px] rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-xs text-white placeholder:text-zinc-600"
                       />
                     </td>
@@ -284,9 +236,17 @@ export function AdminSubscriptionsClient({
         )}
       </section>
 
+      <section>
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">Active subscriptions</h2>
+        <p className="mt-1 text-sm text-zinc-500">Pro and Plus accounts, renewal dates, and quick extend / cancel.</p>
+        <div className="mt-4">
+          <AdminPaidSubscriptionsTable initialRows={paidUsers} />
+        </div>
+      </section>
+
       {history.length > 0 ? (
         <section>
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">Recent decisions</h2>
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">Recent slip decisions</h2>
           <div className="mt-4 overflow-x-auto rounded-xl border border-zinc-800">
             <table className="w-full min-w-[560px] border-collapse text-left text-sm">
               <thead>
@@ -298,7 +258,7 @@ export function AdminSubscriptionsClient({
                 </tr>
               </thead>
               <tbody>
-                {history.slice(0, 30).map((r) => (
+                {history.slice(0, 40).map((r) => (
                   <tr key={r.id} className="border-b border-zinc-800/80">
                     <td className="px-3 py-2 text-zinc-300">{r.requester_email}</td>
                     <td className="px-3 py-2 capitalize text-zinc-400">{r.plan_tier}</td>

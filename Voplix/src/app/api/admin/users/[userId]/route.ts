@@ -66,10 +66,45 @@ export async function PATCH(
       admin_notes = body.admin_notes.trim() || null;
     }
 
+    let subscription_period_end: string | null =
+      typeof ex?.subscription_period_end === 'string' && (ex.subscription_period_end as string).trim()
+        ? (ex.subscription_period_end as string)
+        : null;
+
+    if (body.cancel_paid_subscription === true) {
+      plan_tier = 'free';
+      can_use_broadcast = false;
+      subscription_period_end = null;
+    }
+
+    const extendDays =
+      typeof body.extend_subscription_days === 'number' && Number.isFinite(body.extend_subscription_days)
+        ? Math.floor(body.extend_subscription_days)
+        : 0;
+    if (extendDays > 0) {
+      const base =
+        subscription_period_end && new Date(subscription_period_end) > new Date()
+          ? new Date(subscription_period_end)
+          : new Date();
+      subscription_period_end = new Date(base.getTime() + extendDays * 86400000).toISOString();
+    }
+
+    if (plan_tier === 'free' && extendDays <= 0 && body.cancel_paid_subscription !== true) {
+      subscription_period_end = null;
+    }
+
+    if (extendDays > 0 && plan_tier === 'free') {
+      return NextResponse.json(
+        { error: 'Account is on Free — set Pro/Plus first or use slip approval to extend paid access.' },
+        { status: 400 }
+      );
+    }
+
     const row = {
       user_id: userId,
       account_status,
       plan_tier,
+      subscription_period_end,
       can_use_broadcast,
       can_use_stock,
       can_use_orders,
@@ -84,7 +119,7 @@ export async function PATCH(
       return NextResponse.json({ error: upsertErr.message }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, account: row });
+    return NextResponse.json({ success: true, account: { ...row, plan_tier, account_status } });
   } catch (e) {
     console.error('[PATCH /api/admin/users/[userId]]', e);
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });

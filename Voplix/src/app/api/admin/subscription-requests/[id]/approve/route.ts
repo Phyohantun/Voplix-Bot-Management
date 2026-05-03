@@ -39,10 +39,22 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     }
 
     const ex = (existing ?? {}) as Record<string, unknown>;
+    const { data: settings } = await (supabaseAdmin.from('platform_subscription_settings') as any)
+      .select('subscription_period_days')
+      .eq('id', 'default')
+      .maybeSingle();
+    const days = Math.max(1, Math.min(3650, Math.floor(Number(settings?.subscription_period_days) || 30)));
+    const existingEndRaw = ex.subscription_period_end as string | null | undefined;
+    const existingEnd = existingEndRaw ? new Date(existingEndRaw) : null;
+    const startFrom =
+      existingEnd && !Number.isNaN(existingEnd.getTime()) && existingEnd > new Date() ? existingEnd : new Date();
+    const subscription_period_end = new Date(startFrom.getTime() + days * 86400000).toISOString();
+
     const accountRow = {
       user_id: userId,
       account_status: 'active',
       plan_tier: planTier,
+      subscription_period_end,
       can_use_broadcast: planTier === 'plus',
       can_use_stock: ex.can_use_stock !== false,
       can_use_orders: ex.can_use_orders !== false,

@@ -15,22 +15,34 @@ import { cn } from '@/lib/utils';
 
 type Pending = { id: string; plan_tier: string; created_at: string } | null;
 
+type LastRejection = { plan_tier: string; admin_notes: string | null; reviewed_at: string | null } | null;
+
 export function SubscriptionClient({
   userEmail,
   currentPlan,
+  subscriptionPeriodEnd,
   bankHtml,
   pending,
   pendingSlipUrl,
   planSnapshot,
   supportWhatsappUrl,
+  priceProMmk,
+  pricePlusMmk,
+  promptpayUrl,
+  lastRejection,
 }: {
   userEmail: string;
   currentPlan: string;
+  subscriptionPeriodEnd: string | null;
   bankHtml: string;
   pending: Pending;
   pendingSlipUrl: string | null;
   planSnapshot: PlanEnforcementSnapshot;
   supportWhatsappUrl: string;
+  priceProMmk: number;
+  pricePlusMmk: number;
+  promptpayUrl: string | null;
+  lastRejection: LastRejection;
 }) {
   const router = useRouter();
   const { t } = useLanguage();
@@ -88,7 +100,8 @@ export function SubscriptionClient({
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-white">{t('Subscription')}</h1>
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            {t('Signed in as')} <span className="font-medium text-zinc-800 dark:text-zinc-200">{userEmail}</span>. {t('Plans: Free · Pro (45,000 MMK) · Plus (65,000 MMK).')}{' '}
+            {t('Signed in as')} <span className="font-medium text-zinc-800 dark:text-zinc-200">{userEmail}</span>.{' '}
+            {t(`Plans: Free · Pro (${priceProMmk.toLocaleString()} MMK) · Plus (${pricePlusMmk.toLocaleString()} MMK).`)}{' '}
             <Link href="/pricing" className="text-indigo-600 underline-offset-2 hover:underline dark:text-indigo-400">
               {t('Full marketing page')}
             </Link>
@@ -104,6 +117,13 @@ export function SubscriptionClient({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {planSnapshot.paid_period_lapsed ? (
+            <div className="rounded-lg border border-amber-800/60 bg-amber-950/30 px-3 py-2 text-sm text-amber-100">
+              {t(
+                'Your paid period has ended. You are on Free limits until you renew. Submit a new slip below or contact support.'
+              )}
+            </div>
+          ) : null}
           {ordersCap != null ? (
             <div>
               <div className="mb-1 flex justify-between text-xs text-zinc-600 dark:text-zinc-400">
@@ -129,7 +149,12 @@ export function SubscriptionClient({
           )}
           <div className="flex flex-wrap items-center gap-3">
             <p className="text-sm text-zinc-600 dark:text-zinc-400">
-              <span className="font-medium text-zinc-800 dark:text-zinc-200">{t('Next renewal:')}</span> {t('N/A (manual bank billing)')}
+              <span className="font-medium text-zinc-800 dark:text-zinc-200">{t('Paid access until:')}</span>{' '}
+              {subscriptionPeriodEnd
+                ? formatDateTimeUtc(subscriptionPeriodEnd)
+                : tier === 'free'
+                  ? t('— (upgrade to start a paid period)')
+                  : t('No fixed end date')}
             </p>
             {!atTop ? (
               <Link
@@ -174,6 +199,35 @@ export function SubscriptionClient({
         </Card>
       </section>
 
+      {lastRejection?.reviewed_at ? (
+        <Card className="border-red-200 bg-red-50/40 dark:border-red-900/50 dark:bg-red-950/20">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-medium text-red-900 dark:text-red-200">
+              {t('Latest payment request was not approved')}
+            </CardTitle>
+            <CardDescription className="text-sm text-red-800/90 dark:text-red-200/80">
+              {t('Plan requested:')}{' '}
+              <span className="font-medium uppercase">{lastRejection.plan_tier}</span>
+              {lastRejection.reviewed_at ? (
+                <>
+                  {' '}
+                  · {formatDateTimeUtc(lastRejection.reviewed_at)}
+                </>
+              ) : null}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm text-red-950 dark:text-red-100/90">
+            {lastRejection.admin_notes?.trim() ? (
+              <p>
+                <span className="font-medium">{t('Reason:')}</span> {lastRejection.admin_notes.trim()}
+              </p>
+            ) : (
+              <p>{t('No reason was provided. You can submit a new slip after correcting the payment.')}</p>
+            )}
+          </CardContent>
+        </Card>
+      ) : null}
+
       {bankHtml.trim() ? (
         <Card className="border-zinc-200 dark:border-zinc-800">
           <CardHeader className="pb-3">
@@ -182,17 +236,26 @@ export function SubscriptionClient({
               {t('Transfer in MMK (or as instructed), then upload your slip below.')}
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             <div
               className="rounded-lg border border-zinc-200 bg-zinc-50/80 p-4 text-sm leading-relaxed text-zinc-800 dark:border-zinc-700 dark:bg-zinc-900/50 dark:text-zinc-200 [&_a]:text-indigo-600 dark:[&_a]:text-indigo-400"
               dangerouslySetInnerHTML={{ __html: bankHtml }}
             />
+            {promptpayUrl ? (
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-zinc-600 dark:text-zinc-400">{t('PromptPay QR')}</p>
+                <div className="overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-700">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={promptpayUrl} alt={t('PromptPay QR')} className="max-h-56 w-full bg-zinc-100 object-contain dark:bg-zinc-900" />
+                </div>
+              </div>
+            ) : null}
           </CardContent>
         </Card>
       ) : (
         <Card className="border-amber-200 bg-amber-50/50 dark:border-amber-900/40 dark:bg-amber-950/20">
           <CardContent className="pt-6 text-sm text-amber-900 dark:text-amber-200/90">
-            {t('Payment instructions are not configured yet. Your platform admin should add bank / QR details in the admin console under')} <span className="font-medium">{t('Subscriptions & bank')}</span>.
+            {t('Payment instructions are not configured yet. Your platform admin should add bank / QR details in the admin console under')} <span className="font-medium">{t('Settings')}</span>.
           </CardContent>
         </Card>
       )}
@@ -290,7 +353,9 @@ export function SubscriptionClient({
                           onChange={() => setPlan('pro')}
                           className="border-zinc-400"
                         />
-                        <span className="text-sm font-semibold text-zinc-900 dark:text-white">{t('Pro — 45,000 MMK / month')}</span>
+                        <span className="text-sm font-semibold text-zinc-900 dark:text-white">
+                          {t(`Pro — ${priceProMmk.toLocaleString()} MMK / month`)}
+                        </span>
                       </div>
                       <ul className="ml-6 list-inside list-disc text-xs text-zinc-600 dark:text-zinc-400">
                         <li>{t('2 bots, unlimited orders')}</li>
@@ -315,7 +380,9 @@ export function SubscriptionClient({
                           onChange={() => setPlan('plus')}
                           className="border-zinc-400"
                         />
-                        <span className="text-sm font-semibold text-zinc-900 dark:text-white">{t('Plus — 65,000 MMK / month')}</span>
+                        <span className="text-sm font-semibold text-zinc-900 dark:text-white">
+                          {t(`Plus — ${pricePlusMmk.toLocaleString()} MMK / month`)}
+                        </span>
                       </div>
                       <ul className="ml-6 list-inside list-disc text-xs text-zinc-600 dark:text-zinc-400">
                         <li>{t('Everything in Pro')}</li>

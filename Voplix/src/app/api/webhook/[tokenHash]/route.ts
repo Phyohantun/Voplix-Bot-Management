@@ -20,7 +20,7 @@ import {
   type BotTelegramCopy,
 } from '@/lib/bot-telegram-copy';
 import { getShopDisplayName } from '@/lib/shop-display-name';
-import { checkOrderCreationAllowed, loadPlatformAccountFlagsAdmin } from '@/lib/plan-limits';
+import { checkOrderCreationAllowed, effectivePlanTier, loadPlatformAccountFlagsAdmin } from '@/lib/plan-limits';
 
 interface TelegramUpdate {
   message?: {
@@ -146,10 +146,8 @@ export async function POST(
     const ownerUserId = (bot as any).user_id as string;
     const botUsername = (bot as any).bot_username as string;
     const ownerFlags = await loadPlatformAccountFlagsAdmin(ownerUserId);
-    const copy = mergeBotTelegramCopyRespectingPlan(
-      (bot as any).telegram_customer_copy,
-      ownerFlags.plan_tier
-    );
+    const planForCopy = effectivePlanTier(ownerFlags.plan_tier, ownerFlags.subscription_period_end);
+    const copy = mergeBotTelegramCopyRespectingPlan((bot as any).telegram_customer_copy, planForCopy);
     const customerPaymentText = paymentInstructionsFromBotRow(bot as any);
 
     if (!(bot as any).is_active) {

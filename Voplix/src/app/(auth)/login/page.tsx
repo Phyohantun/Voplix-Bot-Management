@@ -1,9 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
+import { ArrowLeft } from '@phosphor-icons/react';
+import { useTheme } from 'next-themes';
 import { createClient } from '@/lib/supabase/client';
 import { VoplixWordmark } from '@/components/brand/voplix-wordmark';
 import { Button } from '@/components/ui/button';
@@ -14,10 +16,15 @@ import { toast } from 'sonner';
 
 export default function LoginPage() {
   const router = useRouter();
+  const { setTheme } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const supabase = createClient();
+
+  useEffect(() => {
+    setTheme('light');
+  }, [setTheme]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,6 +38,7 @@ export default function LoginPage() {
     if (error) {
       toast.error(error.message);
     } else {
+      setTheme('light');
       toast.success('Logged in successfully');
       router.push('/dashboard');
       router.refresh();
@@ -42,6 +50,15 @@ export default function LoginPage() {
   return (
     <Card className="border-zinc-300 dark:border-zinc-700/70 bg-zinc-50 dark:bg-zinc-900/70 shadow-2xl backdrop-blur-xl">
       <CardHeader className="space-y-4">
+        <div className="flex items-center justify-start">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-medium text-zinc-700 outline-none ring-offset-2 ring-offset-zinc-100 hover:bg-zinc-200/80 dark:text-zinc-300 dark:ring-offset-zinc-950 dark:hover:bg-zinc-800/80"
+          >
+            <ArrowLeft className="h-4 w-4" aria-hidden />
+            Back
+          </Link>
+        </div>
         <div className="flex flex-col items-center gap-3 pb-1">
           <Link
             href="/"
@@ -77,6 +94,7 @@ export default function LoginPage() {
             <Input
               id="password"
               type="password"
+              placeholder="e.g. MyShop99! (your secret password)"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required

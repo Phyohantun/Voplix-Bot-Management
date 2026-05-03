@@ -6,6 +6,7 @@ import { getPlanEnforcementSnapshot } from '@/lib/plan-limits';
 import { sanitizeOwnerHtml } from '@/lib/sanitize-html';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { PLATFORM_SUBSCRIPTION_SLIPS_BUCKET } from '@/lib/platform-subscription-constants';
+import { getPlatformSubscriptionSettingsAdmin } from '@/lib/platform-subscription-settings-load';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,18 +21,16 @@ export default async function SubscriptionPage() {
 
   const acct = await getPlatformAccountForUser(user.id);
   const plan = acct?.plan_tier ?? 'free';
+  const subscriptionPeriodEnd = acct?.subscription_period_end ?? null;
 
   let bankRaw = '';
   let pending: { id: string; plan_tier: string; created_at: string } | null = null;
   let slipPath: string | null = null;
+  let lastRejection: { plan_tier: string; admin_notes: string | null; reviewed_at: string | null } | null = null;
 
-  const [planSnapshot, settingsRes, pendRes] = await Promise.all([
+  const [planSnapshot, settings, pendRes, rejectRes] = await Promise.all([
     getPlanEnforcementSnapshot(user.id),
-    (supabase as any)
-      .from('platform_subscription_settings')
-      .select('bank_instructions_html')
-      .eq('id', 'default')
-      .maybeSingle(),
+    getPlatformSubscriptionSettingsAdmin(),
     (supabase as any)
       .from('platform_subscription_requests')
       .select('id, plan_tier, created_at, slip_storage_path')
@@ -39,12 +38,18 @@ export default async function SubscriptionPage() {
       .eq('status', 'pending')
       .order('created_at', { ascending: false })
       .limit(1),
+    (supabase as any)
+      .from('platform_subscription_requests')
+      .select('plan_tier, admin_notes, reviewed_at')
+      .eq('user_id', user.id)
+      .eq('status', 'rejected')
+      .order('reviewed_at', { ascending: false })
+      .limit(1),
   ]);
 
-  const settings = settingsRes?.data;
-  if (settings && typeof settings.bank_instructions_html === 'string') {
-    bankRaw = settings.bank_instructions_html;
-  }
+  bankRaw = settings.bank_instructions_html;
+  const priceProMmk = settings.price_pro_mmk_month;
+  const pricePlusMmk = settings.price_plus_mmk_month;
 
   const pendRows = pendRes?.data as
     | { id: string; plan_tier: string; created_at: string; slip_storage_path: string }[]
@@ -58,6 +63,17 @@ export default async function SubscriptionPage() {
     slipPath = pendRows[0].slip_storage_path || null;
   }
 
+  const rejRows = rejectRes?.data as
+    | { plan_tier: string; admin_notes: string | null; reviewed_at: string | null }[]
+    | null;
+  if (rejRows?.[0]) {
+    lastRejection = {
+      plan_tier: rejRows[0].plan_tier,
+      admin_notes: rejRows[0].admin_notes,
+      reviewed_at: rejRows[0].reviewed_at,
+    };
+  }
+
   let pendingSlipUrl: string | null = null;
   if (slipPath) {
     const { data: signed, error: signErr } = await supabaseAdmin.storage
@@ -68,6 +84,15 @@ export default async function SubscriptionPage() {
     }
   }
 
+  let promptpayUrl: string | null = null;
+  const ppPath = settings.promptpay_qr_storage_path?.trim();
+  if (ppPath) {
+    const { data: signedPp } = await supabaseAdmin.storage
+      .from(PLATFORM_SUBSCRIPTION_SLIPS_BUCKET)
+      .createSignedUrl(ppPath, 3600);
+    promptpayUrl = signedPp?.signedUrl ?? null;
+  }
+
   const bankHtml = sanitizeOwnerHtml(bankRaw);
   const supportWhatsappUrl = (process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP_URL || '').trim();
 
@@ -75,11 +100,16 @@ export default async function SubscriptionPage() {
     <SubscriptionClient
       userEmail={user.email ?? ''}
       currentPlan={plan}
+      subscriptionPeriodEnd={subscriptionPeriodEnd}
       bankHtml={bankHtml}
       pending={pending}
       pendingSlipUrl={pendingSlipUrl}
       planSnapshot={planSnapshot}
       supportWhatsappUrl={supportWhatsappUrl}
+      priceProMmk={priceProMmk}
+      pricePlusMmk={pricePlusMmk}
+      promptpayUrl={promptpayUrl}
+      lastRejection={lastRejection}
     />
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { AdminUserRow } from '@/lib/admin-users-list';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,6 +24,7 @@ function RowEditor({
   const [notes, setNotes] = useState(row.admin_notes ?? '');
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [subBusy, setSubBusy] = useState(false);
 
   useEffect(() => {
     setStatus(row.account_status);
@@ -33,6 +34,43 @@ function RowEditor({
     setOrders(row.can_use_orders);
     setNotes(row.admin_notes ?? '');
   }, [row]);
+
+  const applyAccount = (a: Record<string, unknown>) => {
+    let subscription_period_end = row.subscription_period_end;
+    if (a.subscription_period_end === null) subscription_period_end = null;
+    else if (typeof a.subscription_period_end === 'string' && a.subscription_period_end.trim()) {
+      subscription_period_end = a.subscription_period_end;
+    }
+    onSaved({
+      ...row,
+      account_status: String(a.account_status),
+      plan_tier: String(a.plan_tier),
+      subscription_period_end,
+      can_use_broadcast: Boolean(a.can_use_broadcast),
+      can_use_stock: Boolean(a.can_use_stock),
+      can_use_orders: Boolean(a.can_use_orders),
+      admin_notes: (a.admin_notes as string | null) ?? null,
+    });
+  };
+
+  const patchOnly = async (body: Record<string, unknown>, okMsg: string) => {
+    setSubBusy(true);
+    try {
+      const res = await fetch(`/api/admin/users/${row.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const j = (await res.json().catch(() => ({}))) as { error?: string; account?: Record<string, unknown> };
+      if (!res.ok) throw new Error(j.error || 'Request failed');
+      if (j.account) applyAccount(j.account);
+      toast.success(okMsg);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Request failed');
+    } finally {
+      setSubBusy(false);
+    }
+  };
 
   const save = async () => {
     setSaving(true);
@@ -55,17 +93,7 @@ function RowEditor({
       }
       toast.success('Saved');
       const a = j.account;
-      if (a) {
-        onSaved({
-          ...row,
-          account_status: String(a.account_status),
-          plan_tier: String(a.plan_tier),
-          can_use_broadcast: Boolean(a.can_use_broadcast),
-          can_use_stock: Boolean(a.can_use_stock),
-          can_use_orders: Boolean(a.can_use_orders),
-          admin_notes: (a.admin_notes as string | null) ?? null,
-        });
-      }
+      if (a) applyAccount(a);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Save failed');
     } finally {
@@ -94,12 +122,15 @@ function RowEditor({
     }
   };
 
+  const paid = plan === 'pro' || plan === 'plus';
+
   return (
     <tr className="border-b border-zinc-800 align-top">
       <td className="px-3 py-3 text-sm text-zinc-300">
         <div className="font-medium text-white">{row.email || '—'}</div>
         <div className="mt-1 font-mono text-[11px] text-zinc-500">{row.id}</div>
       </td>
+      <td className="px-3 py-3 text-sm text-zinc-400">{row.display_name || '—'}</td>
       <td className="px-3 py-3 text-xs text-zinc-400">{formatDateTimeUtc(row.created_at)}</td>
       <td className="px-3 py-3">
         <select
@@ -115,13 +146,21 @@ function RowEditor({
       <td className="px-3 py-3">
         <select
           value={plan}
-          onChange={(e) => setPlan(e.target.value)}
+          onChange={(e) => {
+            const v = e.target.value;
+            setPlan(v);
+            if (v === 'plus') setBroadcast(true);
+            if (v === 'pro' || v === 'free') setBroadcast(false);
+          }}
           className="w-full rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1.5 text-sm text-white"
         >
           <option value="free">free</option>
           <option value="pro">pro</option>
           <option value="plus">plus</option>
         </select>
+      </td>
+      <td className="px-3 py-3 text-xs text-zinc-500">
+        {row.subscription_period_end ? formatDateTimeUtc(row.subscription_period_end) : '—'}
       </td>
       <td className="px-3 py-3">
         <div className="flex flex-col gap-1 text-xs text-zinc-300">
@@ -148,26 +187,56 @@ function RowEditor({
         />
       </td>
       <td className="px-3 py-3">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <Button
-            type="button"
-            size="sm"
-            className="bg-indigo-600 hover:bg-indigo-700"
-            disabled={saving || deleting}
-            onClick={save}
-          >
-            {saving ? 'Saving…' : 'Save'}
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            className="border-red-800 text-red-400 hover:bg-red-950/50"
-            disabled={saving || deleting}
-            onClick={removeUser}
-          >
-            {deleting ? 'Deleting…' : 'Delete user'}
-          </Button>
+        <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <Button
+              type="button"
+              size="sm"
+              className="bg-indigo-600 hover:bg-indigo-700"
+              disabled={saving || deleting || subBusy}
+              onClick={save}
+            >
+              {saving ? 'Saving…' : 'Save'}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="border-red-800 text-red-400 hover:bg-red-950/50"
+              disabled={saving || deleting || subBusy}
+              onClick={removeUser}
+            >
+              {deleting ? 'Deleting…' : 'Delete user'}
+            </Button>
+          </div>
+          {paid ? (
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="border-zinc-600 text-zinc-200"
+                disabled={subBusy || saving || deleting}
+                onClick={() => void patchOnly({ extend_subscription_days: 30 }, '+30 days applied')}
+              >
+                +30d
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="border-red-900/60 text-red-300 hover:bg-red-950/40"
+                disabled={subBusy || saving || deleting}
+                onClick={() => {
+                  if (window.confirm('Cancel paid plan and move to Free?')) {
+                    void patchOnly({ cancel_paid_subscription: true }, 'Moved to Free');
+                  }
+                }}
+              >
+                Cancel sub
+              </Button>
+            </div>
+          ) : null}
         </div>
       </td>
     </tr>
@@ -176,39 +245,63 @@ function RowEditor({
 
 export function AdminUsersTable({ initialUsers }: { initialUsers: AdminUserRow[] }) {
   const [rows, setRows] = useState(initialUsers);
+  const [q, setQ] = useState('');
 
   useEffect(() => {
     setRows(initialUsers);
   }, [initialUsers]);
 
+  const visible = useMemo(() => {
+    const t = q.trim().toLowerCase();
+    if (!t) return rows;
+    return rows.filter(
+      (r) =>
+        r.email.toLowerCase().includes(t) ||
+        (r.display_name && r.display_name.toLowerCase().includes(t)) ||
+        r.id.toLowerCase().includes(t)
+    );
+  }, [rows, q]);
+
   return (
-    <div className="overflow-x-auto rounded-lg border border-zinc-800">
-      <table className="w-full min-w-[960px] border-collapse text-left">
-        <thead>
-          <tr className="border-b border-zinc-800 bg-zinc-900/50 text-xs font-medium uppercase tracking-wide text-zinc-500">
-            <th className="px-3 py-2">User</th>
-            <th className="px-3 py-2">Signed up</th>
-            <th className="px-3 py-2">Status</th>
-            <th className="px-3 py-2">Plan</th>
-            <th className="px-3 py-2">Features</th>
-            <th className="px-3 py-2">Notes</th>
-            <th className="px-3 py-2">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <RowEditor
-              key={row.id}
-              row={row}
-              onSaved={(next) => setRows((prev) => prev.map((r) => (r.id === next.id ? next : r)))}
-              onDeleted={(id) => setRows((prev) => prev.filter((r) => r.id !== id))}
-            />
-          ))}
-        </tbody>
-      </table>
-      {rows.length === 0 ? (
-        <p className="p-6 text-center text-sm text-zinc-500">No users found.</p>
-      ) : null}
+    <div className="space-y-4">
+      <Input
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+        placeholder="Search email, name, or user id…"
+        className="max-w-md border-zinc-700 bg-zinc-900 text-white placeholder:text-zinc-600"
+      />
+      <div className="overflow-x-auto rounded-lg border border-zinc-800">
+        <table className="w-full min-w-[1100px] border-collapse text-left">
+          <thead>
+            <tr className="border-b border-zinc-800 bg-zinc-900/50 text-xs font-medium uppercase tracking-wide text-zinc-500">
+              <th className="px-3 py-2">Email</th>
+              <th className="px-3 py-2">Name</th>
+              <th className="px-3 py-2">Signed up</th>
+              <th className="px-3 py-2">Status</th>
+              <th className="px-3 py-2">Plan</th>
+              <th className="px-3 py-2">Period end</th>
+              <th className="px-3 py-2">Features</th>
+              <th className="px-3 py-2">Notes</th>
+              <th className="px-3 py-2">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {visible.map((row) => (
+              <RowEditor
+                key={row.id}
+                row={row}
+                onSaved={(next) => setRows((prev) => prev.map((r) => (r.id === next.id ? next : r)))}
+                onDeleted={(id) => setRows((prev) => prev.filter((r) => r.id !== id))}
+              />
+            ))}
+          </tbody>
+        </table>
+        {visible.length === 0 ? (
+          <p className="p-6 text-center text-sm text-zinc-500">
+            {rows.length === 0 ? 'No users found.' : 'No matches for your search.'}
+          </p>
+        ) : null}
+      </div>
     </div>
   );
 }

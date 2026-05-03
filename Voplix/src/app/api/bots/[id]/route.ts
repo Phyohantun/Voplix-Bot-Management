@@ -8,7 +8,7 @@ import {
   mergeTelegramCustomerCopyJson,
   PAYMENT_INSTRUCTIONS_JSON_KEY,
 } from '@/lib/bot-telegram-copy';
-import { loadPlatformAccountFlagsAdmin } from '@/lib/plan-limits';
+import { effectivePlanTier, loadPlatformAccountFlagsAdmin } from '@/lib/plan-limits';
 
 function isPlainObject(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -105,7 +105,8 @@ export async function PATCH(
       } else {
         let incoming = body.telegram_customer_copy as Record<string, unknown>;
         const flags = await loadPlatformAccountFlagsAdmin(user.id);
-        if (flags.plan_tier === 'free') {
+        const plan = effectivePlanTier(flags.plan_tier, flags.subscription_period_end);
+        if (plan === 'free') {
           incoming = { ...incoming };
           for (const k of CUSTOMER_MESSAGE_TEMPLATE_KEYS) {
             delete incoming[k as string];

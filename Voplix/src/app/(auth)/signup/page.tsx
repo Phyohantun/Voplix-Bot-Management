@@ -1,9 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
+import { ArrowLeft } from '@phosphor-icons/react';
+import { useTheme } from 'next-themes';
 import { createClient } from '@/lib/supabase/client';
 import { VoplixWordmark } from '@/components/brand/voplix-wordmark';
 import { getClientSiteUrl } from '@/lib/site-url';
@@ -15,6 +17,7 @@ import { toast } from 'sonner';
 
 export default function SignupPage() {
   const router = useRouter();
+  const { setTheme } = useTheme();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
@@ -22,6 +25,10 @@ export default function SignupPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const supabase = createClient();
+
+  useEffect(() => {
+    setTheme('light');
+  }, [setTheme]);
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -136,6 +143,7 @@ export default function SignupPage() {
             <Input
               id="password"
               type="password"
+              placeholder="At least 6 characters, e.g. MyShop99!"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
@@ -147,6 +155,7 @@ export default function SignupPage() {
             <Input
               id="confirmPassword"
               type="password"
+              placeholder="Same as above, e.g. MyShop99!"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               required

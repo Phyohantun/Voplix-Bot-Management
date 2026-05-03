@@ -5,6 +5,7 @@ export type PlatformAccountRow = {
   user_id: string;
   account_status: 'pending' | 'active' | 'suspended';
   plan_tier: 'free' | 'pro' | 'plus';
+  subscription_period_end: string | null;
   can_use_broadcast: boolean;
   can_use_stock: boolean;
   can_use_orders: boolean;
@@ -16,7 +17,7 @@ export const getPlatformAccountForUser = cache(async (userId: string): Promise<P
   const { data, error } = await (supabase as any)
     .from('platform_accounts')
     .select(
-      'user_id, account_status, plan_tier, can_use_broadcast, can_use_stock, can_use_orders, admin_notes'
+      'user_id, account_status, plan_tier, subscription_period_end, can_use_broadcast, can_use_stock, can_use_orders, admin_notes'
     )
     .eq('user_id', userId)
     .maybeSingle();

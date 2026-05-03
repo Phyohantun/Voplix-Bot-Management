@@ -3,6 +3,7 @@ import { createServerClient } from '@supabase/ssr';
 import type { NextRequest } from 'next/server';
 import { jwtVerify } from 'jose';
 import { PLATFORM_ADMIN_COOKIE } from '@/lib/admin-constants';
+import { readMaintenanceModeOn } from '@/lib/maintenance-cache';
 
 function copyCookies(from: NextResponse, to: NextResponse) {
   from.cookies.getAll().forEach((c) => {
@@ -72,6 +73,42 @@ export async function proxy(request: NextRequest) {
     });
   }
 
+  const maintenanceOn = await readMaintenanceModeOn();
+  if (maintenanceOn) {
+    const exempt =
+      pathname === '/maintenance' ||
+      pathname.startsWith('/admin') ||
+      pathname.startsWith('/api/admin') ||
+      pathname.startsWith('/api/webhook') ||
+      pathname.startsWith('/api/auth') ||
+      pathname.startsWith('/_next') ||
+      pathname === '/' ||
+      pathname === '/login' ||
+      pathname === '/signup' ||
+      pathname.startsWith('/login/') ||
+      pathname.startsWith('/signup/');
+
+    if (!exempt) {
+      if (
+        pathname.startsWith('/dashboard') ||
+        pathname.startsWith('/subscription') ||
+        pathname.startsWith('/onboarding')
+      ) {
+        return NextResponse.redirect(new URL('/maintenance', request.url));
+      }
+      if (pathname.startsWith('/api/')) {
+        const apiExempt =
+          pathname.startsWith('/api/webhook/') ||
+          pathname.startsWith('/api/admin/') ||
+          pathname.startsWith('/api/auth/') ||
+          pathname.startsWith('/api/debug/');
+        if (!apiExempt) {
+          return NextResponse.json({ error: 'Maintenance mode — try again shortly.' }, { status: 503 });
+        }
+      }
+    }
+  }
+
   let supabaseResponse = NextResponse.next({
     request: {
       headers: request.headers,
@@ -128,6 +165,7 @@ export const config = {
     '/dashboard/:path*',
     '/subscription',
     '/onboarding/:path*',
+    '/maintenance',
     '/login',
     '/signup',
     '/api/:path*',

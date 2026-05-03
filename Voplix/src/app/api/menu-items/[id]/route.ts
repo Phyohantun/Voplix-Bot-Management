@@ -3,10 +3,12 @@ import { createClient } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import {
   countActiveMenuItemsForUser,
+  effectivePlanTier,
   loadPlatformAccountFlagsAdmin,
-  maxActiveMenuItemsForPlan,
+  maxActiveMenuItemsForPlanWithSettings,
   planAllowsAutomatedDelivery,
 } from '@/lib/plan-limits';
+import { fetchPlatformSubscriptionSettingsAdmin } from '@/lib/platform-subscription-settings-load';
 
 const MENU_TYPES = ['DIGITAL_DELIVERY', 'MANUAL_DELIVERY'] as const;
 type MenuType = (typeof MENU_TYPES)[number];
@@ -74,7 +76,8 @@ export async function PATCH(
       }
       if (type === 'DIGITAL_DELIVERY') {
         const flags = await loadPlatformAccountFlagsAdmin(user.id);
-        if (!planAllowsAutomatedDelivery(flags.plan_tier)) {
+        const plan = effectivePlanTier(flags.plan_tier, flags.subscription_period_end);
+        if (!planAllowsAutomatedDelivery(plan)) {
           return NextResponse.json(
             { error: 'Auto delivery (digital) requires Pro or Plus. Upgrade on Subscription.' },
             { status: 403 }
@@ -102,8 +105,12 @@ export async function PATCH(
       }
       const wasActive = Boolean((menuItem as { is_active?: boolean }).is_active);
       if (is_active && !wasActive) {
-        const flags = await loadPlatformAccountFlagsAdmin(user.id);
-        const cap = maxActiveMenuItemsForPlan(flags.plan_tier);
+        const [flags, settings] = await Promise.all([
+          loadPlatformAccountFlagsAdmin(user.id),
+          fetchPlatformSubscriptionSettingsAdmin(),
+        ]);
+        const plan = effectivePlanTier(flags.plan_tier, flags.subscription_period_end);
+        const cap = maxActiveMenuItemsForPlanWithSettings(plan, settings);
         if (cap != null) {
           const n = await countActiveMenuItemsForUser(user.id);
           if (n >= cap) {

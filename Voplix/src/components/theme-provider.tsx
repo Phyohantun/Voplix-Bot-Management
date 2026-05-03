@@ -13,6 +13,7 @@ function isPublicLightOnlyPath(pathname: string | null): boolean {
   if (pathname === '/') return true;
   if (pathname.startsWith('/login')) return true;
   if (pathname.startsWith('/signup')) return true;
+  if (pathname.startsWith('/pricing')) return true;
   if (pathname.startsWith('/onboarding')) return true;
   if (pathname.startsWith('/profile-setup')) return true;
   return false;

@@ -8,6 +8,7 @@ import { DashboardSidebar } from './sidebar';
 import { useEffect, useMemo, useState, useTransition } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useTheme } from 'next-themes';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { LanguageToggle } from '@/components/language-toggle';
@@ -30,6 +31,7 @@ const BOT_SCOPED_PAGES = ['/dashboard', '/menu', '/stock', '/orders', '/broadcas
 
 export function DashboardHeader({ user, profile, announcements, unreadCount, bots }: DashboardHeaderProps) {
   const { t } = useLanguage();
+  const { setTheme } = useTheme();
   const [openProfile, setOpenProfile] = useState(false);
   const [openNotifications, setOpenNotifications] = useState(false);
   const supabase = createClient();
@@ -56,6 +58,7 @@ export function DashboardHeader({ user, profile, announcements, unreadCount, bot
   }, [firstName, profile?.display_name, user.email]);
 
   const onLogout = async () => {
+    setTheme('light');
     await supabase.auth.signOut();
     router.push('/login');
     router.refresh();
@@ -93,7 +96,7 @@ export function DashboardHeader({ user, profile, announcements, unreadCount, bot
   }, [activeBotId, pendingBotId]);
 
   const handleBotChange = (value: string | null) => {
-    if (!value) return;
+    if (!value || bots.length <= 1) return;
     setPendingBotId(value);
     const nextUrl = BOT_SCOPED_PAGES.includes(pathname) ? `${pathname}?bot=${value}` : `/dashboard?bot=${value}`;
 
@@ -126,7 +129,7 @@ export function DashboardHeader({ user, profile, announcements, unreadCount, bot
           <p className="truncate text-sm text-zinc-600 dark:text-zinc-400">
             {t('Welcome')}, {fullName || profile?.display_name || user.email?.split('@')[0] || 'Owner'}
           </p>
-          {bots.length > 0 ? (
+          {bots.length > 1 ? (
             <div className="mt-1 w-full max-w-[220px] sm:max-w-[300px]">
               <Select value={selectedBot?.id || ''} onValueChange={handleBotChange}>
                 <SelectTrigger
@@ -151,11 +154,16 @@ export function DashboardHeader({ user, profile, announcements, unreadCount, bot
                 <p className="mt-1 text-sm font-medium text-zinc-500 dark:text-zinc-500">{t('Switching bot…')}</p>
               ) : null}
             </div>
-          ) : (
+          ) : bots.length === 1 ? (
+            <p className="mt-1 truncate text-sm font-semibold tabular-nums text-zinc-900 dark:text-white">
+              @{bots[0].bot_username}
+            </p>
+          ) : null}
+          {bots.length === 0 ? (
             <p className="truncate text-sm font-semibold text-zinc-900 dark:text-white">
               {profile?.business_name || 'Digital Shop'}
             </p>
-          )}
+          ) : null}
         </div>
 
         <div className="ml-1 flex items-center gap-0.5 sm:ml-3 sm:gap-1">

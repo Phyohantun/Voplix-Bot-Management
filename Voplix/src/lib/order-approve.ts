@@ -7,7 +7,7 @@ import {
   escapeHtml,
   plainLinesToTelegramDeliveryHtml,
 } from '@/lib/bot-telegram-copy';
-import { loadPlatformAccountFlagsAdmin } from '@/lib/plan-limits';
+import { effectivePlanTier, loadPlatformAccountFlagsAdmin } from '@/lib/plan-limits';
 
 type ApproveBody = {
   manual_delivery_data?: Record<string, unknown> | null;
@@ -110,7 +110,8 @@ export async function approveSlipOrderForOwner(
   }
 
   const ownerFlags = await loadPlatformAccountFlagsAdmin(ownerUserId);
-  const copy = mergeBotTelegramCopyRespectingPlan(order.bots.telegram_customer_copy, ownerFlags.plan_tier);
+  const planForCopy = effectivePlanTier(ownerFlags.plan_tier, ownerFlags.subscription_period_end);
+  const copy = mergeBotTelegramCopyRespectingPlan(order.bots.telegram_customer_copy, planForCopy);
   const productNameEsc = escapeHtml(String(order.menu_items.name));
   const deliveryHtml = plainLinesToTelegramDeliveryHtml(deliveryContent);
 

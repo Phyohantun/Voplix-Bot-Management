@@ -29,7 +29,7 @@ export default function AdminLoginPage() {
         throw new Error(j.error || 'Login failed');
       }
       toast.success('Signed in');
-      router.push('/admin');
+      router.push('/admin/subscriptions');
       router.refresh();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Login failed');
