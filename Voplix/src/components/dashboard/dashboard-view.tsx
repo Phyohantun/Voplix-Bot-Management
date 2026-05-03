@@ -192,77 +192,73 @@ export function DashboardView({
         <p className="text-xs text-zinc-500 tabular-nums">{t('Last updated')} {lastUpdatedLabel}</p>
       </div>
 
-      <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-3">
         <Card
           className={cn(
-            'rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900'
+            'flex h-full min-h-0 flex-col rounded-lg border border-zinc-200 bg-white p-3.5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900'
           )}
         >
-          <div className="flex flex-row items-center justify-between pb-2">
-            <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">{t('Total Bots')}</span>
-            <ChatCircle className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
+          <div className="flex flex-row items-start justify-between gap-1 pb-1">
+            <span className="text-xs font-medium leading-tight text-zinc-700 dark:text-zinc-300">{t('Total Bots')}</span>
+            <ChatCircle className="h-3.5 w-3.5 shrink-0 text-zinc-600 dark:text-zinc-400" />
           </div>
-          <div className="text-3xl font-bold tabular-nums text-zinc-900 dark:text-white">
+          <div className="text-xl font-bold tabular-nums leading-none text-zinc-900 dark:text-white sm:text-2xl">
             <AnimatedMetric value={model.totalBots} formatter={(n) => String(n)} />
           </div>
-          <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">{t('Active bots')}</p>
-          <div className="mt-2">
+          <p className="mt-1 text-[11px] leading-snug text-zinc-600 dark:text-zinc-400">{t('Active bots')}</p>
+          <div className="mt-auto pt-1.5">
             <TrendLine trend={model.trends.bots} t={t} />
           </div>
         </Card>
 
-        <Link href={ordersHref} className="block">
-          <Card className="h-full rounded-xl border border-zinc-200 bg-white p-6 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900">
-            <div className="flex flex-row items-center justify-between pb-2">
-              <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">{t('Pending Approvals')}</span>
-              <Clock className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
+        <Link href={ordersHref} className="block min-h-0">
+          <Card className="flex h-full min-h-0 flex-col rounded-lg border border-zinc-200 bg-white p-3.5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="flex flex-row items-start justify-between gap-1 pb-1">
+              <span className="text-xs font-medium leading-tight text-zinc-700 dark:text-zinc-300">{t('Pending Approvals')}</span>
+              <Clock className="h-3.5 w-3.5 shrink-0 text-zinc-600 dark:text-zinc-400" />
             </div>
-            <div className="text-3xl font-bold tabular-nums text-zinc-900 dark:text-white">
+            <div className="text-xl font-bold tabular-nums leading-none text-zinc-900 dark:text-white sm:text-2xl">
               <AnimatedMetric value={model.pendingCount} formatter={(n) => String(n)} />
             </div>
-            <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">{t('Awaiting slip verification')}</p>
-            <div className="mt-2">
+            <p className="mt-1 text-[11px] leading-snug text-zinc-600 dark:text-zinc-400">{t('Awaiting slip verification')}</p>
+            <div className="mt-auto pt-1.5">
               <TrendLine trend={model.trends.pending} t={t} />
             </div>
           </Card>
         </Link>
 
-        <Card
-          className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
-        >
-          <div className="flex flex-row items-center justify-between pb-2">
-            <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">{t('Total Orders')}</span>
-            <ShoppingCart className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
+        <Card className="flex h-full min-h-0 flex-col rounded-lg border border-zinc-200 bg-white p-3.5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+          <div className="flex flex-row items-start justify-between gap-1 pb-1">
+            <span className="text-xs font-medium leading-tight text-zinc-700 dark:text-zinc-300">{t('Total Orders')}</span>
+            <ShoppingCart className="h-3.5 w-3.5 shrink-0 text-zinc-600 dark:text-zinc-400" />
           </div>
-          <div className="text-3xl font-bold tabular-nums text-zinc-900 dark:text-white">
+          <div className="text-xl font-bold tabular-nums leading-none text-zinc-900 dark:text-white sm:text-2xl">
             <AnimatedMetric value={model.totalOrders} formatter={(n) => n.toLocaleString('en-US')} />
           </div>
-          <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">{t('All time orders')}</p>
-          <div className="mt-2">
+          <p className="mt-1 text-[11px] leading-snug text-zinc-600 dark:text-zinc-400">{t('All time orders')}</p>
+          <div className="mt-auto pt-1.5">
             <TrendLine trend={model.trends.orders} t={t} />
           </div>
         </Card>
 
-        <Card
-          className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
-        >
-          <div className="flex flex-row items-center justify-between pb-2">
-            <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">{t('Revenue')}</span>
-            <CurrencyDollar className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
+        <Card className="flex h-full min-h-0 flex-col rounded-lg border border-zinc-200 bg-white p-3.5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+          <div className="flex flex-row items-start justify-between gap-1 pb-1">
+            <span className="text-xs font-medium leading-tight text-zinc-700 dark:text-zinc-300">{t('Revenue')}</span>
+            <CurrencyDollar className="h-3.5 w-3.5 shrink-0 text-zinc-600 dark:text-zinc-400" />
           </div>
-          <div className="text-2xl font-bold tabular-nums text-zinc-900 dark:text-white">
+          <div className="text-lg font-bold tabular-nums leading-tight text-zinc-900 dark:text-white sm:text-xl">
             <AnimatedMetric
               value={Math.round(model.totalRevenue)}
               formatter={(n) => formatCurrencyVerbose(n, currency)}
             />
           </div>
-          <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">{t('Completed paid orders')} ({currency})</p>
-          <div className="mt-2">
+          <p className="mt-1 text-[11px] leading-snug text-zinc-600 dark:text-zinc-400">{t('Completed paid orders')} ({currency})</p>
+          <div className="mt-auto space-y-1.5 pt-1">
             <TrendLine trend={model.trends.revenue} t={t} />
-          </div>
-          <div className="mt-3 flex items-end justify-between gap-2">
-            <RevenueSparkline values={model.revenueSparkline} className="h-9 w-[120px] text-zinc-500 dark:text-zinc-400" />
-            <span className="text-[10px] uppercase tracking-wide text-zinc-500">7d</span>
+            <div className="flex items-end justify-between gap-1.5">
+              <RevenueSparkline values={model.revenueSparkline} className="h-6 w-[88px] text-zinc-500 dark:text-zinc-400 sm:h-7 sm:w-[96px]" />
+              <span className="pb-0.5 text-[9px] uppercase tracking-wide text-zinc-500">7d</span>
+            </div>
           </div>
         </Card>
       </div>
