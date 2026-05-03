@@ -3,10 +3,7 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 import { decrypt } from '@/lib/encryption';
 import { fetchTelegramFile } from '@/lib/telegram';
 
-type OrderSlipRow = {
-  slip_image_url: string | null;
-  bots: { user_id: string; token_encrypted: string } | null;
-};
+export const runtime = 'nodejs';
 
 export async function GET(
   _request: Request,
@@ -22,24 +19,45 @@ export async function GET(
     return new Response('Unauthorized', { status: 401 });
   }
 
-  const { data, error: orderError } = await supabaseAdmin
+  const { data: orderRaw, error: orderError } = await supabaseAdmin
     .from('orders')
-    .select('slip_image_url, bots(user_id, token_encrypted)')
+    .select('slip_image_url, bot_id')
     .eq('id', id)
     .single();
 
-  const order = data as OrderSlipRow | null;
+  const orderRow = orderRaw as { slip_image_url: string | null; bot_id: string } | null;
 
-  if (orderError || !order?.slip_image_url || !order.bots) {
+  if (orderError || !orderRow) {
     return new Response('Not found', { status: 404 });
   }
 
-  if (order.bots.user_id !== user.id) {
+  const slipId = orderRow.slip_image_url?.trim() ?? '';
+  const botId = orderRow.bot_id;
+
+  if (!slipId || !botId) {
     return new Response('Not found', { status: 404 });
   }
 
-  const token = decrypt(order.bots.token_encrypted);
-  const file = await fetchTelegramFile(token, order.slip_image_url);
+  const { data: botRaw, error: botError } = await supabaseAdmin
+    .from('bots')
+    .select('user_id, token_encrypted')
+    .eq('id', botId)
+    .single();
+
+  const botRow = botRaw as { user_id: string; token_encrypted: string } | null;
+
+  if (botError || !botRow || botRow.user_id !== user.id) {
+    return new Response('Not found', { status: 404 });
+  }
+
+  let token: string;
+  try {
+    token = decrypt(botRow.token_encrypted);
+  } catch {
+    return new Response('Not found', { status: 404 });
+  }
+
+  const file = await fetchTelegramFile(token, slipId);
 
   if (!file) {
     return new Response('Failed to load slip', { status: 502 });

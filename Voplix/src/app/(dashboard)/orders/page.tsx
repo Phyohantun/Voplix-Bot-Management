@@ -6,8 +6,6 @@ import { FreePlanUpgradeBanner } from '@/components/dashboard/free-plan-banner';
 import { getPlanEnforcementSnapshot } from '@/lib/plan-limits';
 import { applyOrderStatusFilter, parseOrderStatusFilter, type OrderStatusFilter } from '@/lib/owner-orders-filter';
 
-import { PageHeader } from '@/components/dashboard/page-header';
-
 async function getBots(userId: string) {
   const supabase = await createClient();
   const { data, error } = await (supabase as any)

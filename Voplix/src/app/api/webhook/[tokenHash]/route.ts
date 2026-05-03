@@ -34,6 +34,10 @@ interface TelegramUpdate {
     };
     text?: string;
     photo?: Array<{ file_id: string }>;
+    document?: {
+      file_id: string;
+      mime_type?: string;
+    };
   };
   callback_query?: {
     id: string;
@@ -186,7 +190,7 @@ export async function POST(
 
     // Handle message
     if (update.message) {
-      const { from, chat, text, photo } = update.message;
+      const { from, chat, text, photo, document } = update.message;
       const telegramUserId = from.id.toString();
       const telegramUsername = from.username || '';
       const normalizedText = text?.trim() || '';
@@ -234,6 +238,27 @@ export async function POST(
           session,
           copy
         );
+        return NextResponse.json({ ok: true });
+      }
+
+      // Document as image or PDF (some clients send slips as files instead of photos)
+      if (document && session?.state === 'WAITING_FOR_SLIP') {
+        const mime = document.mime_type || '';
+        const okMime = mime.startsWith('image/') || mime === 'application/pdf';
+        if (okMime) {
+          await handleSlipUpload(
+            token,
+            chat.id,
+            botId,
+            telegramUserId,
+            telegramUsername,
+            document.file_id,
+            session,
+            copy
+          );
+          return NextResponse.json({ ok: true });
+        }
+        await sendMessage(token, chat.id, copy.slip_unsupported_file_html, { parse_mode: 'HTML' });
         return NextResponse.json({ ok: true });
       }
 

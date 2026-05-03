@@ -138,8 +138,9 @@ export default async function MenuPage({
 
   return (
     <div className="space-y-6">
-      <PageHeader 
-        title="Bot menu" 
+      <PageHeader
+        dashboardBack
+        title="Bot menu"
         description={
           <>
             Products here are sent to Telegram when someone sends <code className="text-zinc-700 dark:text-zinc-300">/start</code> or taps

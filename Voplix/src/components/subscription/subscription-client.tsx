@@ -302,7 +302,7 @@ export function SubscriptionClient({
             <p className="text-xs text-zinc-500 dark:text-zinc-400">{t('per month')}</p>
             <ul className="mt-4 space-y-2 text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">
               <li>{t('2 bots; unlimited products and orders')}</li>
-              <li>{t('Digital auto-delivery, stock, saved bot messages, exports')}</li>
+              <li>{t('Digital auto-delivery, stock, and editable bot message templates')}</li>
             </ul>
           </div>
           <div className={planCardRing(tier === 'plus')}>
@@ -320,7 +320,7 @@ export function SubscriptionClient({
             <p className="text-xs text-zinc-500 dark:text-zinc-400">{t('per month')}</p>
             <ul className="mt-4 space-y-2 text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">
               <li>{t('5 bots; same product and order limits as Pro')}</li>
-              <li>{t('Broadcast, advanced analytics, sales vs prior month')}</li>
+              <li>{t('Broadcast campaigns and custom post-delivery messages')}</li>
             </ul>
           </div>
         </div>
@@ -481,7 +481,7 @@ export function SubscriptionClient({
             <ul className="list-inside list-disc space-y-1">
               <li>{t('Up to 5 bots and unlimited products / orders')}</li>
               <li>{t('Broadcast to past customers')}</li>
-              <li>{t('Advanced analytics & sales vs last month')}</li>
+              <li>{t('Custom reply after order confirmed')}</li>
               <li>{t('VIP support tier')}</li>
             </ul>
           </CardContent>
@@ -533,7 +533,7 @@ export function SubscriptionClient({
                       <ul className="ml-6 list-inside list-disc text-xs text-zinc-600 dark:text-zinc-400">
                         <li>{t('2 bots, unlimited orders')}</li>
                         <li>{t('Auto delivery & stock management')}</li>
-                        <li>{t('Full reports & exports')}</li>
+                        <li>{t('Full reports (daily, weekly, monthly)')}</li>
                       </ul>
                     </label>
                   ) : null}
@@ -560,7 +560,7 @@ export function SubscriptionClient({
                       <ul className="ml-6 list-inside list-disc text-xs text-zinc-600 dark:text-zinc-400">
                         <li>{t('Everything in Pro')}</li>
                         <li>{t('5 bots')}</li>
-                        <li>{t('Broadcast & advanced analytics')}</li>
+                        <li>{t('Broadcast campaigns')}</li>
                       </ul>
                     </label>
                   ) : null}

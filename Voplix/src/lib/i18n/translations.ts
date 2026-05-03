@@ -1,6 +1,7 @@
 export const translations: Record<string, string> = {
   // Sidebar
   "Dashboard": "ဒက်ရှ်ဘုတ်",
+  "Back to dashboard": "ဒက်ရှ်ဘုတ်သို့ ပြန်မည်",
   "Bots": "ဘော့တ်များ",
   "Menu": "မီနူး",
   "Stock": "ကုန်လက်ကျန်",
@@ -264,11 +265,11 @@ export const translations: Record<string, string> = {
   "Manual fulfillment only; no digital stock or auto-send":
     "လူကိုယ်တိုင် ပေးပို့မှုသာ; ဒီဂျစ်တယ် စတော့ သို့မဟုတ် အလိုအလျောက် ပို့မှုမရှိပါ",
   "2 bots; unlimited products and orders": "ဘော့တ် ၂ ခု; ကုန်ပစ္စည်းနှင့် အော်ဒါ အကန့်အသတ်မရှိ",
-  "Digital auto-delivery, stock, saved bot messages, exports":
-    "ဒီဂျစ်တယ် အလိုအလျောက် ပေးပို့မှု၊ စတော့၊ သိမ်းထားသော ဘော့တ် စာသားများ၊ ထုတ်ယူမှုများ",
+  "Digital auto-delivery, stock, and editable bot message templates":
+    "ဒီဂျစ်တယ် အလိုအလျောက် ပေးပို့မှု၊ စတော့၊ ပြင်ဆင်နိုင်သော ဘော့တ် စာသားတမ်းပလိတ်များ",
   "5 bots; same product and order limits as Pro": "ဘော့တ် ၅ ခု; Pro နှင့် တူညီသော ကုန်ပစ္စည်းနှင့် အော်ဒါ ကန့်သတ်ချက်များ",
-  "Broadcast, advanced analytics, sales vs prior month":
-    "ကြေညာချက်ပေးပို့ခြင်း၊ အဆင့်မြင့် ခွဲခြမ်းစိတ်ဖြာမှု၊ ယခင်လနှင့် ရောင်းအား နှိုင်းယှဉ်ချက်",
+  "Broadcast campaigns and custom post-delivery messages":
+    "ကြေညာချက်ပေးပို့ခြင်းများနှင့် ပေးပို့ပြီးနောက် စိတ်ကြိုက် ပြန်စာများ",
   "These limits are enforced in the app. Paid prices are the MMK amounts set for this platform.":
     "ဤကန့်သတ်ချက်များကို အက်ပ်တွင် အသုံးချပါသည်။ ငွေပေးချေသော ဈေးနှုန်းများသည် ဤပလက်ဖောင်းအတွက် သတ်မှတ်ထားသော MMK ပမာဏများ ဖြစ်သည်။",
   "Renewal / expiry": "သက်တမ်းတိုး / ကုန်ဆုံးရက်",
@@ -323,7 +324,7 @@ export const translations: Record<string, string> = {
   "Included with Plus": "Plus တွင် ပါဝင်သောအရာများ",
   "Up to 5 bots and unlimited products / orders": "ဘော့တ် ၅ ခုအထိ နှင့် အကန့်အသတ်မရှိ ကုန်ပစ္စည်းများ / အော်ဒါများ",
   "Broadcast to past customers": "ယခင်ဝယ်ယူသူများထံ ကြေညာချက်ပေးပို့နိုင်ခြင်း",
-  "Advanced analytics & sales vs last month": "အဆင့်မြင့် ခွဲခြမ်းစိတ်ဖြာမှုများနှင့် ပြီးခဲ့သောလနှင့် ရောင်းအား နှိုင်းယှဉ်ချက်",
+  "Custom reply after order confirmed": "အော်ဒါ အတည်ပြုပြီးနောက် စိတ်ကြိုက် ပြန်စာ",
   "VIP support tier": "VIP အကူအညီပေးရေး အဆင့်",
   "Upgrade with bank transfer": "ဘဏ်လွှဲပြောင်းမှုဖြင့် အဆင့်မြှင့်မည်",
   "Choose a plan, pay using the details above, then attach your slip. Our team activates your account after verification.": "အစီအစဉ်တစ်ခုကို ရွေးချယ်ပါ၊ အထက်ပါအသေးစိတ်အချက်အလက်များကို အသုံးပြု၍ ငွေပေးချေပါ၊ ထို့နောက် သင်၏ပြေစာကို တွဲတင်ပါ။ စစ်ဆေးပြီးနောက် ကျွန်ုပ်တို့အဖွဲ့မှ သင့်အကောင့်ကို အသက်သွင်းပေးပါမည်။",
@@ -331,16 +332,18 @@ export const translations: Record<string, string> = {
   "Pro — 45,000 MMK / month": "Pro — တစ်လလျှင် 45,000 MMK",
   "2 bots, unlimited orders": "ဘော့တ် ၂ ခု၊ အကန့်အသတ်မရှိ အော်ဒါများ",
   "Auto delivery & stock management": "အလိုအလျောက် ပေးပို့ခြင်း နှင့် ပစ္စည်းလက်ကျန် စီမံခန့်ခွဲမှု",
-  "Full reports & exports": "အစီရင်ခံစာ အပြည့်အစုံ နှင့် ထုတ်ယူနိုင်မှုများ",
+  "Full reports (daily, weekly, monthly)": "အစီရင်ခံစာ အပြည့်အစုံ (နေ့စဉ်၊ အပတ်စဉ်၊ လစဉ်)",
   "Plus — 65,000 MMK / month": "Plus — တစ်လလျှင် 65,000 MMK",
   "Everything in Pro": "Pro တွင်ပါဝင်သမျှ အရာအားလုံး",
   "5 bots": "ဘော့တ် ၅ ခု",
-  "Broadcast & advanced analytics": "ကြေညာချက်ပေးပို့ခြင်း နှင့် အဆင့်မြင့် ခွဲခြမ်းစိတ်ဖြာမှုများ",
+  "Broadcast campaigns": "ကြေညာချက် ပေးပို့မှုများ",
   "Payment slip": "ငွေလွှဲပြေစာ",
   "JPG, PNG, WebP, or PDF · max 5 MB": "JPG, PNG, WebP သို့မဟုတ် PDF · အများဆုံး 5 MB",
   "Uploading…": "ဖိုင်တင်နေပါသည်…",
   "Submit for review": "စစ်ဆေးရန် တင်ပြမည်",
   "Submit stays disabled until payment details are configured.": "ငွေပေးချေမှုဆိုင်ရာ အသေးစိတ်အချက်အလက်များကို မသတ်မှတ်မချင်း တင်ပြရန်ခလုတ်ကို ပိတ်ထားပါမည်။",
+  "Loading slip…": "ပြေစာ ဖတ်နေပါသည်…",
+  "Could not load slip.": "ပြေစာ ဖတ်၍ မရပါ။",
   "Failed to load": "ရယူခြင်း မအောင်မြင်ပါ",
   "Failed to load history": "မှတ်တမ်း ရယူခြင်း မအောင်မြင်ပါ",
   "Could not load more": "နောက်ထပ် ရယူ၍မရပါ",

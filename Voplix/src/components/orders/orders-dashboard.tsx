@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { CaretLeft, CaretRight } from '@phosphor-icons/react';
+import { ArrowLeft, CaretLeft, CaretRight } from '@phosphor-icons/react';
 import { toast } from 'sonner';
 import { formatOrderTimestamp } from '@/lib/format-order';
 import { formatCurrencyAmount } from '@/lib/currency';
@@ -25,6 +25,7 @@ import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { cn } from '@/lib/utils';
 import { OrderHistoryCleanup } from '@/components/settings/order-history-cleanup';
 import { telegramHtmlToPlain } from '@/lib/bot-telegram-copy';
+import { OrderSlipMedia } from '@/components/orders/order-slip-media';
 
 type CleanupBotOption = { id: string; bot_username: string };
 
@@ -508,12 +509,7 @@ export function OrdersDashboard({
       <div className="flex flex-col gap-4 md:flex-row md:items-start">
         {order.slip_image_url ? (
           <div className="shrink-0 overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-800">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={`/api/orders/${order.id}/slip`}
-              alt="Payment slip"
-              className="max-h-[min(70vh,420px)] w-full max-w-md object-contain"
-            />
+            <OrderSlipMedia orderId={order.id} />
           </div>
         ) : null}
         <div className="min-w-0 flex-1 space-y-3">
@@ -563,6 +559,14 @@ export function OrdersDashboard({
 
   return (
     <div className="space-y-5">
+      <Link
+        href="/dashboard"
+        className="inline-flex w-fit items-center gap-1.5 text-sm font-medium text-zinc-600 outline-none ring-offset-2 hover:text-zinc-900 focus-visible:ring-2 focus-visible:ring-indigo-500 dark:text-zinc-400 dark:hover:text-white"
+      >
+        <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden />
+        {t('Back to dashboard')}
+      </Link>
+
       <div className="flex flex-wrap gap-2 border-b border-zinc-200 pb-3 dark:border-zinc-800">
         {FILTER_TABS.map((tab) => {
           const active = statusFilter === tab.id;

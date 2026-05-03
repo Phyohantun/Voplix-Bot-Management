@@ -86,8 +86,9 @@ export default async function StockPage({
 
   return (
     <div className="space-y-6">
-      <PageHeader 
-        title="Stock" 
+      <PageHeader
+        dashboardBack
+        title="Stock"
         description={
           <>
             <p>

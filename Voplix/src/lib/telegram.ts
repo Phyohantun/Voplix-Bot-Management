@@ -171,12 +171,21 @@ export async function fetchTelegramFile(
   token: string,
   fileId: string
 ): Promise<{ body: ArrayBuffer; contentType: string } | null> {
-  const getFileRes = await fetchWithTimeout(`${TELEGRAM_API_BASE}${token}/getFile`, {
+  const id = fileId.trim();
+  if (!id) return null;
+
+  let getFileRes = await fetchWithTimeout(`${TELEGRAM_API_BASE}${token}/getFile`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ file_id: fileId }),
+    body: JSON.stringify({ file_id: id }),
   });
-  const getFileData = await getFileRes.json();
+  let getFileData: { ok?: boolean; result?: { file_path?: string }; description?: string } = await getFileRes.json();
+
+  if (!getFileData.ok || !getFileData.result?.file_path) {
+    const getUrl = `${TELEGRAM_API_BASE}${token}/getFile?file_id=${encodeURIComponent(id)}`;
+    getFileRes = await fetchWithTimeout(getUrl);
+    getFileData = await getFileRes.json();
+  }
 
   if (!getFileData.ok || !getFileData.result?.file_path) {
     return null;

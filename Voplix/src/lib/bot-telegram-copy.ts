@@ -28,6 +28,8 @@ export const DEFAULT_BOT_TELEGRAM_COPY = {
     '<b>Available Commands</b>\n\n/start - Show the menu\n/menu - Show the menu\n/help - Show this help message',
   slip_out_of_band_html:
     '<b>Payment Slip</b>\n\nWe only accept slips after you click <b>Confirm & Pay</b> on an order. If you already sent one, please wait for verification — no need to send extra photos.',
+  slip_unsupported_file_html:
+    '<b>Payment Slip</b>\n\nPlease send your slip as a <b>photo</b> (JPG/PNG) or a <b>PDF</b> file.',
   slip_order_not_found: 'We could not find your order. Please try again using /start.',
   slip_already_received:
     'We already have your payment slip for this order. Please wait for verification — no need to send more photos.',
@@ -109,6 +111,10 @@ export const BOT_TELEGRAM_COPY_LABELS: Record<keyof typeof DEFAULT_BOT_TELEGRAM_
   slip_out_of_band_html: {
     title: 'Photo outside of slip phase',
     hint: 'When user sends a photo but no order is waiting for a slip. HTML.',
+  },
+  slip_unsupported_file_html: {
+    title: 'Slip — Unsupported file type',
+    hint: 'When user sends a document that is not an image or PDF during slip upload. HTML.',
   },
   callback_out_of_stock: {
     title: 'Out of Stock (Small Popup)',
@@ -198,6 +204,7 @@ export const BOT_TELEGRAM_COPY_SECTIONS = [
     title: 'Payment Slips',
     keys: [
       'slip_out_of_band_html',
+      'slip_unsupported_file_html',
       'slip_already_received',
       'slip_order_not_found',
       'slip_order_completed',

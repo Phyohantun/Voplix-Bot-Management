@@ -30,6 +30,7 @@ import { RevenueSparkline } from '@/components/dashboard/revenue-sparkline';
 import { AutoRefresh } from '@/components/dashboard/auto-refresh';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
+import { OrderSlipMedia } from '@/components/orders/order-slip-media';
 
 export type DashboardViewModel = {
   totalBots: number;
@@ -485,12 +486,7 @@ export function DashboardView({
           </DialogHeader>
           {slipOrderId ? (
             <div className="relative max-h-[70vh] overflow-auto rounded-lg border border-zinc-200 bg-zinc-50 p-2 dark:border-zinc-800 dark:bg-zinc-950">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={`/api/orders/${slipOrderId}/slip`}
-                alt="Customer payment slip"
-                className="mx-auto max-h-[65vh] w-auto max-w-full object-contain"
-              />
+              <OrderSlipMedia orderId={slipOrderId} />
             </div>
           ) : null}
         </DialogContent>

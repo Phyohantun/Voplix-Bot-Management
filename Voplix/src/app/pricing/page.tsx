@@ -36,14 +36,11 @@ const comparisonRows: {
   { feature: 'Stock management', free: <No />, pro: <Yes />, plus: <Yes /> },
   { feature: 'Message templates (5 key messages)', free: <No />, pro: <Yes />, plus: <Yes /> },
   { feature: 'Reports', free: 'Daily only', pro: 'Full (daily, weekly, monthly)', plus: 'Full (daily, weekly, monthly)' },
-  { feature: 'Export PDF / CSV', free: <No />, pro: <Yes />, plus: <Yes /> },
   { feature: 'Bot pause / resume', free: <No />, pro: <Yes />, plus: <Yes /> },
   { feature: 'Low stock alerts', free: <No />, pro: <Yes />, plus: <Yes /> },
   { feature: 'Bank / payment info edit', free: <No />, pro: <Yes />, plus: <Yes /> },
   { feature: 'Custom reply after order confirmed', free: <No />, pro: <No />, plus: <Yes /> },
   { feature: 'Broadcast to past customers', free: <No />, pro: <No />, plus: <Yes /> },
-  { feature: 'Advanced analytics', free: <No />, pro: <No />, plus: <Yes /> },
-  { feature: 'Sales vs last month', free: <No />, pro: <No />, plus: <Yes /> },
   { feature: 'Early access to new features', free: <No />, pro: <No />, plus: <Yes /> },
   {
     feature: 'Support',
@@ -118,7 +115,7 @@ export default function PricingPage() {
                   <li>1 bot · up to 5 products · 50 orders / month</li>
                   <li>Manual delivery only · daily report only</li>
                   <li>Default bot messages only — cannot edit templates</li>
-                  <li>No export · no pause/resume · no broadcast</li>
+                  <li>No pause/resume · no broadcast</li>
                   <li>Basic support</li>
                 </ul>
                 <Link href="/signup" prefetch className="mt-4 block">
@@ -141,7 +138,7 @@ export default function PricingPage() {
                   <li>2 bots · unlimited products · unlimited orders</li>
                   <li>Manual + auto delivery · stock management</li>
                   <li>Daily, weekly, monthly reports · edit all 5 message templates</li>
-                  <li>Export reports PDF/CSV · bot pause/resume with custom message</li>
+                  <li>Full reports (daily, weekly, monthly) · bot pause/resume with custom message</li>
                   <li>Bank / payment info customization · priority Telegram support</li>
                 </ul>
                 <Link href="/login?next=/subscription" prefetch className="mt-4 block">
@@ -160,7 +157,7 @@ export default function PricingPage() {
                 <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">Plus</p>
                 <p className="mt-1 text-2xl font-semibold text-zinc-900">65,000 MMK</p>
                 <p className="text-sm text-zinc-500">~฿499 / month</p>
-                <p className="mt-2 text-sm text-zinc-600">Scale volume, broadcast, and analytics.</p>
+                <p className="mt-2 text-sm text-zinc-600">Scale with more bots, broadcast, and VIP support.</p>
               </CardHeader>
               <CardContent className="space-y-2 pt-4 text-sm text-zinc-600">
                 <p className="font-medium text-zinc-800">Everything in Pro, and:</p>
@@ -168,8 +165,6 @@ export default function PricingPage() {
                   <li>5 bots</li>
                   <li>Custom reply after order confirmed</li>
                   <li>Broadcast to all past customers</li>
-                  <li>Advanced analytics — best-selling times, revenue trends</li>
-                  <li>Sales comparison this month vs last month</li>
                   <li>Early access to new features · VIP support (fastest response)</li>
                 </ul>
                 <Link href="/login?next=/subscription" prefetch className="mt-4 block">
@@ -261,14 +256,6 @@ export default function PricingPage() {
                 <li className="flex gap-2">
                   <Check className="mt-0.5 h-4 w-4 shrink-0 text-zinc-500" weight="bold" aria-hidden />
                   You need a custom reply after delivery is confirmed
-                </li>
-                <li className="flex gap-2">
-                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-zinc-500" weight="bold" aria-hidden />
-                  You want advanced analytics and revenue trends
-                </li>
-                <li className="flex gap-2">
-                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-zinc-500" weight="bold" aria-hidden />
-                  You rely on month-over-month sales comparison
                 </li>
                 <li className="flex gap-2">
                   <Check className="mt-0.5 h-4 w-4 shrink-0 text-zinc-500" weight="bold" aria-hidden />
