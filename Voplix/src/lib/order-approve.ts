@@ -6,6 +6,7 @@ import {
   applyTemplate,
   escapeHtml,
   plainLinesToTelegramDeliveryHtml,
+  resolveOrderDeliveryFollowupHtml,
   telegramHtmlToPlain,
 } from '@/lib/bot-telegram-copy';
 import { effectivePlanTier, loadPlatformAccountFlagsAdmin } from '@/lib/plan-limits';
@@ -137,13 +138,16 @@ export async function approveSlipOrderForOwner(
   });
 
   const token = decrypt(order.bots.token_encrypted);
-  await sendMessage(token, order.telegram_user_id, confirmHtml, { parse_mode: 'HTML' });
+  const confirmRes = await sendMessage(token, order.telegram_user_id, confirmHtml, { parse_mode: 'HTML' });
+  if (!confirmRes.ok) {
+    console.error('[approve] order confirmed message failed:', confirmRes.error);
+  }
 
-  let followHtml = applyTemplate(copy.order_delivery_followup_template_html, {
-    delivery: deliveryHtml,
-  }).trim();
-  if (!followHtml) followHtml = deliveryHtml;
-  await sendMessage(token, order.telegram_user_id, followHtml, { parse_mode: 'HTML' });
+  const followHtml = resolveOrderDeliveryFollowupHtml(copy.order_delivery_followup_template_html, deliveryHtml);
+  const followRes = await sendMessage(token, order.telegram_user_id, followHtml, { parse_mode: 'HTML' });
+  if (!followRes.ok) {
+    console.error('[approve] delivery / account message failed:', followRes.error);
+  }
 
   return { ok: true };
 }

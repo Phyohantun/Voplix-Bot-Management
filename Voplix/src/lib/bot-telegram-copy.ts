@@ -146,7 +146,7 @@ export const BOT_TELEGRAM_COPY_LABELS: Record<keyof typeof DEFAULT_BOT_TELEGRAM_
   },
   order_delivery_followup_template_html: {
     title: '4b. Delivery / account details (second message)',
-    hint: 'Leave empty to send only what you paste when approving. Otherwise wrap that text with your own short intro.',
+    hint: 'Leave empty to send only what you paste when approving on the Orders page. To add an intro, use {{delivery}} where the pasted buyer message should appear; if you omit it, the pasted details are still sent after your text.',
   },
   order_rejected_template_html: {
     title: '5. Order rejected (after you reject)',
@@ -352,6 +352,27 @@ export function applyTemplate(template: string, vars: Record<string, string>): s
     result = result.replace(new RegExp(`{{${key}}}`, 'g'), value);
   }
   return result;
+}
+
+/**
+ * Second Telegram message after approve: owner paste (deliveryHtml) must always reach the buyer.
+ * - Empty template → send delivery only.
+ * - Template contains `{{delivery}}` → substituted message.
+ * - Non-empty template without `{{delivery}}` → treat as intro/wrapper, then append delivery (common misconfiguration).
+ */
+export function resolveOrderDeliveryFollowupHtml(templateRaw: string | undefined, deliveryHtml: string): string {
+  const template = (templateRaw ?? '').trim();
+  if (!template) {
+    return deliveryHtml;
+  }
+  const substituted = applyTemplate(template, { delivery: deliveryHtml }).trim();
+  if (template.includes('{{delivery}}')) {
+    return substituted || deliveryHtml;
+  }
+  if (!substituted) {
+    return deliveryHtml;
+  }
+  return `${substituted}<br/><br/>${deliveryHtml}`;
 }
 
 /** Replace [ProductName]-style placeholders (owner HTML; substitute pre-escaped values). Longest keys first. */

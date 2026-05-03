@@ -466,7 +466,6 @@ export const translations: Record<string, string> = {
   "e.g. Welcome to Voplix! Choose your package below.": "ဥပမာ Welcome to Voplix! Choose your package below.",
   "Leave empty to use default message. This appears above your menu list.": "ပုံမှန်စာသား သုံးရန် ဗလာထားပါ။ ၎င်းသည် မီနူးစာရင်းအထက်တွင် ပေါ်လာပါမည်။",
   "Show only menu list on /start (hide welcome/title text)": "/start တွင် မီနူးစာရင်းကိုသာ ပြမည် (နှုတ်ခွန်းဆက်စာသားကို ဖျောက်မည်)",
-  "Show \"Browse menu\" tip message after /start": "/start ပြီးနောက် \"Browse menu\" အကြံပြုစာသားကို ပြမည်",
   "Close": "ပိတ်မည်",
   "Save start message": "အစစာသားကို သိမ်းမည်",
   "Save chat texts": "စာသားများကို သိမ်းမည်",
@@ -531,7 +530,8 @@ export const translations: Record<string, string> = {
   "5 — Payment numbers and method": "၅ — ငွေလွှဲနံပါတ်နှင့် ငွေပေးချေနည်း",
   "To enter your bank account numbers such as KBZ, Wave. Customers will see them directly.": "KBZ၊ Wave အစရှိသော မိမိ၏ ဘဏ်အကောင့်နံပါတ်များ ထည့်သွင်းရန်။ ဖောက်သည်များ တိုက်ရိုက်မြင်ရပါမည်။",
   "6 — Second message after order confirmation": "၆ — အော်ဒါ အတည်ပြုပြီးနောက် ဒုတိယ မက်ဆေ့ချ်",
-  "Message containing information entered when confirming on the Orders page. (This field can be left blank)": "Orders စာမျက်နှာတွင် အတည်ပြုချိန်၌ ရိုက်ထည့်မည့် အချက်အလက်များ ပါဝင်မည့် စာသား။ (ဤအကွက်ကို ဗလာထား၍လည်း ရပါသည်)",
+  "Optional wrapper for the message you type when approving on Orders. Leave blank to send only that text. If you write an intro here, put {{delivery}} where the buyer's details should go — or omit it and your intro is still followed by those details automatically.":
+    "Orders တွင် အတည်ပြုချိန် ရိုက်မည့် စာသားအတွက် ရွေးချယ်နိုင်သော အကျဉ်းချုပ်။ ဗလာထားပါက ထိုစာသားကိုသာ ပို့ပါသည်။ စာကြိုး ရေးပါက {{delivery}} ဖြင့် ဝယ်ယူသူအတွက် အသေးစိတ်ထည့်ရမည့်နေရာကို ညွှန်ပါ — မထည့်ပါက လည်း စာကြိုးနောက်က အသေးစိတ်များ အလိုအလျောက် ပါဝင်ပါသည်။",
   "Preview of what customer will see": "ဖောက်သည်မြင်မည့် နမူနာပုံ",
   "The above texts will be seen as follows.": "အထက်ပါ စာသားများကို အောက်ပါအတိုင်း မြင်ရမည် ဖြစ်ပါသည်။",
   "Link copied": "လင့်ခ်ကို ကူးယူပြီးပါပြီ",

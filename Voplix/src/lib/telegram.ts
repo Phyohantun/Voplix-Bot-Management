@@ -231,14 +231,6 @@ export async function answerCallbackQuery(
   }
 }
 
-/** Persistent bottom keyboard so users can reopen the catalog without typing /menu. */
-export function createPersistentMenuReplyKeyboard(browseMenuButtonLabel: string) {
-  return {
-    keyboard: [[{ text: browseMenuButtonLabel }]],
-    resize_keyboard: true,
-  };
-}
-
 /** Telegram inline button labels are limited (~64 chars); long names break the keyboard. */
 function truncateTelegramButtonLabel(text: string, maxChars = 58): string {
   const chars = [...text];

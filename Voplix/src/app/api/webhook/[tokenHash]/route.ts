@@ -6,7 +6,6 @@ import {
   answerCallbackQuery,
   createMainMenuKeyboard,
   createConfirmOrderKeyboard,
-  createPersistentMenuReplyKeyboard,
 } from '@/lib/telegram';
 import { getUserSession, setUserSession, clearUserSession, UserSession } from '@/lib/redis';
 import { getShopCurrencyForBot } from '@/lib/owner-currency';
@@ -69,7 +68,6 @@ interface MenuItemRecord {
 interface BotStartConfig {
   start_welcome_message: string | null;
   start_show_menu_only: boolean;
-  start_show_tip: boolean;
 }
 
 async function sendMessageWithFallback(
@@ -355,14 +353,13 @@ async function handleStart(
 ) {
   const { data: botConfigData } = await (supabaseAdmin
     .from('bots') as any)
-    .select('start_welcome_message, start_show_menu_only, start_show_tip')
+    .select('start_welcome_message, start_show_menu_only')
     .eq('id', botId)
     .single();
 
   const botConfig = (botConfigData as BotStartConfig | null) ?? {
     start_welcome_message: null,
     start_show_menu_only: false,
-    start_show_tip: true,
   };
 
   // Get menu items
@@ -430,27 +427,6 @@ async function handleStart(
 
   if (!main.ok) {
     console.error('[webhook] sendMessage (menu) failed:', main.error);
-  }
-
-  if (botConfig.start_show_tip) {
-    const tipHtml = copy.help_text_html.replace(
-      /\{\{browse_menu_button\}\}/g,
-      escapeHtml(copy.browse_menu_button)
-    );
-    const tipPlain = telegramHtmlToPlain(
-      copy.help_text_html.replace(/\{\{browse_menu_button\}\}/g, copy.browse_menu_button)
-    );
-    const tip = await sendMessageWithFallback(
-      token,
-      chatId,
-      tipHtml,
-      tipPlain,
-      { reply_markup: createPersistentMenuReplyKeyboard(copy.browse_menu_button) }
-    );
-
-    if (!tip.ok) {
-      console.error('[webhook] sendMessage (reply keyboard) failed:', tip.error);
-    }
   }
 
   await setUserSession(telegramUserId, botId, { state: 'VIEWING_MENU' });

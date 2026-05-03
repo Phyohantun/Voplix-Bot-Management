@@ -11,6 +11,7 @@ import {
   applyTemplate,
   escapeHtml,
   mergeBotTelegramCopy,
+  resolveOrderDeliveryFollowupHtml,
 } from '@/lib/bot-telegram-copy';
 import { sanitizeOwnerHtml } from '@/lib/sanitize-html';
 import { cn } from '@/lib/utils';
@@ -207,10 +208,8 @@ export function CustomerChatFlowSettings({
     const sampleLines =
       'KBZ Pay — 09xxxxxxxxx\nWave — 09xxxxxxxxx\nAccount — buyer@example.com';
     const deliveryHtml = escapeHtml(sampleLines).replace(/\n/g, '<br/>');
-    const raw = applyTemplate(msgTemplates.order_delivery_followup_template_html, {
-      delivery: deliveryHtml,
-    }).trim();
-    return sanitizeOwnerHtml(raw || deliveryHtml);
+    const raw = resolveOrderDeliveryFollowupHtml(msgTemplates.order_delivery_followup_template_html, deliveryHtml);
+    return sanitizeOwnerHtml(raw);
   }, [msgTemplates.order_delivery_followup_template_html]);
 
   const ta = 'min-h-[72px] resize-y border-zinc-300 bg-zinc-50 text-sm dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-100';
@@ -303,7 +302,9 @@ export function CustomerChatFlowSettings({
 
         <MessageField
           title={t('6 — Second message after order confirmation')}
-          hint={t('Message containing information entered when confirming on the Orders page. (This field can be left blank)')}
+          hint={t(
+            "Optional wrapper for the message you type when approving on Orders. Leave blank to send only that text. If you write an intro here, put {{delivery}} where the buyer's details should go — or omit it and your intro is still followed by those details automatically."
+          )}
         >
           <Textarea
             value={msgTemplates.order_delivery_followup_template_html}

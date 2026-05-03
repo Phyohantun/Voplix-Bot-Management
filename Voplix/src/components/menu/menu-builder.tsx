@@ -96,7 +96,6 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems, planSn
   const [startSettingsLoading, setStartSettingsLoading] = useState(false);
   const [startWelcomeMessage, setStartWelcomeMessage] = useState(selectedBot.start_welcome_message ?? '');
   const [startShowMenuOnly, setStartShowMenuOnly] = useState(selectedBot.start_show_menu_only);
-  const [startShowTip, setStartShowTip] = useState(selectedBot.start_show_tip);
   const [paymentInstructions, setPaymentInstructions] = useState(selectedBot.payment_instructions ?? '');
   const [paymentInstructionsSaving, setPaymentInstructionsSaving] = useState(false);
   const [msgTemplates, setMsgTemplates] = useState<CustomerMsgTemplatesState>(() => {
@@ -125,7 +124,6 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems, planSn
   useEffect(() => {
     setStartWelcomeMessage(selectedBot.start_welcome_message ?? '');
     setStartShowMenuOnly(selectedBot.start_show_menu_only);
-    setStartShowTip(selectedBot.start_show_tip);
     setPaymentInstructions(selectedBot.payment_instructions ?? '');
     const m = mergeBotTelegramCopy(selectedBot.telegram_customer_copy ?? null);
     setMsgTemplates({
@@ -140,7 +138,6 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems, planSn
     selectedBot.id,
     selectedBot.start_welcome_message,
     selectedBot.start_show_menu_only,
-    selectedBot.start_show_tip,
     selectedBot.payment_instructions,
     selectedBot.telegram_customer_copy,
   ]);
@@ -319,7 +316,6 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems, planSn
         body: JSON.stringify({
           start_welcome_message: startWelcomeMessage.trim() || null,
           start_show_menu_only: startShowMenuOnly,
-          start_show_tip: startShowTip,
         }),
       });
 
@@ -596,15 +592,6 @@ export function MenuBuilder({ bots, selectedBot, menuItems: initialItems, planSn
                       className="h-4 w-4 rounded border-zinc-600"
                     />
                     {t('Show only menu list on /start (hide welcome/title text)')}
-                  </label>
-                  <label className="flex items-center gap-3 text-sm text-zinc-700 dark:text-zinc-300">
-                    <input
-                      type="checkbox"
-                      checked={startShowTip}
-                      onChange={(e) => setStartShowTip(e.target.checked)}
-                      className="h-4 w-4 rounded border-zinc-600"
-                    />
-                    {t('Show "Browse menu" tip message after /start')}
                   </label>
                 </div>
               ) : (
