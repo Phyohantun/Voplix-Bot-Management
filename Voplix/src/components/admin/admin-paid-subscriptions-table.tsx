@@ -44,6 +44,11 @@ export function AdminPaidSubscriptionsTable({ initialRows }: { initialRows: Admi
                     typeof a.subscription_period_end === 'string' && a.subscription_period_end.trim()
                       ? a.subscription_period_end
                       : null,
+                  subscription_current_period_start:
+                    typeof a.subscription_current_period_start === 'string' &&
+                    a.subscription_current_period_start.trim()
+                      ? a.subscription_current_period_start
+                      : null,
                   can_use_broadcast: Boolean(a.can_use_broadcast),
                 }
               : r
@@ -77,11 +82,12 @@ export function AdminPaidSubscriptionsTable({ initialRows }: { initialRows: Admi
 
   return (
     <div className="overflow-x-auto rounded-xl border border-zinc-800">
-      <table className="w-full min-w-[720px] border-collapse text-left text-sm">
+      <table className="w-full min-w-[880px] border-collapse text-left text-sm">
         <thead>
           <tr className="border-b border-zinc-800 bg-zinc-900/60 text-xs font-medium uppercase tracking-wide text-zinc-500">
             <th className="px-3 py-2">Customer</th>
             <th className="px-3 py-2">Plan</th>
+            <th className="px-3 py-2">Period start</th>
             <th className="px-3 py-2">Expires</th>
             <th className="px-3 py-2">Status</th>
             <th className="px-3 py-2"> </th>
@@ -95,6 +101,9 @@ export function AdminPaidSubscriptionsTable({ initialRows }: { initialRows: Admi
                 <div className="mt-0.5 font-mono text-[11px] text-zinc-500">{r.id}</div>
               </td>
               <td className="px-3 py-3 capitalize text-zinc-300">{r.plan_tier}</td>
+              <td className="px-3 py-3 text-xs text-zinc-400">
+                {r.subscription_current_period_start ? formatDateTimeUtc(r.subscription_current_period_start) : '—'}
+              </td>
               <td className="px-3 py-3 text-xs text-zinc-400">
                 {r.subscription_period_end ? formatDateTimeUtc(r.subscription_period_end) : '—'}
               </td>

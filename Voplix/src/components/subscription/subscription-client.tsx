@@ -21,6 +21,7 @@ export function SubscriptionClient({
   userEmail,
   currentPlan,
   subscriptionPeriodEnd,
+  subscriptionCurrentPeriodStart,
   bankHtml,
   pending,
   pendingSlipUrl,
@@ -35,6 +36,7 @@ export function SubscriptionClient({
   userEmail: string;
   currentPlan: string;
   subscriptionPeriodEnd: string | null;
+  subscriptionCurrentPeriodStart: string | null;
   bankHtml: string;
   pending: Pending;
   pendingSlipUrl: string | null;
@@ -155,7 +157,26 @@ export function SubscriptionClient({
         </div>
         <div className="rounded-xl border border-zinc-200 bg-zinc-50/90 px-4 py-3 dark:border-zinc-700 dark:bg-zinc-900/40">
           <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">{t('Renewal / expiry')}</p>
-          <p className="mt-1.5 text-sm font-medium tabular-nums">{renewalExpiryLine()}</p>
+          {planSnapshot.plan !== 'free' && subscriptionCurrentPeriodStart?.trim() ? (
+            <p className="mt-2 text-sm text-zinc-700 dark:text-zinc-300">
+              <span className="text-xs font-medium uppercase tracking-wide text-zinc-500">{t('Current period started')}</span>{' '}
+              <span className="font-medium tabular-nums text-zinc-900 dark:text-zinc-100">
+                {formatDateTimeUtc(subscriptionCurrentPeriodStart)}
+              </span>
+            </p>
+          ) : null}
+          <p
+            className={`text-sm font-medium tabular-nums text-zinc-900 dark:text-white ${
+              planSnapshot.plan !== 'free' && subscriptionCurrentPeriodStart?.trim() ? 'mt-2' : 'mt-1.5'
+            }`}
+          >
+            {planSnapshot.plan !== 'free' ? (
+              <>
+                <span className="mr-2 text-xs font-medium uppercase tracking-wide text-zinc-500">{t('Access ends')}</span>
+              </>
+            ) : null}
+            {renewalExpiryLine()}
+          </p>
           {planSnapshot.plan !== 'free' && subscriptionPeriodEnd && !planSnapshot.paid_period_lapsed ? (
             <p className="mt-2 text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
               {t('Pro/Plus access ends at the time above unless you renew before then.')}

@@ -71,10 +71,17 @@ export async function PATCH(
         ? (ex.subscription_period_end as string)
         : null;
 
+    let subscription_current_period_start: string | null =
+      typeof ex?.subscription_current_period_start === 'string' &&
+      (ex.subscription_current_period_start as string).trim()
+        ? (ex.subscription_current_period_start as string)
+        : null;
+
     if (body.cancel_paid_subscription === true) {
       plan_tier = 'free';
       can_use_broadcast = false;
       subscription_period_end = null;
+      subscription_current_period_start = null;
     }
 
     const extendDays =
@@ -91,6 +98,7 @@ export async function PATCH(
 
     if (plan_tier === 'free' && extendDays <= 0 && body.cancel_paid_subscription !== true) {
       subscription_period_end = null;
+      subscription_current_period_start = null;
     }
 
     if (extendDays > 0 && plan_tier === 'free') {
@@ -105,6 +113,7 @@ export async function PATCH(
       account_status,
       plan_tier,
       subscription_period_end,
+      subscription_current_period_start,
       can_use_broadcast,
       can_use_stock,
       can_use_orders,
@@ -119,7 +128,10 @@ export async function PATCH(
       return NextResponse.json({ error: upsertErr.message }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, account: { ...row, plan_tier, account_status } });
+    return NextResponse.json({
+      success: true,
+      account: { ...row, plan_tier, account_status },
+    });
   } catch (e) {
     console.error('[PATCH /api/admin/users/[userId]]', e);
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });

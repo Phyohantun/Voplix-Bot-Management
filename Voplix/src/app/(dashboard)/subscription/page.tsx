@@ -22,6 +22,7 @@ export default async function SubscriptionPage() {
   const acct = await getPlatformAccountForUser(user.id);
   const plan = acct?.plan_tier ?? 'free';
   const subscriptionPeriodEnd = acct?.subscription_period_end ?? null;
+  const subscriptionCurrentPeriodStart = acct?.subscription_current_period_start ?? null;
 
   let bankRaw = '';
   let pending: { id: string; plan_tier: string; created_at: string } | null = null;
@@ -106,6 +107,7 @@ export default async function SubscriptionPage() {
       userEmail={user.email ?? ''}
       currentPlan={plan}
       subscriptionPeriodEnd={subscriptionPeriodEnd}
+      subscriptionCurrentPeriodStart={subscriptionCurrentPeriodStart}
       bankHtml={bankHtml}
       pending={pending}
       pendingSlipUrl={pendingSlipUrl}

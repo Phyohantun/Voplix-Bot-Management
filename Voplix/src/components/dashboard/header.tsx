@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ThemeToggle } from '@/components/theme-toggle';
 import { LanguageToggle } from '@/components/language-toggle';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
+import { useDashboardActivityOptional } from '@/components/dashboard/dashboard-activity-context';
 
 interface DashboardHeaderProps {
   user: User;
@@ -57,6 +58,9 @@ export function DashboardHeader({ user, profile, announcements, unreadCount, bot
     return src.slice(0, 1).toUpperCase();
   }, [firstName, profile?.display_name, user.email]);
 
+  const activity = useDashboardActivityOptional();
+  const bellUnread = activity?.unreadAnnouncements ?? unreadCount;
+
   const onLogout = async () => {
     setTheme('light');
     await supabase.auth.signOut();
@@ -65,7 +69,7 @@ export function DashboardHeader({ user, profile, announcements, unreadCount, bot
   };
 
   const markNotificationsRead = async () => {
-    if (unreadCount <= 0) return;
+    if (bellUnread <= 0) return;
     await fetch('/api/profile', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -182,9 +186,9 @@ export function DashboardHeader({ user, profile, announcements, unreadCount, bot
             }}
           >
             <Bell className="h-5 w-5" />
-            {unreadCount > 0 ? (
+            {bellUnread > 0 ? (
               <span className="absolute -top-1 -right-1 min-w-4 rounded-full border border-zinc-300 bg-zinc-200 px-1 text-[10px] text-zinc-900 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100">
-                {unreadCount}
+                {bellUnread > 99 ? '99+' : bellUnread}
               </span>
             ) : null}
             <span className="sr-only">Notifications</span>

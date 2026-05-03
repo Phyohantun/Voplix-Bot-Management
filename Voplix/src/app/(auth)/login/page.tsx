@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowLeft } from '@phosphor-icons/react';
@@ -12,10 +12,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { GoogleAuthButton } from '@/components/auth/google-auth-button';
 import { toast } from 'sonner';
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { setTheme } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -25,6 +27,12 @@ export default function LoginPage() {
   useEffect(() => {
     setTheme('light');
   }, [setTheme]);
+
+  useEffect(() => {
+    if (searchParams.get('error') === 'auth') {
+      toast.error('Sign-in failed. Please try again.');
+    }
+  }, [searchParams]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,13 +84,22 @@ export default function LoginPage() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        <GoogleAuthButton label="Continue with Google" />
+        <div className="relative py-1">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t border-zinc-200 dark:border-zinc-700" />
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-zinc-50 px-2 text-zinc-500 dark:bg-zinc-900/70 dark:text-zinc-400">Or</span>
+          </div>
+        </div>
         <form onSubmit={handleLogin} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email" className="text-zinc-700 dark:text-zinc-300">Email</Label>
             <Input
               id="email"
               type="email"
-              placeholder="name@example.com"
+              placeholder="Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -94,7 +111,7 @@ export default function LoginPage() {
             <Input
               id="password"
               type="password"
-              placeholder="e.g. MyShop99! (your secret password)"
+              placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required

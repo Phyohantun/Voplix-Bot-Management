@@ -17,6 +17,17 @@ export const translations: Record<string, string> = {
   "Switching bot…": "ဘော့တ် ပြောင်းနေသည်…",
   "System announcements": "စနစ် ကြေညာချက်များ",
   "No announcements yet.": "ကြေညာချက် မရှိသေးပါ။",
+  "order awaiting slip review": "အော်ဒါ တစ်ခု စလစ်စစ်ဆေးရန် ကျန်ရှိသည်",
+  "orders awaiting slip review": "အော်ဒါများ စလစ်စစ်ဆေးရန် ကျန်ရှိသည်",
+  "Open Orders": "အော်ဒါများ ဖွင့်မည်",
+  "Unread announcements:": "မဖတ်ရသေးသော ကြေညာချက်များ —",
+  "Use the bell icon in the header.": "ခေါင်းစဉ်ရှိ ခေါင်းလောင်းသင်္ကေတကို သုံးပါ။",
+  "Current period started": "လက်ရှိ သက်တမ်း စတင်ချိန်",
+  "Access ends": "အသုံးပြုခွင့် ကုန်ဆုံးချိန်",
+  "Orders awaiting review": "အော်ဒါများ စစ်ဆေးရန် ကျန်ရှိသည်",
+  "One new slip to review.": "စလစ်အသစ် တစ်ခု စစ်ဆေးရန်။",
+  "{n} new slips to review.": "စလစ်အသစ် {n} ခု စစ်ဆေးရန်။",
+  "Open the bell menu to read the full message.": "စာသားအပြည့်အစုံ ဖတ်ရန် ခေါင်းလောင်းမီနူးကို ဖွင့်ပါ။",
 
   // Dashboard Page
   "Active": "အသုံးပြုနေသည်",

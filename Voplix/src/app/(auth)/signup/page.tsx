@@ -13,7 +13,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { GoogleAuthButton } from '@/components/auth/google-auth-button';
 import { toast } from 'sonner';
+import { validateOwnerPasswordStrength } from '@/lib/password-policy';
 
 export default function SignupPage() {
   const router = useRouter();
@@ -95,10 +97,19 @@ export default function SignupPage() {
         </div>
         <CardTitle className="text-2xl text-zinc-900 dark:text-white">Create an account</CardTitle>
         <CardDescription className="text-zinc-600 dark:text-zinc-400">
-          Enter your details to create your account
+          Create your owner account to manage bots and orders.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        <GoogleAuthButton label="Sign up with Google" />
+        <div className="relative py-1">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t border-zinc-200 dark:border-zinc-700" />
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-zinc-50 px-2 text-zinc-500 dark:bg-zinc-900/70 dark:text-zinc-400">Or</span>
+          </div>
+        </div>
         <form onSubmit={handleSignup} className="space-y-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
@@ -106,7 +117,7 @@ export default function SignupPage() {
               <Input
                 id="firstName"
                 type="text"
-                placeholder="John"
+                placeholder="First name"
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
                 required
@@ -118,7 +129,7 @@ export default function SignupPage() {
               <Input
                 id="lastName"
                 type="text"
-                placeholder="Doe"
+                placeholder="Last name"
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
                 required
@@ -131,7 +142,7 @@ export default function SignupPage() {
             <Input
               id="email"
               type="email"
-              placeholder="name@example.com"
+              placeholder="Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -143,7 +154,7 @@ export default function SignupPage() {
             <Input
               id="password"
               type="password"
-              placeholder="At least 6 characters, e.g. MyShop99!"
+              placeholder="At least 6 characters"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
@@ -155,7 +166,7 @@ export default function SignupPage() {
             <Input
               id="confirmPassword"
               type="password"
-              placeholder="Same as above, e.g. MyShop99!"
+              placeholder="At least 6 characters"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               required

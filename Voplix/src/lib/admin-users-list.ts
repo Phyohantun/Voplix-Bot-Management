@@ -9,6 +9,7 @@ export type AdminUserRow = {
   account_status: string;
   plan_tier: string;
   subscription_period_end: string | null;
+  subscription_current_period_start: string | null;
   can_use_broadcast: boolean;
   can_use_stock: boolean;
   can_use_orders: boolean;
@@ -64,6 +65,7 @@ export async function listAllUsersWithPlatformAccounts(): Promise<AdminUserRow[]
   return collected.map((u) => {
     const a = map.get(u.id) as any;
     const endRaw = a?.subscription_period_end as string | null | undefined;
+    const startRaw = a?.subscription_current_period_start as string | null | undefined;
     return {
       id: u.id,
       email: u.email ?? '',
@@ -73,6 +75,7 @@ export async function listAllUsersWithPlatformAccounts(): Promise<AdminUserRow[]
       account_status: (a?.account_status as string) ?? 'active',
       plan_tier: (a?.plan_tier as string) ?? 'free',
       subscription_period_end: typeof endRaw === 'string' && endRaw.trim() ? endRaw : null,
+      subscription_current_period_start: typeof startRaw === 'string' && startRaw.trim() ? startRaw : null,
       can_use_broadcast: a?.can_use_broadcast !== false,
       can_use_stock: a?.can_use_stock !== false,
       can_use_orders: a?.can_use_orders !== false,

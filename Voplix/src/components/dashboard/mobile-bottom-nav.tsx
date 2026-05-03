@@ -5,6 +5,7 @@ import { usePathname, useSearchParams } from 'next/navigation';
 import { ChatCircle, ShoppingCart, List, Gear, Package } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
+import { useDashboardActivityOptional } from '@/components/dashboard/dashboard-activity-context';
 
 const items = [
   { href: '/menu', label: 'Menu', icon: List, match: (p: string) => p.startsWith('/menu') },
@@ -24,6 +25,8 @@ export function MobileBottomNav() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const bot = searchParams.get('bot');
+  const activity = useDashboardActivityOptional();
+  const pendingSlipOrders = activity?.pendingSlipOrders ?? 0;
 
   return (
     <nav
@@ -42,7 +45,7 @@ export function MobileBottomNav() {
               <Link
                 href={href}
                 className={cn(
-                  'flex flex-col items-center gap-0.5 rounded-lg py-2 text-[10px] font-semibold transition-colors',
+                  'relative flex flex-col items-center gap-0.5 rounded-lg py-2 text-[10px] font-semibold transition-colors',
                   active
                     ? 'text-indigo-600 dark:text-indigo-400'
                     : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200'
@@ -52,6 +55,11 @@ export function MobileBottomNav() {
                   className={cn('h-6 w-6', active && 'text-indigo-600 dark:text-indigo-400')}
                   {...(active ? { weight: 'fill' as const } : {})}
                 />
+                {item.href === '/orders' && pendingSlipOrders > 0 ? (
+                  <span className="absolute right-1 top-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-0.5 text-[9px] font-bold text-white tabular-nums dark:bg-amber-600">
+                    {pendingSlipOrders > 99 ? '99+' : pendingSlipOrders}
+                  </span>
+                ) : null}
                 <span className="truncate">{t(item.label)}</span>
               </Link>
             </li>

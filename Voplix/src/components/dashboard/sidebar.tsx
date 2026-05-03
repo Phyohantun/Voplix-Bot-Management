@@ -21,6 +21,7 @@ import { VoplixWordmark } from '@/components/brand/voplix-wordmark';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
+import { useDashboardActivityOptional } from '@/components/dashboard/dashboard-activity-context';
 
 interface DashboardSidebarProps {
   user: User;
@@ -45,6 +46,8 @@ export function DashboardSidebar({ user, mobile = false }: DashboardSidebarProps
   const supabase = createClient();
   const activeBotId = searchParams.get('bot');
   const { t } = useLanguage();
+  const activity = useDashboardActivityOptional();
+  const pendingSlipOrders = activity?.pendingSlipOrders ?? 0;
 
   useEffect(() => {
     navigation.forEach((item) => {
@@ -91,14 +94,22 @@ export function DashboardSidebar({ user, mobile = false }: DashboardSidebarProps
                     <Link
                       href={href}
                       className={cn(
-                        'group flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6',
+                        'group flex items-center gap-x-3 rounded-md p-2 text-sm font-semibold leading-6',
                         pathname === item.href || pathname.startsWith(`${item.href}/`)
                           ? 'bg-zinc-200 text-zinc-900 ring-1 ring-zinc-300 dark:bg-zinc-800 dark:text-white dark:ring-zinc-700/80'
                           : 'text-zinc-600 hover:bg-zinc-200/80 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/80 dark:hover:text-white'
                       )}
                     >
                       <item.icon className="h-5 w-5 shrink-0" aria-hidden="true" />
-                      {t(item.name)}
+                      <span className="min-w-0 flex-1 truncate">{t(item.name)}</span>
+                      {item.href === '/orders' && pendingSlipOrders > 0 ? (
+                        <span
+                          className="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-bold text-white tabular-nums dark:bg-amber-600"
+                          aria-label={`${pendingSlipOrders} ${t('orders awaiting slip review')}`}
+                        >
+                          {pendingSlipOrders > 99 ? '99+' : pendingSlipOrders}
+                        </span>
+                      ) : null}
                     </Link>
                       );
                     })()}

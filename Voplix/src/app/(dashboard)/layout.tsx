@@ -8,6 +8,10 @@ import { getOwnerProfileForLayout } from '@/lib/owner-profile';
 import { shopCurrencyFromUser } from '@/lib/currency';
 import { getPlatformAccountForUser } from '@/lib/platform-account';
 import { MobileBottomNav } from '@/components/dashboard/mobile-bottom-nav';
+import { DashboardActivityProvider } from '@/components/dashboard/dashboard-activity-context';
+import { DashboardAlertStrip } from '@/components/dashboard/dashboard-alert-strip';
+import { DashboardActivityPoller } from '@/components/dashboard/dashboard-activity-poller';
+import { countPendingSlipOrdersForUser } from '@/lib/dashboard-activity';
 
 export default async function DashboardLayout({
   children,
@@ -53,26 +57,35 @@ export default async function DashboardLayout({
     return new Date(a.created_at).getTime() > new Date(profile.notification_last_seen_at).getTime();
   }).length;
 
+  const initialPendingSlipOrders = await countPendingSlipOrdersForUser(user.id);
+
   const currency = shopCurrencyFromUser(user);
 
   return (
       <CurrencyProvider value={currency}>
-        <div className="min-h-screen bg-zinc-100 dark:bg-zinc-950">
-          <DashboardSidebar user={user} />
-          <div className="lg:pl-72">
-            <DashboardHeader
-              user={user}
-              profile={profile}
-              announcements={(announcements as any[]) || []}
-              unreadCount={unreadCount}
-              bots={(bots as any[]) || []}
-            />
-            <main className="px-4 py-6 pb-28 sm:px-6 sm:py-8 lg:px-8 lg:pb-8">{children}</main>
+        <DashboardActivityProvider
+          initialPendingSlipOrders={initialPendingSlipOrders}
+          initialUnreadAnnouncements={unreadCount}
+        >
+          <div className="min-h-screen bg-zinc-100 dark:bg-zinc-950">
+            <DashboardSidebar user={user} />
+            <div className="lg:pl-72">
+              <DashboardHeader
+                user={user}
+                profile={profile}
+                announcements={(announcements as any[]) || []}
+                unreadCount={unreadCount}
+                bots={(bots as any[]) || []}
+              />
+              <DashboardAlertStrip />
+              <main className="px-4 py-6 pb-28 sm:px-6 sm:py-8 lg:px-8 lg:pb-8">{children}</main>
+            </div>
+            <Suspense fallback={null}>
+              <MobileBottomNav />
+            </Suspense>
+            <DashboardActivityPoller />
           </div>
-          <Suspense fallback={null}>
-            <MobileBottomNav />
-          </Suspense>
-        </div>
+        </DashboardActivityProvider>
       </CurrencyProvider>
   );
 }

@@ -41,11 +41,20 @@ function RowEditor({
     else if (typeof a.subscription_period_end === 'string' && a.subscription_period_end.trim()) {
       subscription_period_end = a.subscription_period_end;
     }
+    let subscription_current_period_start = row.subscription_current_period_start;
+    if (a.subscription_current_period_start === null) subscription_current_period_start = null;
+    else if (
+      typeof a.subscription_current_period_start === 'string' &&
+      a.subscription_current_period_start.trim()
+    ) {
+      subscription_current_period_start = a.subscription_current_period_start;
+    }
     onSaved({
       ...row,
       account_status: String(a.account_status),
       plan_tier: String(a.plan_tier),
       subscription_period_end,
+      subscription_current_period_start,
       can_use_broadcast: Boolean(a.can_use_broadcast),
       can_use_stock: Boolean(a.can_use_stock),
       can_use_orders: Boolean(a.can_use_orders),
@@ -160,6 +169,9 @@ function RowEditor({
         </select>
       </td>
       <td className="px-3 py-3 text-xs text-zinc-500">
+        {row.subscription_current_period_start ? formatDateTimeUtc(row.subscription_current_period_start) : '—'}
+      </td>
+      <td className="px-3 py-3 text-xs text-zinc-500">
         {row.subscription_period_end ? formatDateTimeUtc(row.subscription_period_end) : '—'}
       </td>
       <td className="px-3 py-3">
@@ -271,7 +283,7 @@ export function AdminUsersTable({ initialUsers }: { initialUsers: AdminUserRow[]
         className="max-w-md border-zinc-700 bg-zinc-900 text-white placeholder:text-zinc-600"
       />
       <div className="overflow-x-auto rounded-lg border border-zinc-800">
-        <table className="w-full min-w-[1100px] border-collapse text-left">
+        <table className="w-full min-w-[1240px] border-collapse text-left">
           <thead>
             <tr className="border-b border-zinc-800 bg-zinc-900/50 text-xs font-medium uppercase tracking-wide text-zinc-500">
               <th className="px-3 py-2">Email</th>
@@ -279,6 +291,7 @@ export function AdminUsersTable({ initialUsers }: { initialUsers: AdminUserRow[]
               <th className="px-3 py-2">Signed up</th>
               <th className="px-3 py-2">Status</th>
               <th className="px-3 py-2">Plan</th>
+              <th className="px-3 py-2">Period start</th>
               <th className="px-3 py-2">Subscription expires</th>
               <th className="px-3 py-2">Features</th>
               <th className="px-3 py-2">Notes</th>

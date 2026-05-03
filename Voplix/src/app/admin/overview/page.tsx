@@ -47,6 +47,19 @@ export default async function AdminOverviewPage() {
                 </div>
               ))}
             </div>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {[
+                ['Users with at least one bot', String(stats.usersWithBots)],
+                ['Free plan accounts', String(stats.freeCount)],
+                ['Pro plan accounts', String(stats.proCount)],
+                ['Plus plan accounts', String(stats.plusCount)],
+              ].map(([label, value]) => (
+                <div key={label} className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-4">
+                  <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">{label}</p>
+                  <p className="mt-2 text-2xl font-semibold tabular-nums text-white">{value}</p>
+                </div>
+              ))}
+            </div>
             <p className="text-xs text-zinc-500">
               Paying seats: {stats.payingProCount} Pro @ settings price, {stats.payingPlusCount} Plus. Lapsed (past
               period end) are excluded from MRR.

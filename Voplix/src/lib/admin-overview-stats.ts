@@ -9,6 +9,10 @@ export type AdminOverviewStats = {
   mrrMmk: number;
   payingProCount: number;
   payingPlusCount: number;
+  usersWithBots: number;
+  freeCount: number;
+  proCount: number;
+  plusCount: number;
   recentSignups: { id: string; email: string; display_name: string | null; created_at: string; plan_tier: string }[];
 };
 
@@ -31,10 +35,24 @@ export async function loadAdminOverviewStats(): Promise<AdminOverviewStats> {
   const pendingSlips = pendingRes.count ?? 0;
   const activeBots = botsRes.count ?? 0;
 
+  const { data: botOwnerRows } = await (supabaseAdmin.from('bots') as any)
+    .select('user_id')
+    .eq('is_active', true);
+  const usersWithBots = new Set(
+    ((botOwnerRows ?? []) as { user_id: string }[]).map((r) => r.user_id)
+  ).size;
+
   let mrrMmk = 0;
   let payingProCount = 0;
   let payingPlusCount = 0;
+  let freeCount = 0;
+  let proCount = 0;
+  let plusCount = 0;
   for (const u of users) {
+    if (u.plan_tier === 'pro') proCount += 1;
+    else if (u.plan_tier === 'plus') plusCount += 1;
+    else freeCount += 1;
+
     if (!isPaidPeriodActive(u.subscription_period_end)) continue;
     if (u.plan_tier === 'pro') {
       mrrMmk += settings.price_pro_mmk_month;
@@ -63,6 +81,10 @@ export async function loadAdminOverviewStats(): Promise<AdminOverviewStats> {
     mrrMmk,
     payingProCount,
     payingPlusCount,
+    usersWithBots,
+    freeCount,
+    proCount,
+    plusCount,
     recentSignups,
   };
 }
