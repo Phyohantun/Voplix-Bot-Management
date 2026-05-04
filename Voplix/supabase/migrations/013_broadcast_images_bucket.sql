@@ -1,4 +1,5 @@
 -- Public read so Telegram sendPhoto can fetch by URL; uploads go through API (service role) under {user_id}/.
+-- The upload API also calls `storage.createBucket` when missing (service role), but SQL here keeps local/prod consistent.
 
 INSERT INTO storage.buckets (id, name, public)
 VALUES ('broadcast-images', 'broadcast-images', true)

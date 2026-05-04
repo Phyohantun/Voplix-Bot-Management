@@ -102,34 +102,35 @@ export async function POST(request: Request) {
     // Decrypt token
     const token = decrypt(bot.token_encrypted);
 
-    // Send messages with rate limiting (30 messages per second)
+    // Telegram: ~30 msgs/s to different chats is a common safe ceiling; we burst in parallel then pause briefly.
     let sentCount = 0;
     let failedCount = 0;
-    const batchSize = 30;
-    const delay = 1000; // 1 second
+    const batchSize = 28;
+    const interBatchMs = 280;
 
     for (let i = 0; i < users.length; i += batchSize) {
       const batch = users.slice(i, i + batchSize);
-      
-      await Promise.all(batch.map(async (user: any) => {
-        try {
-          if (imageForSend) {
-            const result = await sendPhoto(token, user.telegram_user_id, imageForSend, message);
-            if (result.ok) sentCount++;
-            else failedCount++;
-          } else {
-            const result = await sendMessage(token, user.telegram_user_id, message, { parse_mode: 'HTML' });
-            if (result.ok) sentCount++;
-            else failedCount++;
-          }
-        } catch (error) {
-          failedCount++;
-        }
-      }));
 
-      // Delay between batches
-      if (i + batchSize < users.length) {
-        await new Promise(resolve => setTimeout(resolve, delay));
+      await Promise.all(
+        batch.map(async (u: { telegram_user_id: string }) => {
+          try {
+            if (imageForSend) {
+              const result = await sendPhoto(token, u.telegram_user_id, imageForSend, message);
+              if (result.ok) sentCount++;
+              else failedCount++;
+            } else {
+              const result = await sendMessage(token, u.telegram_user_id, message, { parse_mode: 'HTML' });
+              if (result.ok) sentCount++;
+              else failedCount++;
+            }
+          } catch {
+            failedCount++;
+          }
+        })
+      );
+
+      if (i + batchSize < users.length && interBatchMs > 0) {
+        await new Promise((r) => setTimeout(r, interBatchMs));
       }
     }
 

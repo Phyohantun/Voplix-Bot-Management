@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { BROADCAST_IMAGES_BUCKET } from '@/lib/broadcast-image-constants';
+import { ensureBroadcastImagesBucketReady } from '@/lib/broadcast-storage-ensure';
 import { checkBroadcastAllowed } from '@/lib/plan-limits';
 
 const ALLOWED = new Set(['image/jpeg', 'image/png', 'image/webp']);
@@ -59,6 +60,21 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Use JPG, PNG, or WebP' }, { status: 400 });
     }
 
+    try {
+      await ensureBroadcastImagesBucketReady();
+    } catch (e) {
+      console.error('[broadcast/upload-image] ensure bucket', e);
+      return NextResponse.json(
+        {
+          error:
+            e instanceof Error
+              ? e.message
+              : 'Could not prepare storage for broadcast images. Check Supabase Storage and service role permissions.',
+        },
+        { status: 503 }
+      );
+    }
+
     const id = crypto.randomUUID();
     const path = `${user.id}/${id}.${extForMime(mime)}`;
     const buf = Buffer.from(await file.arrayBuffer());
@@ -69,17 +85,6 @@ export async function POST(request: Request) {
     });
 
     if (upErr) {
-      const msg = (upErr.message || '').toLowerCase();
-      const bucketMissing = /bucket not found/i.test(upErr.message || '') || msg.includes('bucket');
-      if (bucketMissing) {
-        return NextResponse.json(
-          {
-            error:
-              'Storage bucket "broadcast-images" is missing. Run migration 013_broadcast_images_bucket.sql in Supabase.',
-          },
-          { status: 503 }
-        );
-      }
       return NextResponse.json({ error: upErr.message || 'Upload failed' }, { status: 500 });
     }
 
