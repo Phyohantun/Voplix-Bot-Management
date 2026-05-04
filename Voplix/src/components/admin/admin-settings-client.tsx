@@ -208,7 +208,7 @@ export function AdminSettingsClient({
 
       <section className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-5 sm:p-6">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">Plan limits (optional overrides)</h2>
-        <p className="mt-1 text-sm text-zinc-500">Leave blank to use product defaults (1 / 2 / 5 bots, 5 menu items, 50 orders/mo on Free).</p>
+        <p className="mt-1 text-sm text-zinc-500">Leave blank to use product defaults (1 / 2 / 5 bots, 5 menu items, 20 orders/mo on Free).</p>
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           {(
             [

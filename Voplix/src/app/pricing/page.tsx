@@ -5,6 +5,7 @@ import { Check, X, Crown } from '@phosphor-icons/react/dist/ssr';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { VoplixWordmark } from '@/components/brand/voplix-wordmark';
+import { FREE_ORDERS_PER_MONTH_DEFAULT } from '@/lib/plan-constants';
 
 function Yes() {
   return (
@@ -30,7 +31,7 @@ const comparisonRows: {
 }[] = [
   { feature: 'Bots', free: '1', pro: '2', plus: '5' },
   { feature: 'Products', free: '5', pro: 'Unlimited', plus: 'Unlimited' },
-  { feature: 'Orders / month', free: '50', pro: 'Unlimited', plus: 'Unlimited' },
+  { feature: 'Orders / month', free: String(FREE_ORDERS_PER_MONTH_DEFAULT), pro: 'Unlimited', plus: 'Unlimited' },
   { feature: 'Manual delivery', free: <Yes />, pro: <Yes />, plus: <Yes /> },
   { feature: 'Auto delivery', free: <No />, pro: <Yes />, plus: <Yes /> },
   { feature: 'Stock management', free: <No />, pro: <Yes />, plus: <Yes /> },
@@ -112,7 +113,7 @@ export default function PricingPage() {
               </CardHeader>
               <CardContent className="space-y-2 pt-4 text-sm text-zinc-600">
                 <ul className="list-inside list-disc space-y-1.5 marker:text-zinc-400">
-                  <li>1 bot · up to 5 products · 50 orders / month</li>
+                  <li>{`1 bot · up to 5 products · ${FREE_ORDERS_PER_MONTH_DEFAULT} orders / month`}</li>
                   <li>Manual delivery only · daily report only</li>
                   <li>Default bot messages only — cannot edit templates</li>
                   <li>No pause/resume · no broadcast campaigns</li>
@@ -217,7 +218,7 @@ export default function PricingPage() {
               <ul className="mt-4 space-y-2.5 text-sm text-zinc-600">
                 <li className="flex gap-2">
                   <Check className="mt-0.5 h-4 w-4 shrink-0 text-zinc-500" weight="bold" aria-hidden />
-                  You are approaching or hit the 50 orders / month limit
+                  {`You are approaching or hit the ${FREE_ORDERS_PER_MONTH_DEFAULT} orders / month limit`}
                 </li>
                 <li className="flex gap-2">
                   <Check className="mt-0.5 h-4 w-4 shrink-0 text-zinc-500" weight="bold" aria-hidden />

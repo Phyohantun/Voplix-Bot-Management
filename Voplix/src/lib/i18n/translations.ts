@@ -322,7 +322,7 @@ export const translations: Record<string, string> = {
   "No monthly fee": "လစဉ်ကြေး မရှိပါ",
   "per month": "တစ်လလျှင်",
   "Your current plan": "သင်၏ လက်ရှိအစီအစဉ်",
-  "1 bot · up to 5 products · 50 orders per month": "ဘော့တ် ၁ ခု · ကုန်ပစ္စည်း ၅ ခုအထိ · လတစ်လလျှင် အော်ဒါ ၅၀",
+  "1 bot · up to 5 products · 20 orders per month": "ဘော့တ် ၁ ခု · ကုန်ပစ္စည်း ၅ ခုအထိ · လတစ်လလျှင် အော်ဒါ ၂၀",
   "Manual fulfillment only; no digital stock or auto-send":
     "လူကိုယ်တိုင် ပေးပို့မှုသာ; ဒီဂျစ်တယ် စတော့ သို့မဟုတ် အလိုအလျောက် ပို့မှုမရှိပါ",
   "2 bots; unlimited products and orders": "ဘော့တ် ၂ ခု; ကုန်ပစ္စည်းနှင့် အော်ဒါ အကန့်အသတ်မရှိ",

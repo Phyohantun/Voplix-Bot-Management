@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { toast } from 'sonner';
 import { formatDateTimeUtc } from '@/lib/format-date-utc';
 import { PLAN_COMPARISON_ROWS } from '@/lib/plan-comparison-data';
+import { FREE_ORDERS_PER_MONTH_DEFAULT } from '@/lib/plan-constants';
 import type { PlanEnforcementSnapshot } from '@/lib/plan-limits';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { cn } from '@/lib/utils';
@@ -283,7 +284,7 @@ export function SubscriptionClient({
             <p className="mt-3 text-2xl font-semibold tabular-nums text-zinc-900 dark:text-white">0 MMK</p>
             <p className="text-xs text-zinc-500 dark:text-zinc-400">{t('No monthly fee')}</p>
             <ul className="mt-4 space-y-2 text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">
-              <li>{t('1 bot · up to 5 products · 50 orders per month')}</li>
+              <li>{t(`1 bot · up to 5 products · ${FREE_ORDERS_PER_MONTH_DEFAULT} orders per month`)}</li>
               <li>{t('Manual fulfillment only; no digital stock or auto-send')}</li>
             </ul>
           </div>
