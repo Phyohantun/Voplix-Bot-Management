@@ -140,26 +140,37 @@ export async function sendMessage(
 export async function sendPhoto(
   token: string,
   chatId: string | number,
-  photoUrl: string,
-  caption?: string
-): Promise<{ ok: boolean; error?: string }> {
+  /** HTTPS URL (Telegram fetches once) or a `file_id` from a prior successful send (fast for broadcasts). */
+  photo: string,
+  caption?: string,
+  options?: { parse_mode?: 'HTML' | 'Markdown' | 'MarkdownV2' }
+): Promise<{ ok: boolean; error?: string; fileId?: string }> {
   try {
+    const payload: Record<string, unknown> = {
+      chat_id: chatId,
+      photo,
+    };
+    if (caption !== undefined) payload.caption = caption;
+    if (options?.parse_mode) payload.parse_mode = options.parse_mode;
+
     const response = await fetchWithTimeout(`${TELEGRAM_API_BASE}${token}/sendPhoto`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: chatId,
-        photo: photoUrl,
-        caption,
-      }),
+      body: JSON.stringify(payload),
     });
-    
+
     const data = await response.json();
-    
+
     if (data.ok) {
-      return { ok: true };
+      const photoArr = data.result?.photo as Array<{ file_id?: string }> | undefined;
+      let fileId: string | undefined;
+      if (Array.isArray(photoArr) && photoArr.length > 0) {
+        const last = photoArr[photoArr.length - 1];
+        if (last?.file_id) fileId = last.file_id;
+      }
+      return { ok: true, fileId };
     }
-    
+
     return { ok: false, error: data.description || 'Failed to send photo' };
   } catch (error) {
     return { ok: false, error: 'Failed to send photo' };

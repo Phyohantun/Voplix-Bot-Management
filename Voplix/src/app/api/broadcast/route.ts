@@ -102,35 +102,61 @@ export async function POST(request: Request) {
     // Decrypt token
     const token = decrypt(bot.token_encrypted);
 
-    // Telegram: ~30 msgs/s to different chats is a common safe ceiling; we burst in parallel then pause briefly.
+    // Telegram: burst parallel sends, short pause between batches. With photos, reuse `file_id` after the first
+    // successful send so Telegram does not re-download the same public URL for every recipient.
     let sentCount = 0;
     let failedCount = 0;
-    const batchSize = 28;
-    const interBatchMs = 280;
+    const batchSize = 40;
+    const interBatchMs = 120;
 
-    for (let i = 0; i < users.length; i += batchSize) {
-      const batch = users.slice(i, i + batchSize);
-
-      await Promise.all(
-        batch.map(async (u: { telegram_user_id: string }) => {
-          try {
-            if (imageForSend) {
-              const result = await sendPhoto(token, u.telegram_user_id, imageForSend, message);
-              if (result.ok) sentCount++;
-              else failedCount++;
-            } else {
-              const result = await sendMessage(token, u.telegram_user_id, message, { parse_mode: 'HTML' });
-              if (result.ok) sentCount++;
-              else failedCount++;
-            }
-          } catch {
-            failedCount++;
+    const sendOne = async (u: { telegram_user_id: string }, photoArg: string | null) => {
+      try {
+        if (photoArg) {
+          const result = await sendPhoto(token, u.telegram_user_id, photoArg, message, { parse_mode: 'HTML' });
+          if (result.ok) {
+            sentCount++;
+            return result.fileId ?? null;
           }
-        })
-      );
+          failedCount++;
+          return null;
+        }
+        const result = await sendMessage(token, u.telegram_user_id, message, { parse_mode: 'HTML' });
+        if (result.ok) sentCount++;
+        else failedCount++;
+        return null;
+      } catch {
+        failedCount++;
+        return null;
+      }
+    };
 
-      if (i + batchSize < users.length && interBatchMs > 0) {
-        await new Promise((r) => setTimeout(r, interBatchMs));
+    if (imageForSend) {
+      let telegramPhotoFileId: string | null = null;
+      let idx = 0;
+      while (idx < users.length && !telegramPhotoFileId) {
+        const id = await sendOne(users[idx], imageForSend);
+        idx++;
+        if (id) telegramPhotoFileId = id;
+      }
+      for (let i = idx; i < users.length; i += batchSize) {
+        const batch = users.slice(i, i + batchSize);
+        await Promise.all(
+          batch.map(async (u: { telegram_user_id: string }) => {
+            const photoArg = telegramPhotoFileId ?? imageForSend;
+            await sendOne(u, photoArg);
+          })
+        );
+        if (i + batchSize < users.length && interBatchMs > 0) {
+          await new Promise((r) => setTimeout(r, interBatchMs));
+        }
+      }
+    } else {
+      for (let i = 0; i < users.length; i += batchSize) {
+        const batch = users.slice(i, i + batchSize);
+        await Promise.all(batch.map(async (u: { telegram_user_id: string }) => sendOne(u, null)));
+        if (i + batchSize < users.length && interBatchMs > 0) {
+          await new Promise((r) => setTimeout(r, interBatchMs));
+        }
       }
     }
 

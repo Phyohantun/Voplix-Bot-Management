@@ -25,6 +25,7 @@ import { telegramHtmlToPlain } from '@/lib/bot-telegram-copy';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { cn } from '@/lib/utils';
 import type { PlanTier } from '@/lib/plan-limits';
+import { shrinkBroadcastImageForUpload } from '@/lib/broadcast-image-client';
 const TG_MAX = 4096;
 
 interface BotRow {
@@ -233,9 +234,10 @@ export function BroadcastClient({
 
     setImageUploading(true);
     try {
+      const toUpload = await shrinkBroadcastImageForUpload(f);
       const fd = new FormData();
       fd.set('bot_id', formData.bot_id);
-      fd.set('image', f);
+      fd.set('image', toUpload);
       const res = await fetch('/api/broadcast/upload-image', { method: 'POST', body: fd });
       const j = (await res.json().catch(() => ({}))) as { publicUrl?: string; error?: string };
       if (!res.ok) throw new Error(j.error || t('Upload failed'));

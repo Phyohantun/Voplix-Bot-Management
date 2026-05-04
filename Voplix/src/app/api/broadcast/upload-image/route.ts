@@ -77,9 +77,9 @@ export async function POST(request: Request) {
 
     const id = crypto.randomUUID();
     const path = `${user.id}/${id}.${extForMime(mime)}`;
-    const buf = Buffer.from(await file.arrayBuffer());
 
-    const { error: upErr } = await supabaseAdmin.storage.from(BROADCAST_IMAGES_BUCKET).upload(path, buf, {
+    // Pass the File/Blob through — avoids an extra full-file Buffer copy before upload.
+    const { error: upErr } = await supabaseAdmin.storage.from(BROADCAST_IMAGES_BUCKET).upload(path, file, {
       contentType: mime,
       upsert: false,
     });
