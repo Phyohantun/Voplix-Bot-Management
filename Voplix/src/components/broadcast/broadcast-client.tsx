@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -74,6 +74,9 @@ export function BroadcastClient({
     target_type: 'ALL' as 'ALL' | 'PAID_ONLY',
   });
   const [imageUploading, setImageUploading] = useState(false);
+  /** Local object URL for immediate preview while uploading; released when replaced or cleared. */
+  const [imageLocalPreview, setImageLocalPreview] = useState<string | null>(null);
+  const imageFileInputRef = useRef<HTMLInputElement>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [audienceCount, setAudienceCount] = useState<number | null>(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
@@ -109,6 +112,26 @@ export function BroadcastClient({
   useEffect(() => {
     void loadLogs();
   }, [loadLogs]);
+
+  const imageLocalPreviewRef = useRef<string | null>(null);
+  useEffect(() => {
+    imageLocalPreviewRef.current = imageLocalPreview;
+  }, [imageLocalPreview]);
+  useEffect(() => {
+    return () => {
+      const u = imageLocalPreviewRef.current;
+      if (u) URL.revokeObjectURL(u);
+    };
+  }, []);
+
+  const clearAttachedImage = useCallback(() => {
+    const u = imageLocalPreviewRef.current;
+    if (u) URL.revokeObjectURL(u);
+    imageLocalPreviewRef.current = null;
+    setImageLocalPreview(null);
+    setFormData((p) => ({ ...p, image_url: '' }));
+    if (imageFileInputRef.current) imageFileInputRef.current.value = '';
+  }, []);
 
   const selectedBot = bots.find((b) => b.id === formData.bot_id);
 
@@ -178,7 +201,12 @@ export function BroadcastClient({
 
       const data = (await response.json()) as { sentCount: number };
       toast.success(`${t('Broadcast sent to')} ${data.sentCount} ${t('users')}`);
+      setImageLocalPreview((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return null;
+      });
       setFormData((prev) => ({ ...prev, message: '', image_url: '' }));
+      if (imageFileInputRef.current) imageFileInputRef.current.value = '';
       setConfirmOpen(false);
       void loadLogs();
     } catch (error) {
@@ -189,12 +217,20 @@ export function BroadcastClient({
   };
 
   const onImageFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
-    e.target.value = '';
-    if (!f || !formData.bot_id) {
+    const input = e.target;
+    const f = input.files?.[0];
+    if (!f) return;
+    if (!formData.bot_id) {
       toast.error(t('Select a bot first'));
+      input.value = '';
       return;
     }
+
+    setImageLocalPreview((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return URL.createObjectURL(f);
+    });
+
     setImageUploading(true);
     try {
       const fd = new FormData();
@@ -204,9 +240,19 @@ export function BroadcastClient({
       const j = (await res.json().catch(() => ({}))) as { publicUrl?: string; error?: string };
       if (!res.ok) throw new Error(j.error || t('Upload failed'));
       if (!j.publicUrl) throw new Error(t('No image URL returned'));
+      setImageLocalPreview((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return null;
+      });
       setFormData((prev) => ({ ...prev, image_url: j.publicUrl! }));
+      input.value = '';
       toast.success(t('Image attached'));
     } catch (err) {
+      setImageLocalPreview((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return null;
+      });
+      input.value = '';
       toast.error(err instanceof Error ? err.message : t('Upload failed'));
     } finally {
       setImageUploading(false);
@@ -361,23 +407,60 @@ export function BroadcastClient({
             </div>
 
             <div className="space-y-2">
-              <Label className="text-zinc-700 dark:text-zinc-300">{t('Image (optional)')}</Label>
-              <Input
+              <Label htmlFor="broadcast-image-file" className="text-zinc-700 dark:text-zinc-300">
+                {t('Image (optional)')}
+              </Label>
+              <input
+                id="broadcast-image-file"
+                ref={imageFileInputRef}
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
+                className="sr-only"
                 disabled={!canUseBroadcast || imageUploading}
                 onChange={(e) => void onImageFile(e)}
-                className="border-zinc-300 bg-zinc-200 text-sm text-zinc-900 file:mr-2 file:rounded file:border-0 file:bg-zinc-300 file:px-2 file:py-1 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white dark:file:bg-zinc-700"
               />
-              <p className="text-xs text-zinc-500">{t('JPG, PNG, or WebP · max 5 MB')}</p>
-              {formData.image_url ? (
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-xs text-zinc-600 dark:text-zinc-400">{t('Image attached')}</span>
-                  <Button type="button" variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setFormData((p) => ({ ...p, image_url: '' }))}>
-                    {t('Remove image')}
+              <div
+                className={cn(
+                  'rounded-lg border border-dashed border-zinc-300 bg-zinc-50 p-3 dark:border-zinc-600 dark:bg-zinc-900/60',
+                  !canUseBroadcast && 'opacity-60'
+                )}
+              >
+                {imageLocalPreview || formData.image_url ? (
+                  <div className="relative mx-auto w-full max-w-sm">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={imageLocalPreview || formData.image_url}
+                      alt=""
+                      className="mx-auto max-h-48 w-auto max-w-full rounded-md object-contain ring-1 ring-zinc-200 dark:ring-zinc-700"
+                    />
+                    {imageUploading ? (
+                      <div className="absolute inset-0 flex items-center justify-center rounded-md bg-zinc-900/40">
+                        <SpinnerGap className="h-8 w-8 animate-spin text-white" aria-hidden />
+                      </div>
+                    ) : null}
+                  </div>
+                ) : (
+                  <p className="py-6 text-center text-sm text-zinc-500 dark:text-zinc-400">{t('No image selected yet')}</p>
+                )}
+                <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="border-zinc-400 dark:border-zinc-600"
+                    disabled={!canUseBroadcast || imageUploading}
+                    onClick={() => imageFileInputRef.current?.click()}
+                  >
+                    {formData.image_url || imageLocalPreview ? t('Change image') : t('Choose image')}
                   </Button>
+                  {(formData.image_url || imageLocalPreview) && !imageUploading ? (
+                    <Button type="button" variant="ghost" size="sm" className="h-8 text-xs text-red-600 dark:text-red-400" onClick={clearAttachedImage}>
+                      {t('Remove image')}
+                    </Button>
+                  ) : null}
                 </div>
-              ) : null}
+              </div>
+              <p className="text-xs text-zinc-500">{t('JPG, PNG, or WebP · max 5 MB')}</p>
             </div>
 
             <Button
