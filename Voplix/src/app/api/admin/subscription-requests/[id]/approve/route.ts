@@ -57,7 +57,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
       plan_tier: planTier,
       subscription_period_end,
       subscription_current_period_start: startFrom.toISOString(),
-      can_use_broadcast: planTier === 'plus',
+      can_use_broadcast: planTier === 'pro' || planTier === 'plus',
       can_use_stock: ex.can_use_stock !== false,
       can_use_orders: ex.can_use_orders !== false,
       admin_notes: (ex.admin_notes as string | null) ?? null,

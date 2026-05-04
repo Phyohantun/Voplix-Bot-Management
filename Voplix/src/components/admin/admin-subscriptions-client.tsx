@@ -148,7 +148,7 @@ export function AdminSubscriptionsClient({
           <div>
             <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">Pending slips</h2>
             <p className="mt-1 text-sm text-zinc-500">
-              Approve to set plan to Pro or Plus (Plus unlocks broadcast). Reject to decline without changing plan — the
+              Approve to set plan to Pro or Plus (both include broadcast; Pro 10/month, Plus 50/month, UTC). Reject to decline without changing plan — the
               customer sees your note on the Subscription page.
             </p>
           </div>

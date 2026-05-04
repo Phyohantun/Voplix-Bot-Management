@@ -24,6 +24,7 @@ import { sanitizeOwnerHtml } from '@/lib/sanitize-html';
 import { telegramHtmlToPlain } from '@/lib/bot-telegram-copy';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { cn } from '@/lib/utils';
+import type { PlanTier } from '@/lib/plan-limits';
 const TG_MAX = 4096;
 
 interface BotRow {
@@ -47,9 +48,19 @@ interface BroadcastClientProps {
   bots: BotRow[];
   initialBotId: string | null;
   canUseBroadcast: boolean;
+  plan?: PlanTier;
+  broadcastsThisMonth?: number;
+  maxBroadcastsPerMonth?: number | null;
 }
 
-export function BroadcastClient({ bots, initialBotId, canUseBroadcast }: BroadcastClientProps) {
+export function BroadcastClient({
+  bots,
+  initialBotId,
+  canUseBroadcast,
+  plan = 'free',
+  broadcastsThisMonth = 0,
+  maxBroadcastsPerMonth = null,
+}: BroadcastClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { t } = useLanguage();
@@ -100,6 +111,11 @@ export function BroadcastClient({ bots, initialBotId, canUseBroadcast }: Broadca
   }, [loadLogs]);
 
   const selectedBot = bots.find((b) => b.id === formData.bot_id);
+
+  const atMonthlyBroadcastCap =
+    maxBroadcastsPerMonth != null &&
+    broadcastsThisMonth >= maxBroadcastsPerMonth &&
+    (plan === 'pro' || plan === 'plus');
 
   const messageLen = formData.message.length;
   const warnLen = messageLen >= Math.floor(TG_MAX * 0.9);
@@ -231,6 +247,14 @@ export function BroadcastClient({ bots, initialBotId, canUseBroadcast }: Broadca
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white">{t('Broadcast')}</h1>
           <p className="text-sm text-zinc-600 dark:text-zinc-400">{t('Send one message to your selected audience.')}</p>
+          {canUseBroadcast && maxBroadcastsPerMonth != null ? (
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">
+              {t('Broadcasts this UTC month:')}{' '}
+              <span className="font-medium tabular-nums text-zinc-800 dark:text-zinc-200">
+                {broadcastsThisMonth} / {maxBroadcastsPerMonth}
+              </span>
+            </p>
+          ) : null}
         </div>
         {canUseBroadcast ? (
           <Link
@@ -247,10 +271,24 @@ export function BroadcastClient({ bots, initialBotId, canUseBroadcast }: Broadca
           <CardHeader>
             <div className="flex items-center gap-2">
               <Broadcast className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
-              <CardTitle className="text-lg text-zinc-900 dark:text-white">{t('Unlock broadcast with Plus')}</CardTitle>
+              <CardTitle className="text-lg text-zinc-900 dark:text-white">
+                {atMonthlyBroadcastCap && plan === 'pro'
+                  ? t('Pro broadcast limit reached')
+                  : atMonthlyBroadcastCap && plan === 'plus'
+                    ? t('Monthly broadcast limit reached')
+                    : plan === 'free'
+                      ? t('Broadcast requires Pro or Plus')
+                      : t('Broadcast unavailable')}
+              </CardTitle>
             </div>
             <CardDescription className="text-zinc-600 dark:text-zinc-400">
-              {t('Reach everyone who used your bot, or only paying customers — ideal for restocks, announcements, and campaigns.')}
+              {atMonthlyBroadcastCap && plan === 'pro'
+                ? t('You have used all Pro broadcasts for this UTC month. Upgrade to Plus for 50/month, or wait until next month.')
+                : atMonthlyBroadcastCap && plan === 'plus'
+                  ? t('You have used all Plus broadcasts for this UTC month. Your limit resets on the 1st (UTC).')
+                  : plan === 'free'
+                    ? t('Reach everyone who used your bot, or only paying customers — ideal for restocks, announcements, and campaigns.')
+                    : t('Broadcast may be turned off for your account, or your plan has expired. Check Subscription or contact support.')}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">

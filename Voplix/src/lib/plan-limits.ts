@@ -8,6 +8,10 @@ const BOTS_BY_PLAN_DEFAULT: Record<PlanTier, number> = { free: 1, pro: 2, plus: 
 const FREE_MENU_ITEM_CAP_DEFAULT = 5;
 const FREE_ORDERS_PER_MONTH_DEFAULT = 50;
 
+/** Broadcast sends logged in `broadcast_logs` — cap per calendar month (UTC) by paid tier. */
+export const BROADCASTS_PER_MONTH_PRO = 10;
+export const BROADCASTS_PER_MONTH_PLUS = 50;
+
 export function normalizePlanTier(v: string | null | undefined): PlanTier {
   const x = String(v || 'free').toLowerCase();
   if (x === 'pro' || x === 'plus') return x;
@@ -109,7 +113,13 @@ export function planAllowsStockManagement(plan: PlanTier, canUseStock: boolean):
 }
 
 export function planAllowsBroadcast(plan: PlanTier, canUseBroadcast: boolean): boolean {
-  return plan === 'plus' && canUseBroadcast;
+  return (plan === 'pro' || plan === 'plus') && canUseBroadcast;
+}
+
+export function maxBroadcastsPerMonthForPlan(plan: PlanTier): number | null {
+  if (plan === 'pro') return BROADCASTS_PER_MONTH_PRO;
+  if (plan === 'plus') return BROADCASTS_PER_MONTH_PLUS;
+  return null;
 }
 
 export async function countActiveBotsForUser(userId: string): Promise<number> {
@@ -161,6 +171,24 @@ export async function countOrdersThisUtcMonthForUser(userId: string): Promise<nu
   return count ?? 0;
 }
 
+/** Counts broadcast campaigns sent this UTC month across all of the user’s bots (each send = one log row). */
+export async function countBroadcastsThisUtcMonthForUser(userId: string): Promise<number> {
+  const { data: bots, error: bErr } = await (supabaseAdmin.from('bots') as any)
+    .select('id')
+    .eq('user_id', userId);
+  if (bErr) throw bErr;
+  const ids = ((bots as { id: string }[]) ?? []).map((b) => b.id);
+  if (ids.length === 0) return 0;
+
+  const start = startOfUtcMonthIso();
+  const { count, error } = await (supabaseAdmin.from('broadcast_logs') as any)
+    .select('*', { count: 'exact', head: true })
+    .in('bot_id', ids)
+    .gte('created_at', start);
+  if (error) throw error;
+  return count ?? 0;
+}
+
 export type PlanEnforcementSnapshot = {
   /** Effective tier for limits (paid plan lapses to Free when `subscription_period_end` is in the past). */
   plan: PlanTier;
@@ -178,17 +206,22 @@ export type PlanEnforcementSnapshot = {
   ordersThisMonth: number;
   canAcceptMoreOrdersThisMonth: boolean;
   canUseBroadcast: boolean;
+  /** Broadcasts already sent this UTC month (all bots). */
+  broadcastsThisMonth: number;
+  /** Monthly broadcast cap for Pro/Plus; null on Free. */
+  maxBroadcastsPerMonth: number | null;
   canUseStockManagement: boolean;
   canCreateDigitalProduct: boolean;
 };
 
 export async function getPlanEnforcementSnapshot(userId: string): Promise<PlanEnforcementSnapshot> {
-  const [flags, settings, activeBots, activeMenuItems, ordersThisMonth] = await Promise.all([
+  const [flags, settings, activeBots, activeMenuItems, ordersThisMonth, broadcastsThisMonth] = await Promise.all([
     loadPlatformAccountFlagsAdmin(userId),
     fetchPlatformSubscriptionSettingsAdmin(),
     countActiveBotsForUser(userId),
     countActiveMenuItemsForUser(userId),
     countOrdersThisUtcMonthForUser(userId),
+    countBroadcastsThisUtcMonthForUser(userId),
   ]);
 
   const stored = flags.plan_tier;
@@ -197,6 +230,9 @@ export async function getPlanEnforcementSnapshot(userId: string): Promise<PlanEn
   const maxBots = maxBotsForPlanWithSettings(plan, settings);
   const maxMenu = maxActiveMenuItemsForPlanWithSettings(plan, settings);
   const maxOrd = maxOrdersPerMonthForPlanWithSettings(plan, settings);
+  const maxBc = maxBroadcastsPerMonthForPlan(plan);
+  const broadcastEligible = !suspended && planAllowsBroadcast(plan, flags.can_use_broadcast);
+  const underBroadcastCap = maxBc == null || broadcastsThisMonth < maxBc;
 
   return {
     plan,
@@ -213,7 +249,9 @@ export async function getPlanEnforcementSnapshot(userId: string): Promise<PlanEn
     maxOrdersPerMonth: maxOrd,
     ordersThisMonth,
     canAcceptMoreOrdersThisMonth: !suspended && flags.can_use_orders && (maxOrd == null || ordersThisMonth < maxOrd),
-    canUseBroadcast: !suspended && planAllowsBroadcast(plan, flags.can_use_broadcast),
+    broadcastsThisMonth,
+    maxBroadcastsPerMonth: maxBc,
+    canUseBroadcast: broadcastEligible && underBroadcastCap,
     canUseStockManagement: !suspended && planAllowsStockManagement(plan, flags.can_use_stock),
     canCreateDigitalProduct: !suspended && planAllowsAutomatedDelivery(plan),
   };
@@ -276,14 +314,31 @@ export async function checkBroadcastAllowed(userId: string): Promise<{ ok: true 
     return { ok: false, message: 'Your account cannot use this feature.' };
   }
   const plan = effectivePlanTier(flags.plan_tier, flags.subscription_period_end);
-  if (plan !== 'plus') {
+  if (!planAllowsBroadcast(plan, flags.can_use_broadcast)) {
     return {
       ok: false,
-      message: 'Broadcast is available on the Plus plan only. Upgrade on Subscription.',
+      message:
+        plan === 'free'
+          ? 'Broadcast is available on Pro and Plus. Upgrade on Subscription.'
+          : 'Broadcast is disabled for your account.',
     };
   }
-  if (!flags.can_use_broadcast) {
-    return { ok: false, message: 'Broadcast is disabled for your account.' };
+  const cap = maxBroadcastsPerMonthForPlan(plan);
+  if (cap != null) {
+    const used = await countBroadcastsThisUtcMonthForUser(userId);
+    if (used >= cap) {
+      const resetHint = 'Your limit resets at the start of the next month (UTC).';
+      if (plan === 'pro') {
+        return {
+          ok: false,
+          message: `You have used all ${cap} broadcasts for this month on Pro. Upgrade to Plus for ${BROADCASTS_PER_MONTH_PLUS} per month, or wait until next month (UTC).`,
+        };
+      }
+      return {
+        ok: false,
+        message: `You have used all ${cap} broadcasts for this month. ${resetHint}`,
+      };
+    }
   }
   return { ok: true };
 }

@@ -158,8 +158,8 @@ function RowEditor({
           onChange={(e) => {
             const v = e.target.value;
             setPlan(v);
-            if (v === 'plus') setBroadcast(true);
-            if (v === 'pro' || v === 'free') setBroadcast(false);
+            if (v === 'pro' || v === 'plus') setBroadcast(true);
+            if (v === 'free') setBroadcast(false);
           }}
           className="w-full rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1.5 text-sm text-white"
         >

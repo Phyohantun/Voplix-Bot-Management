@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { checkBroadcastAllowed } from '@/lib/plan-limits';
 
 export async function GET(request: Request) {
   try {
@@ -11,6 +12,11 @@ export async function GET(request: Request) {
 
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const bc = await checkBroadcastAllowed(user.id);
+    if (!bc.ok) {
+      return NextResponse.json({ error: bc.message }, { status: 403 });
     }
 
     const { searchParams } = new URL(request.url);

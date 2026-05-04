@@ -37,7 +37,14 @@ export default async function BroadcastPage({
   return (
     <div className="space-y-6">
       <AutoRefresh intervalMs={30000} />
-      <BroadcastClient bots={bots} initialBotId={selectedBotId} canUseBroadcast={planSnapshot.canUseBroadcast} />
+      <BroadcastClient
+        bots={bots}
+        initialBotId={selectedBotId}
+        canUseBroadcast={planSnapshot.canUseBroadcast}
+        plan={planSnapshot.plan}
+        broadcastsThisMonth={planSnapshot.broadcastsThisMonth}
+        maxBroadcastsPerMonth={planSnapshot.maxBroadcastsPerMonth}
+      />
     </div>
   );
 }

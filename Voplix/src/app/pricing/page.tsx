@@ -40,7 +40,7 @@ const comparisonRows: {
   { feature: 'Low stock alerts', free: <No />, pro: <Yes />, plus: <Yes /> },
   { feature: 'Bank / payment info edit', free: <No />, pro: <Yes />, plus: <Yes /> },
   { feature: 'Custom reply after order confirmed', free: <No />, pro: <No />, plus: <Yes /> },
-  { feature: 'Broadcast to past customers', free: <No />, pro: <No />, plus: <Yes /> },
+  { feature: 'Broadcast to past customers (per month, UTC)', free: <No />, pro: <span className="text-zinc-700">10</span>, plus: <span className="text-zinc-700">50</span> },
   { feature: 'Early access to new features', free: <No />, pro: <No />, plus: <Yes /> },
   {
     feature: 'Support',
@@ -115,7 +115,7 @@ export default function PricingPage() {
                   <li>1 bot · up to 5 products · 50 orders / month</li>
                   <li>Manual delivery only · daily report only</li>
                   <li>Default bot messages only — cannot edit templates</li>
-                  <li>No pause/resume · no broadcast</li>
+                  <li>No pause/resume · no broadcast campaigns</li>
                   <li>Basic support</li>
                 </ul>
                 <Link href="/signup" prefetch className="mt-4 block">
@@ -140,6 +140,7 @@ export default function PricingPage() {
                   <li>Daily, weekly, monthly reports · edit all 5 message templates</li>
                   <li>Full reports (daily, weekly, monthly) · bot pause/resume with custom message</li>
                   <li>Bank / payment info customization · priority Telegram support</li>
+                  <li>Broadcast to past customers — up to 10 campaigns per month (UTC)</li>
                 </ul>
                 <Link href="/login?next=/subscription" prefetch className="mt-4 block">
                   <Button className="w-full bg-zinc-900 text-white hover:bg-zinc-800">
@@ -157,14 +158,14 @@ export default function PricingPage() {
                 <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">Plus</p>
                 <p className="mt-1 text-2xl font-semibold text-zinc-900">65,000 MMK</p>
                 <p className="text-sm text-zinc-500">~฿499 / month</p>
-                <p className="mt-2 text-sm text-zinc-600">Scale with more bots, broadcast, and VIP support.</p>
+                <p className="mt-2 text-sm text-zinc-600">Scale with more bots, higher broadcast volume, and VIP support.</p>
               </CardHeader>
               <CardContent className="space-y-2 pt-4 text-sm text-zinc-600">
                 <p className="font-medium text-zinc-800">Everything in Pro, and:</p>
                 <ul className="list-inside list-disc space-y-1.5 marker:text-zinc-400">
                   <li>5 bots</li>
                   <li>Custom reply after order confirmed</li>
-                  <li>Broadcast to all past customers</li>
+                  <li>Broadcast to all past customers — up to 50 campaigns per month (UTC)</li>
                   <li>Early access to new features · VIP support (fastest response)</li>
                 </ul>
                 <Link href="/login?next=/subscription" prefetch className="mt-4 block">
@@ -251,7 +252,7 @@ export default function PricingPage() {
                 </li>
                 <li className="flex gap-2">
                   <Check className="mt-0.5 h-4 w-4 shrink-0 text-zinc-500" weight="bold" aria-hidden />
-                  You want broadcast campaigns to past customers
+                  You need more than 10 broadcast campaigns per month (Plus: up to 50, UTC month)
                 </li>
                 <li className="flex gap-2">
                   <Check className="mt-0.5 h-4 w-4 shrink-0 text-zinc-500" weight="bold" aria-hidden />

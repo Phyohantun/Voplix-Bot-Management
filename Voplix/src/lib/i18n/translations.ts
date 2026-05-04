@@ -242,6 +242,26 @@ export const translations: Record<string, string> = {
   "Connect a bot first to start broadcasting messages.": "စာတိုများ စတင်ကြေညာရန် ဘော့တ်ကို ဦးစွာ ချိတ်ဆက်ပါ။",
   "Send one message to your selected audience.": "ရွေးချယ်ထားသော ပရိသတ်ထံသို့ စာတိုတစ်စောင် ပေးပို့ပါ။",
   "Manage plan": "အစီအစဉ်ကို စီမံမည်",
+  "Broadcasts this UTC month:": "ဤ UTC လအတွင်း ကြေညာချက်ပေးပို့မှု —",
+  "Pro broadcast limit reached": "Pro ကြေညာချက် လစဉ်ကန့်သတ်သို့ ရောက်ပါပြီ",
+  "Monthly broadcast limit reached": "လစဉ် ကြေညာချက် ကန့်သတ်သို့ ရောက်ပါပြီ",
+  "Broadcast requires Pro or Plus": "ကြေညာချက်အတွက် Pro သို့မဟုတ် Plus လိုအပ်ပါသည်",
+  "Broadcast unavailable": "ကြေညာချက် မရနိုင်ပါ",
+  "You have used all Pro broadcasts for this UTC month. Upgrade to Plus for 50/month, or wait until next month.":
+    "ဤ UTC လအတွင်း Pro ကြေညာချက်အားလုံး သုံးပြီးပါပြီ။ လတစ်လလျှင် 50 ခုအထိ လိုအပ်ပါက Plus သို့ အဆင့်မြှင့်ပါ၊ သို့မဟုတ် နောက်လ (UTC) အထိ စောင့်ပါ။",
+  "You have used all Plus broadcasts for this UTC month. Your limit resets on the 1st (UTC).":
+    "ဤ UTC လအတွင်း Plus ကြေညာချက်အားလုံး သုံးပြီးပါပြီ။ ကန့်သတ်ချက်သည် လ ၁ ရက် (UTC) တွင် ပြန်စပါမည်။",
+  "Broadcast may be turned off for your account, or your plan has expired. Check Subscription or contact support.":
+    "သင့်အကောင့်တွင် ကြေညာချက်ကို ပိတ်ထားနိုင်သည် သို့မဟုတ် သင့်အစီအစဉ် သက်တမ်းကုန်နိုင်ပါသည်။ စာရင်းသွင်းမှု စာမျက်နှာကို စစ်ပါ သို့မဟုတ် ပံ့ပိုးမှုကို ဆက်သွယ်ပါ။",
+  "Broadcast: up to 10 campaigns per month to past customers (UTC)":
+    "ကြေညာချက် — ယခင်ဝယ်ယူသူများထံ လတစ်လလျှင် ၁၀ ကြိမ်အထိ (UTC)",
+  "Broadcast: up to 50 campaigns per month (UTC); custom post-delivery messages":
+    "ကြေညာချက် — လတစ်လလျှင် ၅၀ ကြိမ်အထိ (UTC); ပေးပို့ပြီးနောက် စိတ်ကြိုက် ပြန်စာများ",
+  "Broadcast: up to 10 / month (UTC) to past customers":
+    "ကြေညာချက် — လတစ်လလျှင် ၁၀ / ယခင်ဝယ်ယူသူများ (UTC)",
+  "Broadcast: up to 50 / month (UTC)": "ကြေညာချက် — လတစ်လလျှင် ၅၀ (UTC)",
+  "Broadcast: up to 50 campaigns per month (UTC)": "ကြေညာချက် — လတစ်လလျှင် ၅၀ ကြိမ် (UTC)",
+  "Broadcast (per month, UTC)": "ကြေညာချက် (လစဉ်, UTC)",
   "Unlock broadcast with Plus": "Plus အစီအစဉ်ဖြင့် ကြေညာချက်ကို ဖွင့်ပါ",
   "Reach everyone who used your bot, or only paying customers — ideal for restocks, announcements, and campaigns.": "သင့်ဘော့တ်ကို အသုံးပြုဖူးသူတိုင်း သို့မဟုတ် ငွေပေးချေထားသော ဝယ်ယူသူများကိုသာ ဆက်သွယ်ပါ — ပစ္စည်းပြန်လည်ဖြည့်တင်းခြင်း၊ ကြေညာချက်များနှင့် ကမ်ပိန်းများအတွက် အထူးသင့်လျော်ပါသည်။",
   "Send rich HTML messages (bold, links) with optional hero image": "ပုံများတွဲ၍ HTML စာတိုများ (စာလုံးအမည်း၊ လင့်ခ်များ) ပေးပို့ပါ",

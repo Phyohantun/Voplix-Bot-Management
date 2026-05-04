@@ -11,6 +11,6 @@ export const PLAN_COMPARISON_ROWS: { feature: string; free: string; pro: string;
   { feature: 'Stock management', free: 'No', pro: 'Yes', plus: 'Yes' },
   { feature: 'Message templates', free: 'No', pro: 'Yes', plus: 'Yes' },
   { feature: 'Reports', free: 'Daily only', pro: 'Full', plus: 'Full' },
-  { feature: 'Broadcast', free: 'No', pro: 'No', plus: 'Yes' },
+  { feature: 'Broadcast (per month, UTC)', free: 'No', pro: '10', plus: '50' },
   { feature: 'Price', free: '0 MMK', pro: '—', plus: '—' },
 ];

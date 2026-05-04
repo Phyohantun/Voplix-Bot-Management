@@ -84,6 +84,16 @@ export async function PATCH(
       subscription_current_period_start = null;
     }
 
+    if (typeof body.plan_tier === 'string' && body.plan_tier === 'free') {
+      can_use_broadcast = false;
+    } else if (
+      typeof body.plan_tier === 'string' &&
+      (body.plan_tier === 'pro' || body.plan_tier === 'plus') &&
+      typeof body.can_use_broadcast !== 'boolean'
+    ) {
+      can_use_broadcast = true;
+    }
+
     const extendDays =
       typeof body.extend_subscription_days === 'number' && Number.isFinite(body.extend_subscription_days)
         ? Math.floor(body.extend_subscription_days)

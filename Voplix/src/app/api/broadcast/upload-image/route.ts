@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { BROADCAST_IMAGES_BUCKET } from '@/lib/broadcast-image-constants';
+import { checkBroadcastAllowed } from '@/lib/plan-limits';
 
 const ALLOWED = new Set(['image/jpeg', 'image/png', 'image/webp']);
 const MAX_BYTES = 5 * 1024 * 1024;
@@ -22,6 +23,11 @@ export async function POST(request: Request) {
 
     if (!user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const bc = await checkBroadcastAllowed(user.id);
+    if (!bc.ok) {
+      return NextResponse.json({ error: bc.message }, { status: 403 });
     }
 
     const form = await request.formData();
