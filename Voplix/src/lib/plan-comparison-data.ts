@@ -1,4 +1,4 @@
-import { FREE_ORDERS_PER_MONTH_DEFAULT } from '@/lib/plan-constants';
+import { BROADCASTS_PER_MONTH_PLUS, BROADCASTS_PER_MONTH_PRO, FREE_ORDERS_PER_MONTH_DEFAULT } from '@/lib/plan-constants';
 
 /**
  * Plain-text plan matrix for subscription UI. The Price row is replaced at runtime with admin-configured MMK amounts.
@@ -13,6 +13,6 @@ export const PLAN_COMPARISON_ROWS: { feature: string; free: string; pro: string;
   { feature: 'Stock management', free: 'No', pro: 'Yes', plus: 'Yes' },
   { feature: 'Message templates', free: 'No', pro: 'Yes', plus: 'Yes' },
   { feature: 'Reports', free: 'Daily only', pro: 'Full', plus: 'Full' },
-  { feature: 'Broadcast (per month, UTC)', free: 'No', pro: '10', plus: '50' },
+  { feature: 'Broadcast (per month, UTC)', free: 'No', pro: String(BROADCASTS_PER_MONTH_PRO), plus: String(BROADCASTS_PER_MONTH_PLUS) },
   { feature: 'Price', free: '0 MMK', pro: '—', plus: '—' },
 ];

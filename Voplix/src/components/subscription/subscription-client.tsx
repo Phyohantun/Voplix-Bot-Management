@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { toast } from 'sonner';
 import { formatDateTimeUtc } from '@/lib/format-date-utc';
 import { PLAN_COMPARISON_ROWS } from '@/lib/plan-comparison-data';
-import { FREE_ORDERS_PER_MONTH_DEFAULT } from '@/lib/plan-constants';
+import { BROADCASTS_PER_MONTH_PRO, FREE_ORDERS_PER_MONTH_DEFAULT } from '@/lib/plan-constants';
 import type { PlanEnforcementSnapshot } from '@/lib/plan-limits';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { cn } from '@/lib/utils';
@@ -304,7 +304,7 @@ export function SubscriptionClient({
             <ul className="mt-4 space-y-2 text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">
               <li>{t('2 bots; unlimited products and orders')}</li>
               <li>{t('Digital auto-delivery, stock, and editable bot message templates')}</li>
-              <li>{t('Broadcast: up to 10 campaigns per month to past customers (UTC)')}</li>
+              <li>{t(`Broadcast: up to ${BROADCASTS_PER_MONTH_PRO} campaigns per month to past customers (UTC)`)}</li>
             </ul>
           </div>
           <div className={planCardRing(tier === 'plus')}>
@@ -536,7 +536,7 @@ export function SubscriptionClient({
                         <li>{t('2 bots, unlimited orders')}</li>
                         <li>{t('Auto delivery & stock management')}</li>
                         <li>{t('Full reports (daily, weekly, monthly)')}</li>
-                        <li>{t('Broadcast: up to 10 / month (UTC) to past customers')}</li>
+                        <li>{t(`Broadcast: up to ${BROADCASTS_PER_MONTH_PRO} / month (UTC) to past customers`)}</li>
                       </ul>
                     </label>
                   ) : null}

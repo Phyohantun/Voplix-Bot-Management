@@ -5,7 +5,7 @@ import { Check, X, Crown } from '@phosphor-icons/react/dist/ssr';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { VoplixWordmark } from '@/components/brand/voplix-wordmark';
-import { FREE_ORDERS_PER_MONTH_DEFAULT } from '@/lib/plan-constants';
+import { BROADCASTS_PER_MONTH_PLUS, BROADCASTS_PER_MONTH_PRO, FREE_ORDERS_PER_MONTH_DEFAULT } from '@/lib/plan-constants';
 
 function Yes() {
   return (
@@ -41,7 +41,12 @@ const comparisonRows: {
   { feature: 'Low stock alerts', free: <No />, pro: <Yes />, plus: <Yes /> },
   { feature: 'Bank / payment info edit', free: <No />, pro: <Yes />, plus: <Yes /> },
   { feature: 'Custom reply after order confirmed', free: <No />, pro: <No />, plus: <Yes /> },
-  { feature: 'Broadcast to past customers (per month, UTC)', free: <No />, pro: <span className="text-zinc-700">10</span>, plus: <span className="text-zinc-700">50</span> },
+  {
+    feature: 'Broadcast to past customers (per month, UTC)',
+    free: <No />,
+    pro: <span className="text-zinc-700">{BROADCASTS_PER_MONTH_PRO}</span>,
+    plus: <span className="text-zinc-700">{BROADCASTS_PER_MONTH_PLUS}</span>,
+  },
   { feature: 'Early access to new features', free: <No />, pro: <No />, plus: <Yes /> },
   {
     feature: 'Support',
@@ -141,7 +146,7 @@ export default function PricingPage() {
                   <li>Daily, weekly, monthly reports · edit all 5 message templates</li>
                   <li>Full reports (daily, weekly, monthly) · bot pause/resume with custom message</li>
                   <li>Bank / payment info customization · priority Telegram support</li>
-                  <li>Broadcast to past customers — up to 10 campaigns per month (UTC)</li>
+                  <li>{`Broadcast to past customers — up to ${BROADCASTS_PER_MONTH_PRO} campaigns per month (UTC)`}</li>
                 </ul>
                 <Link href="/login?next=/subscription" prefetch className="mt-4 block">
                   <Button className="w-full bg-zinc-900 text-white hover:bg-zinc-800">
@@ -253,7 +258,7 @@ export default function PricingPage() {
                 </li>
                 <li className="flex gap-2">
                   <Check className="mt-0.5 h-4 w-4 shrink-0 text-zinc-500" weight="bold" aria-hidden />
-                  You need more than 10 broadcast campaigns per month (Plus: up to 50, UTC month)
+                  {`You need more than ${BROADCASTS_PER_MONTH_PRO} broadcast campaigns per month (Plus: up to ${BROADCASTS_PER_MONTH_PLUS}, UTC month)`}
                 </li>
                 <li className="flex gap-2">
                   <Check className="mt-0.5 h-4 w-4 shrink-0 text-zinc-500" weight="bold" aria-hidden />

@@ -1,18 +1,14 @@
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import type { PlatformSubscriptionSettingsAdmin } from '@/lib/platform-subscription-settings-load';
 import { fetchPlatformSubscriptionSettingsAdmin } from '@/lib/platform-subscription-settings-load';
-import { FREE_ORDERS_PER_MONTH_DEFAULT } from '@/lib/plan-constants';
+import { BROADCASTS_PER_MONTH_PLUS, BROADCASTS_PER_MONTH_PRO, FREE_ORDERS_PER_MONTH_DEFAULT } from '@/lib/plan-constants';
 
 export type PlanTier = 'free' | 'pro' | 'plus';
 
-export { FREE_ORDERS_PER_MONTH_DEFAULT };
+export { BROADCASTS_PER_MONTH_PLUS, BROADCASTS_PER_MONTH_PRO, FREE_ORDERS_PER_MONTH_DEFAULT };
 
 const BOTS_BY_PLAN_DEFAULT: Record<PlanTier, number> = { free: 1, pro: 2, plus: 5 };
 const FREE_MENU_ITEM_CAP_DEFAULT = 5;
-
-/** Broadcast sends logged in `broadcast_logs` — cap per calendar month (UTC) by paid tier. */
-export const BROADCASTS_PER_MONTH_PRO = 10;
-export const BROADCASTS_PER_MONTH_PLUS = 50;
 
 export function normalizePlanTier(v: string | null | undefined): PlanTier {
   const x = String(v || 'free').toLowerCase();
