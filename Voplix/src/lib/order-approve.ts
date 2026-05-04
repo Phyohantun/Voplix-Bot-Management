@@ -16,6 +16,22 @@ type ApproveBody = {
   manual_message?: string | null;
 };
 
+type MenuItemRow = {
+  type?: string;
+  price?: number | string | null;
+  name?: string;
+  delivery_content?: string | null;
+};
+
+/** PostgREST sometimes returns `menu_items` as object or single-element array on order embeds. */
+function menuItemFromOrderSelect(order: { menu_items?: unknown; menu_item_id?: string }): MenuItemRow | null {
+  const raw = order.menu_items;
+  if (raw == null) return null;
+  const first = Array.isArray(raw) ? raw[0] : raw;
+  if (!first || typeof first !== 'object') return null;
+  return first as MenuItemRow;
+}
+
 /** Turn owner-typed or menu-saved HTML into plain lines for the buyer (no raw tags). */
 function ownerDeliveryAsPlainText(raw: string): string {
   const plain = telegramHtmlToPlain(raw).replace(/\r\n/g, '\n').trim();
@@ -45,11 +61,24 @@ export async function approveSlipOrderForOwner(
     return { ok: false, error: 'Order is not waiting for slip approval', status: 400 };
   }
 
+  let menuItem = menuItemFromOrderSelect(order);
+  if (!menuItem && order.menu_item_id) {
+    const { data: miRow } = await (supabaseAdmin as any)
+      .from('menu_items')
+      .select('type, price, name, delivery_content')
+      .eq('id', order.menu_item_id)
+      .maybeSingle();
+    menuItem = (miRow as MenuItemRow | null) ?? null;
+  }
+  if (!menuItem) {
+    return { ok: false, error: 'Order product not found', status: 500 };
+  }
+
   const { manual_message } = body;
 
   let deliveryContent = '';
 
-  if (order.menu_items.type === 'DIGITAL_DELIVERY') {
+  if (menuItem.type === 'DIGITAL_DELIVERY') {
     const { data: stockItem } = await (supabaseAdmin
       .from('stock_items') as any)
       .select('*')
@@ -83,9 +112,9 @@ export async function approveSlipOrderForOwner(
           .eq('id', order.menu_item_id);
       }
     } else {
-      deliveryContent = order.menu_items.delivery_content || 'Your order is ready!';
+      deliveryContent = menuItem.delivery_content || 'Your order is ready!';
     }
-  } else if (order.menu_items.type === 'MANUAL_DELIVERY') {
+  } else if (menuItem.type === 'MANUAL_DELIVERY') {
     const pasted = typeof manual_message === 'string' ? manual_message.trim() : '';
     if (!pasted) {
       return {
@@ -105,16 +134,16 @@ export async function approveSlipOrderForOwner(
     }
     deliveryContent = normalized;
   } else {
-    const fromMenu = order.menu_items.delivery_content
-      ? ownerDeliveryAsPlainText(String(order.menu_items.delivery_content))
+    const fromMenu = menuItem.delivery_content
+      ? ownerDeliveryAsPlainText(String(menuItem.delivery_content))
       : '';
     deliveryContent = fromMenu || 'Thank you for your purchase!';
   }
 
   const storedManual =
-    order.menu_items.type === 'MANUAL_DELIVERY' ? { message: deliveryContent } : null;
+    menuItem.type === 'MANUAL_DELIVERY' ? { message: deliveryContent } : null;
 
-  const snapshotRevenue = roundMoney(Number(order.menu_items.price ?? 0));
+  const snapshotRevenue = roundMoney(Number(menuItem.price ?? 0));
 
   const { error: updateError } = await (supabaseAdmin
     .from('orders') as any)
@@ -134,7 +163,7 @@ export async function approveSlipOrderForOwner(
   const ownerFlags = await loadPlatformAccountFlagsAdmin(ownerUserId);
   const planForCopy = effectivePlanTier(ownerFlags.plan_tier, ownerFlags.subscription_period_end);
   const copy = mergeBotTelegramCopyRespectingPlan(order.bots.telegram_customer_copy, planForCopy);
-  const productNameEsc = escapeHtml(String(order.menu_items.name));
+  const productNameEsc = escapeHtml(String(menuItem.name ?? 'Product'));
   const deliveryHtml = plainLinesToTelegramDeliveryHtml(deliveryContent);
 
   const confirmHtml = applyTemplate(copy.order_confirmed_template_html, {

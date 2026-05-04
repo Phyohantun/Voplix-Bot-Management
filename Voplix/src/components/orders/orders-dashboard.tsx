@@ -28,6 +28,7 @@ import { OrderHistoryCleanup } from '@/components/settings/order-history-cleanup
 import { telegramHtmlToPlain } from '@/lib/bot-telegram-copy';
 import { OrderSlipMedia } from '@/components/orders/order-slip-media';
 import { orderCountsTowardRevenue, revenueAmountFromOrderRow, roundMoney } from '@/lib/order-revenue';
+import { orderAllowsOwnerListRemoval } from '@/lib/order-list-removal';
 
 type CleanupBotOption = { id: string; bot_username: string };
 
@@ -112,18 +113,6 @@ function menuPlainTemplate(order: { menu_items?: unknown }): string {
   return telegramHtmlToPlain(savedRaw).trim() || savedRaw.trim();
 }
 
-/** Prefill manual-delivery drafts from Menu template so owners can approve in one step. */
-function buildManualPrefill(orders: any[]): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const o of orders) {
-    if (o.status !== 'SLIP_SUBMITTED') continue;
-    if (embeddedMenuItem(o)?.type !== 'MANUAL_DELIVERY') continue;
-    const plain = menuPlainTemplate(o);
-    if (plain) out[o.id] = plain;
-  }
-  return out;
-}
-
 export function OrdersDashboard({
   orders: initialOrders,
   totalCount,
@@ -164,10 +153,17 @@ export function OrdersDashboard({
     setNextFetchPage(page + 1);
     setHasMoreClient(true);
     setSelected(new Set());
-    setManualDeliveryNotes(buildManualPrefill(initialOrders));
+    const keepIds = new Set(initialOrders.map((o: any) => o.id as string));
+    setManualDeliveryNotes((prev) => {
+      const next: Record<string, string> = {};
+      for (const [id, text] of Object.entries(prev)) {
+        if (keepIds.has(id)) next[id] = text;
+      }
+      return next;
+    });
   }, [initialOrders, page, pageSize, selectedBotId, statusFilter]);
 
-  /** Draft for manual-delivery orders (required before approve; prefilled from Menu when saved). */
+  /** Per-order draft only — never auto-filled from Menu or from other orders. */
   const manualMessageDraft = (order: any) =>
     embeddedMenuItem(order)?.type === 'MANUAL_DELIVERY' ? (manualDeliveryNotes[order.id] ?? '') : '';
 
@@ -203,6 +199,17 @@ export function OrdersDashboard({
     [selected, combinedOrders]
   );
 
+  /** Soft-delete from list is not allowed while payment or slip review is in progress. */
+  const selectedDeletableIds = useMemo(
+    () =>
+      [...selected].filter((id) => {
+        const o = combinedOrders.find((x: any) => x.id === id);
+        return o && orderAllowsOwnerListRemoval(o.status);
+      }),
+    [selected, combinedOrders]
+  );
+  const selectedNonDeletableCount = selected.size - selectedDeletableIds.length;
+
   const loadMore = useCallback(async () => {
     if (typeof window !== 'undefined' && !window.matchMedia('(max-width: 767px)').matches) return;
     if (loadingMore || isDeepPage || !hasMoreClient) return;
@@ -227,16 +234,6 @@ export function OrdersDashboard({
       if (chunk.length === 0) {
         setHasMoreClient(false);
       } else {
-        const prefillChunk = buildManualPrefill(chunk);
-        if (Object.keys(prefillChunk).length > 0) {
-          setManualDeliveryNotes((prev) => {
-            const merged = { ...prev };
-            for (const [id, text] of Object.entries(prefillChunk)) {
-              if (!(id in merged)) merged[id] = text;
-            }
-            return merged;
-          });
-        }
         setAppendOrders((prev) => {
           const seen = new Set(
             [...orders, ...prev].map((x: any) => x.id)
@@ -426,6 +423,14 @@ export function OrdersDashboard({
   };
 
   const deleteOne = async (order: any) => {
+    if (!orderAllowsOwnerListRemoval(order.status)) {
+      toast.error(
+        t(
+          'This order is still in progress. Use Reject for slips, or wait until payment is done — you cannot hide it from the list yet.'
+        )
+      );
+      return;
+    }
     if (
       !confirm(
         t(
@@ -459,17 +464,25 @@ export function OrdersDashboard({
   };
 
   const deleteSelected = async () => {
-    if (selected.size === 0) return;
+    if (selectedDeletableIds.length === 0) return;
     setLoading(true);
     try {
       const res = await fetch('/api/orders/bulk-delete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids: [...selected] }),
+        body: JSON.stringify({ ids: selectedDeletableIds }),
       });
-      const j = (await res.json().catch(() => ({}))) as { error?: string; deleted?: number };
+      const j = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        deleted?: number;
+        skipped_pending?: number;
+      };
       if (!res.ok) throw new Error(j.error || t('Bulk delete failed'));
-      toast.success(`${t('Deleted')} ${j.deleted ?? selected.size} ${t('order(s)')}`);
+      const skipped = j.skipped_pending ?? 0;
+      toast.success(
+        `${t('Deleted')} ${j.deleted ?? selectedDeletableIds.length} ${t('order(s)')}` +
+          (skipped > 0 ? ` (${skipped} ${t('in progress — not removed')})` : '')
+      );
       setSelected(new Set());
       setBulkDeleteOpen(false);
       router.refresh();
@@ -552,9 +565,14 @@ export function OrdersDashboard({
           {t('Message to buyer (sent after Approve)')}
         </p>
         {templateHint ? (
-          <p className="text-[11px] leading-snug text-zinc-500 dark:text-zinc-400">
-            {t('Prefilled from your product in Menu — edit if needed.')}
-          </p>
+          <details className="rounded-md border border-zinc-200 bg-zinc-50/80 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-400">
+            <summary className="cursor-pointer select-none px-2 py-1.5 text-[11px] font-medium">
+              {t('Product template in Menu (copy if useful)')}
+            </summary>
+            <div className="border-t border-zinc-200 px-2 py-2 text-[11px] leading-relaxed whitespace-pre-wrap dark:border-zinc-700">
+              {templateHint}
+            </div>
+          </details>
         ) : null}
         <Textarea
           aria-label={t('Message to buyer (sent after Approve)')}
@@ -713,7 +731,14 @@ export function OrdersDashboard({
               size="sm"
               className="border border-red-900/50 bg-red-950/30 text-red-200 hover:bg-red-950/50"
               onClick={() => setBulkDeleteOpen(true)}
-              disabled={loading}
+              disabled={loading || selectedDeletableIds.length === 0}
+              title={
+                selectedDeletableIds.length === 0 && selected.size > 0
+                  ? t(
+                      'Selected orders are still in progress (payment or slip). Use Reject or wait — they cannot be hidden from the list yet.'
+                    )
+                  : undefined
+              }
             >
               {t('Delete selected…')}
             </Button>
@@ -817,16 +842,18 @@ export function OrdersDashboard({
                             />
                           </div>
                         ) : null}
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="text-zinc-500 hover:text-red-400"
-                          disabled={loading}
-                          onClick={() => deleteOne(order)}
-                        >
-                          {t('Delete from list')}
-                        </Button>
+                        {orderAllowsOwnerListRemoval(order.status) ? (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="text-zinc-500 hover:text-red-400"
+                            disabled={loading}
+                            onClick={() => deleteOne(order)}
+                          >
+                            {t('Delete from list')}
+                          </Button>
+                        ) : null}
                       </div>
                     </div>
                   </div>
@@ -945,16 +972,18 @@ export function OrdersDashboard({
                               ) : (
                                 <span className="text-xs text-zinc-500">—</span>
                               )}
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                className="mt-1 h-7 px-0 text-xs text-zinc-500 hover:text-red-400"
-                                disabled={loading}
-                                onClick={() => deleteOne(order)}
-                              >
-                                {t('Delete')}
-                              </Button>
+                              {orderAllowsOwnerListRemoval(order.status) ? (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="mt-1 h-7 px-0 text-xs text-zinc-500 hover:text-red-400"
+                                  disabled={loading}
+                                  onClick={() => deleteOne(order)}
+                                >
+                                  {t('Delete')}
+                                </Button>
+                              ) : null}
                             </td>
                           </tr>
                       ))}
@@ -971,11 +1000,22 @@ export function OrdersDashboard({
         <DialogContent className="border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
           <DialogHeader>
             <DialogTitle className="text-zinc-900 dark:text-white">{t('Delete selected orders?')}</DialogTitle>
-            <DialogDescription className="text-zinc-500">
-              {t('Hides')} <strong className="text-zinc-700 dark:text-zinc-300">{selected.size}</strong>{' '}
-              {t(
-                'order row(s) from this list. Revenue from completed sales stays in your totals. Customers are not messaged on Telegram.'
-              )}
+            <DialogDescription className="space-y-2 text-zinc-500">
+              <p>
+                {t('Hides')}{' '}
+                <strong className="text-zinc-700 dark:text-zinc-300">{selectedDeletableIds.length}</strong>{' '}
+                {t(
+                  'order row(s) from this list. Revenue from completed sales stays in your totals. Customers are not messaged on Telegram.'
+                )}
+              </p>
+              {selectedNonDeletableCount > 0 ? (
+                <p className="text-sm text-amber-700 dark:text-amber-300">
+                  {selectedNonDeletableCount}{' '}
+                  {t(
+                    'selected order(s) are still waiting for payment or slip review and will stay on the list. Use Reject for slips.'
+                  )}
+                </p>
+              ) : null}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-3">
@@ -985,7 +1025,7 @@ export function OrdersDashboard({
             <Button
               className="border border-red-900/50 bg-red-950/40 text-red-100 hover:bg-red-950/60"
               onClick={deleteSelected}
-              disabled={loading}
+              disabled={loading || selectedDeletableIds.length === 0}
             >
               {t('Delete')}
             </Button>

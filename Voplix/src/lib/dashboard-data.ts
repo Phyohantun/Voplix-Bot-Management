@@ -75,6 +75,32 @@ async function countOrdersInRange(
   return count ?? 0;
 }
 
+/** PostgREST returns at most 1000 rows per request — sum revenue across pages. */
+const REVENUE_PAGE_SIZE = 1000;
+
+async function sumCompletedRevenuePages(
+  supabase: SupabaseClient,
+  configure: (q: any) => any
+): Promise<number> {
+  let sum = 0;
+  let from = 0;
+  for (;;) {
+    let q = (supabase as any)
+      .from('orders')
+      .select('revenue_amount, menu_items(price), bots!inner(user_id)');
+    q = configure(q);
+    const { data, error } = await q.range(from, from + REVENUE_PAGE_SIZE - 1);
+    if (error) break;
+    const rows = (data as Parameters<typeof revenueAmountFromOrderRow>[0][]) || [];
+    for (const row of rows) {
+      sum += revenueAmountFromOrderRow(row);
+    }
+    if (rows.length < REVENUE_PAGE_SIZE) break;
+    from += REVENUE_PAGE_SIZE;
+  }
+  return sum;
+}
+
 async function sumCompletedRevenueInRange(
   supabase: SupabaseClient,
   userId: string,
@@ -84,20 +110,29 @@ async function sumCompletedRevenueInRange(
   botFilter: string | null
 ): Promise<number> {
   if (botIds.length === 0) return 0;
-  let q = (supabase as any)
-    .from('orders')
-    .select('revenue_amount, menu_items(price)')
-    .in('status', ['COMPLETED', 'APPROVED'])
-    .eq('bots.user_id', userId)
-    .gte('updated_at', start)
-    .lt('updated_at', end);
-  if (botFilter && botIds.includes(botFilter)) q = q.eq('bot_id', botFilter);
-  const { data, error } = await q;
-  if (error || !data) return 0;
-  return (data as Parameters<typeof revenueAmountFromOrderRow>[0][]).reduce(
-    (s, row) => s + revenueAmountFromOrderRow(row),
-    0
-  );
+  return sumCompletedRevenuePages(supabase, (q) => {
+    let x = q
+      .in('status', ['COMPLETED', 'APPROVED'])
+      .eq('bots.user_id', userId)
+      .gte('updated_at', start)
+      .lt('updated_at', end);
+    if (botFilter && botIds.includes(botFilter)) x = x.eq('bot_id', botFilter);
+    return x;
+  });
+}
+
+async function sumLifetimeCompletedRevenue(
+  supabase: SupabaseClient,
+  userId: string,
+  botIds: string[],
+  selectedBotId: string | null
+): Promise<number> {
+  if (botIds.length === 0) return 0;
+  return sumCompletedRevenuePages(supabase, (q) => {
+    let x = q.in('status', ['COMPLETED', 'APPROVED']).eq('bots.user_id', userId);
+    if (selectedBotId && botIds.includes(selectedBotId)) x = x.eq('bot_id', selectedBotId);
+    return x;
+  });
 }
 
 async function countBotsCreatedInRange(
@@ -202,7 +237,7 @@ export async function fetchDashboardPageModel(
     pendingTotalRes,
     pendingOrdersResult,
     totalOrdersResult,
-    revenueRows,
+    lifetimeRevenueSum,
     ordersYesterday,
     ordersDayBefore,
     revYesterday,
@@ -240,15 +275,7 @@ export async function fetchDashboardPageModel(
       if (selectedBotId && botIds.includes(selectedBotId)) q = q.eq('bot_id', selectedBotId);
       return q;
     })(),
-    (() => {
-      let q = (supabase as any)
-        .from('orders')
-        .select('revenue_amount, menu_items(price)')
-        .in('status', ['COMPLETED', 'APPROVED'])
-        .eq('bots.user_id', userId);
-      if (selectedBotId && botIds.includes(selectedBotId)) q = q.eq('bot_id', selectedBotId);
-      return q;
-    })(),
+    sumLifetimeCompletedRevenue(supabase, userId, botIds, selectedBotId),
     countOrdersInRange(supabase, botIds, yesterdayStart, yesterdayEnd, selectedBotId),
     countOrdersInRange(supabase, botIds, dayBeforeStart, dayBeforeEnd, selectedBotId),
     sumCompletedRevenueInRange(supabase, userId, botIds, yesterdayStart, yesterdayEnd, selectedBotId),
@@ -263,11 +290,7 @@ export async function fetchDashboardPageModel(
   const pendingTotal = pendingTotalRes.count ?? 0;
   const pendingData = (pendingOrdersResult?.data as PendingOrderRow[]) || [];
   const totalOrders = (totalOrdersResult?.data as unknown[])?.length || 0;
-  const revenue =
-    ((revenueRows?.data as Parameters<typeof revenueAmountFromOrderRow>[0][]) || []).reduce(
-      (s, r) => s + revenueAmountFromOrderRow(r),
-      0
-    ) || 0;
+  const revenue = typeof lifetimeRevenueSum === 'number' ? lifetimeRevenueSum : 0;
 
   const botsTrend = pctChange(botsYesterday, botsDayBefore);
   const pendingTrend = slipActivityTrend(slipLast24, slipPrev24);

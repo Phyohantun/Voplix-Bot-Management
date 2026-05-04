@@ -163,11 +163,19 @@ export const translations: Record<string, string> = {
   "View slip": "ပြေစာ ကြည့်မည်",
   "Message to buyer (sent after Approve)": "ဝယ်ယူသူထံ စာတို (အတည်ပြုပြီးမှ ပို့မည်)",
   "Prefilled from your product in Menu — edit if needed.": "Menu တွင် သိမ်းထားသော ကုန်ပစ္စည်းမှ ကြိုဖြည့်ထားသည် — လိုပါက ပြင်ပါ။",
+  "Product template in Menu (copy if useful)": "Menu တွင် ကုန်ပစ္စည်း မူကြမ်း (လိုအပ်ပါက ကူးယူပါ)",
   "Bank details, links, or instructions for the buyer…": "ဘဏ်အချက်အလက်၊ လင့်များ သို့မဟုတ် ဝယ်ယူသူအတွက် ညွှန်ကြားချက်များ…",
   "Add a short message above to enable Approve.": "အတည်ပြုခွင့်ရရန် အထက်တွင် စာတိုတိုတစ်ခု ထည့်ပါ။",
   "No orders match this filter.": "ဤစစ်ထုတ်မှုနှင့် ကိုက်ညီသော အော်ဒါများ မရှိပါ။",
   "Approve": "အတည်ပြုမယ်",
   "Delete from list": "စာရင်းမှ ဖျက်မည်",
+  "This order is still in progress. Use Reject for slips, or wait until payment is done — you cannot hide it from the list yet.":
+    "ဤအော်ဒါသည် ဆက်လုပ်ဆောင်နေဆဲ ဖြစ်ပါသည်။ စလစ်များအတွက် ငြင်းပယ်မည်ကို သုံးပါ၊ သို့မဟုတ် ငွေပေးချေပြီးသည်အထိ စောင့်ပါ — စာရင်းမှ မဖျောက်နိုင်သေးပါ။",
+  "Selected orders are still in progress (payment or slip). Use Reject or wait — they cannot be hidden from the list yet.":
+    "ရွေးချယ်ထားသော အော်ဒါများသည် ဆက်လုပ်ဆောင်နေဆဲ ဖြစ်ပါသည် (ငွေပေးချေ သို့မဟုတ် စလစ်)။ ငြင်းပယ်မည်ကို သုံးပါ သို့မဟုတ် စောင့်ပါ — စာရင်းမှ မဖျောက်နိုင်သေးပါ။",
+  "in progress — not removed": "လုပ်ဆောင်ဆဲ — မဖျောက်ပါ",
+  "selected order(s) are still waiting for payment or slip review and will stay on the list. Use Reject for slips.":
+    "ရွေးချယ်ထားသော အော်ဒါ(များ)သည် ငွေပေးချေ သို့မဟုတ် စလစ်စစ်ဆေးမှုကို ဆက်စောင့်နေပါသည်၊ စာရင်းတွင် ဆက်ရှိမည်ဖြစ်သည်။ စလစ်များအတွက် ငြင်းပယ်မည်ကို သုံးပါ။",
   "Loading…": "လုပ်ဆောင်နေပါသည်…",
   "Load more": "နောက်ထပ်ပြသမည်",
   "Customer / product": "ဝယ်ယူသူ / ကုန်ပစ္စည်း",

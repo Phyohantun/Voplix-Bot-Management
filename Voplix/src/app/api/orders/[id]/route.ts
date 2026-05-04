@@ -32,14 +32,24 @@ export async function DELETE(
 
     const { data: raw, error: fetchError } = await supabaseAdmin
       .from('orders')
-      .select('id, deleted_at, bots(user_id)')
+      .select('id, status, deleted_at, bots(user_id)')
       .eq('id', id)
       .single();
 
-    const order = raw as (OrderWithBot & { deleted_at: string | null }) | null;
+    const order = raw as (OrderWithBot & { deleted_at: string | null; status: string }) | null;
 
     if (fetchError || !order || order.bots.user_id !== user.id) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+    }
+
+    if (order.status === 'PENDING_PAYMENT' || order.status === 'SLIP_SUBMITTED') {
+      return NextResponse.json(
+        {
+          error:
+            'This order is still in progress (waiting for payment or slip). Remove it from the list only after you reject the slip or the buyer finishes payment — use Reject instead of delete for slips.',
+        },
+        { status: 409 }
+      );
     }
 
     if (order.deleted_at) {

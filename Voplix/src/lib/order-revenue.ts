@@ -1,18 +1,26 @@
-/** Revenue counted for dashboards: stored snapshot, else live menu price. */
+/** PostgREST may return `menu_items` as an object or a one-element array for the same FK embed. */
+function menuPriceFromOrderRowEmbed(menu_items: unknown): number | null {
+  if (menu_items == null) return null;
+  const first = Array.isArray(menu_items) ? menu_items[0] : menu_items;
+  if (!first || typeof first !== 'object') return null;
+  const p = (first as { price?: number | string | null }).price;
+  if (p == null || p === '') return null;
+  const n = Number(p);
+  return Number.isFinite(n) ? roundMoney(n) : null;
+}
+
+/** Revenue counted for dashboards: stored snapshot, else live menu price from embed. */
 export function revenueAmountFromOrderRow(row: {
   revenue_amount?: number | string | null;
-  menu_items?: { price?: number | string | null } | null;
+  menu_items?: unknown;
 }): number {
   const ra = row.revenue_amount;
   if (ra != null && ra !== '') {
     const n = Number(ra);
     if (Number.isFinite(n)) return roundMoney(n);
   }
-  const p = row.menu_items?.price;
-  if (p != null && p !== '') {
-    const n = Number(p);
-    if (Number.isFinite(n)) return roundMoney(n);
-  }
+  const fromMenu = menuPriceFromOrderRowEmbed(row.menu_items);
+  if (fromMenu != null) return fromMenu;
   return 0;
 }
 
